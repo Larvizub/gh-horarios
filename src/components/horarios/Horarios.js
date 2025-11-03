@@ -1,0 +1,1241 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { ref, get, set } from 'firebase/database';
+import { database } from '../../firebase/config';
+import { Container, Paper, Typography, Box, Button, useMediaQuery, useTheme, Alert } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { format, getYear } from 'date-fns';
+import HeaderSemana from './HeaderSemana';
+import RecomendacionesPracticantes from './RecomendacionesPracticantes';
+import DialogoHorario from './DialogoHorario';
+import DialogoEliminar from './DialogoEliminar';
+import DialogoCopiar from './DialogoCopiar';
+import ModalConfirmacion from './ModalConfirmacion';
+import InfoTurnoModal from './InfoTurnoModal';
+import { 
+  calcularHorasTotales, 
+  calcularHorasExcedentes, 
+  convertirA24h, 
+  encontrarPracticantesDisponibles, 
+  generarRecomendacionPracticantes 
+} from '../../utils/horariosUtils';
+import { 
+  puedeEditarHorarios, 
+  puedeEliminarHorarios, 
+  puedeModificarHorarios 
+} from '../../utils/permissionsUtils';
+import { obtenerHorasMaximas } from '../../utils/contratoUtils';
+import { 
+  departamentos, 
+  diasSemana, 
+  NO_SUMAN_HORAS, 
+  DIAS_LABELS 
+} from '../../utils/horariosConstants';
+import { obtenerUsuario } from '../../utils/horariosHelpers';
+import { useUsuariosFiltrados } from '../../hooks/useUsuariosFiltrados';
+import HorariosTable from './HorariosTable';
+import { cargarHorariosPorSemana, guardarBatchHorarios, guardarHorariosUsuarioSemana, subscribeHorariosSemana } from '../../services/firebaseHorarios';
+import { puedeVerHorarios } from '../../utils/contratoUtils';
+import { useUsuariosYHorarios } from '../../hooks/useUsuariosYHorarios';
+import { useSemana } from '../../hooks/useSemana';
+import { useModalConfirm } from '../../hooks/useModalConfirm';
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: '16px',
+  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+  [theme.breakpoints.down('md')]: {
+    padding: theme.spacing(2),
+    borderRadius: '12px',
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(1.5),
+    borderRadius: '8px',
+    margin: theme.spacing(0.5),
+  },
+}));
+
+const Horarios = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Reemplazar estados de usuarios por el hook
+  const { usuarios, departamentoSeleccionado, setDepartamentoSeleccionado, currentUser } = useUsuariosYHorarios();
+  const [loading, setLoading] = useState(true);
+  const [horarios, setHorarios] = useState({});
+  const { semanaActual, semanaSeleccionada, setSemanaSeleccionada, avanzarSemana, retrocederSemana, obtenerClaveSemana } = useSemana();
+  const [editando, setEditando] = useState(false);
+  const [horariosEditados, setHorariosEditados] = useState({});
+  // Buffer de ediciones por semana: { [semanaKey]: { ...horariosEditadosSemana } }
+  const [bufferEditSemanas, setBufferEditSemanas] = useState({});
+  // Clave de la semana más recientemente cargada desde backend
+  const [lastLoadedWeekKey, setLastLoadedWeekKey] = useState(null);
+  const [dialogoHorario, setDialogoHorario] = useState(false);
+  const [horarioPersonalizado, setHorarioPersonalizado] = useState({
+    horaInicio: '',
+    horaFin: '',
+    usuarioId: null,
+    diaKey: null,
+    tipo: 'personalizado'
+  });
+  const [dialogoEliminar, setDialogoEliminar] = useState(false);
+  const [eliminacionSeleccionada, setEliminacionSeleccionada] = useState({
+    tipo: 'mis-dias', // 'todo', 'usuario', 'dia', 'mis-dias'
+    usuarioId: null,
+    dia: null,
+    diasSeleccionados: []
+  });
+  const [anchorEl, setAnchorEl] = useState(null); // Para el menú de selección de fecha
+  const [yearSelected, setYearSelected] = useState(getYear(new Date()));
+  const [monthSelected, setMonthSelected] = useState(new Date().getMonth());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  // Estados para copiar horario
+  const [dialogoCopiar, setDialogoCopiar] = useState(false);
+  const [horarioACopiar, setHorarioACopiar] = useState(null);
+
+  // Estados para modales de confirmación modernos
+  const { modalConfirmacion, mostrarModal, cerrarModal } = useModalConfirm();
+
+  // Estado y handlers para el InfoTurnoModal
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [modalUsuario, setModalUsuario] = useState(null);
+  const [modalTurno, setModalTurno] = useState(null);
+  const [modalDiaKey, setModalDiaKey] = useState(null);
+  const abrirInfoTurno = (usuario, turno, diaKey) => {
+    setModalUsuario(usuario);
+    setModalTurno(turno);
+    setModalDiaKey(diaKey);
+    setInfoModalOpen(true);
+  };
+  const cerrarInfoTurno = () => {
+    setInfoModalOpen(false);
+    setModalUsuario(null);
+    setModalTurno(null);
+  };
+
+  const usuariosFiltrados = useUsuariosFiltrados(usuarios, departamentoSeleccionado);
+
+  // Iniciar edición según permisos (evita cargar datos de otros usuarios para no admins)
+  const iniciarEdicion = useCallback(() => {
+    setEditando(true);
+    const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+    const puedeGuardarTodos = usuarioActual && (
+      usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador'
+    );
+    if (puedeGuardarTodos) {
+      setHorariosEditados({ ...(horarios || {}) });
+    } else {
+      setHorariosEditados({ [currentUser.uid]: (horarios?.[currentUser.uid] || {}) });
+    }
+  }, [usuarios, currentUser, horarios]);
+
+  // Suscribirse en tiempo real a los horarios de la semana seleccionada
+  useEffect(() => {
+    if (!currentUser) return;
+    setLoading(true);
+    const key = obtenerClaveSemana(semanaSeleccionada);
+    // subscribeHorariosSemana invoca onChange con el objeto actual
+    const unsubscribe = subscribeHorariosSemana(key, (data) => {
+      setHorarios(data || {});
+      setLastLoadedWeekKey(key);
+      setLoading(false);
+    });
+
+    // En caso de error o timeout, intentamos una carga puntual como fallback
+    const fallback = setTimeout(async () => {
+      try {
+        const data = await cargarHorariosPorSemana(semanaSeleccionada, obtenerClaveSemana);
+        setHorarios(data || {});
+        setLastLoadedWeekKey(key);
+      } catch (e) {
+        console.error('Fallback cargarHorariosPorSemana falló:', e);
+      } finally {
+        setLoading(false);
+      }
+    }, 3000);
+
+    return () => {
+      clearTimeout(fallback);
+      try {
+        unsubscribe && unsubscribe();
+      } catch (e) {
+        // no-op
+      }
+    };
+  }, [semanaSeleccionada, currentUser, obtenerClaveSemana]);
+
+  // Al cambiar de semana durante edición: restaurar del buffer o inicializar desde los horarios cargados
+  useEffect(() => {
+    if (!editando) return;
+    const key = obtenerClaveSemana(semanaSeleccionada);
+    const existente = bufferEditSemanas[key];
+    if (existente) {
+      setHorariosEditados(existente);
+      return;
+    }
+    // Evita inicializar con horarios de otra semana o durante la carga
+    if (loading || lastLoadedWeekKey !== key) {
+      // Para no mostrar datos de otra semana, limpia mientras llega la data correcta
+      setHorariosEditados({});
+      return;
+    }
+    const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+    const esAdmin = usuarioActual && (usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador');
+    const init = esAdmin ? { ...(horarios || {}) } : { [currentUser?.uid]: (horarios?.[currentUser?.uid] || {}) };
+    setHorariosEditados(init);
+    setBufferEditSemanas(prev => ({ ...prev, [key]: init }));
+  }, [editando, semanaSeleccionada, loading, lastLoadedWeekKey, horarios, usuarios, currentUser, obtenerClaveSemana, bufferEditSemanas]);
+
+  // Sincronizar el buffer con los cambios en horariosEditados para la semana actual
+  useEffect(() => {
+    if (!editando) return;
+    const key = obtenerClaveSemana(semanaSeleccionada);
+    // No sincronizar mientras esperamos data de la semana correcta
+    if (loading || lastLoadedWeekKey !== key) return;
+    setBufferEditSemanas(prev => ({ ...prev, [key]: horariosEditados }));
+  }, [horariosEditados, editando, semanaSeleccionada, obtenerClaveSemana, loading, lastLoadedWeekKey]);
+
+  // Función para recalcular horas extras después de modificaciones
+  const recalcularHorasExtras = useCallback(async () => {
+    try {
+      // Solo recalcular si estamos en la semana actual
+      const esSemanaActual = format(semanaSeleccionada, 'yyyy-MM-dd') === format(semanaActual, 'yyyy-MM-dd');
+      
+      if (!esSemanaActual) {
+        return; // No necesitamos recalcular horas extras para semanas que no son la actual
+      }
+
+      const semanaKey = obtenerClaveSemana(semanaSeleccionada);
+      const horariosRef = ref(database, `horarios_registros/${semanaKey}`);
+      const horariosSnapshot = await get(horariosRef);
+      
+      if (!horariosSnapshot.exists()) {
+        // No hay horarios, eliminar todas las horas extras
+        await set(ref(database, 'horas_extras'), {});
+        return;
+      }
+
+      const horariosActuales = horariosSnapshot.val();
+      const nuevasHorasExtras = {};
+
+      // Calcular horas extras para cada usuario
+      Object.keys(horariosActuales).forEach(usuarioId => {
+        const horariosUsuario = horariosActuales[usuarioId];
+        if (!horariosUsuario) return;
+
+        const usuario = usuarios.find(u => u.id === usuarioId);
+        const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
+        
+        const horasTotales = Object.values(horariosUsuario).reduce((total, turno) => {
+          if (!turno || NO_SUMAN_HORAS.includes(turno.tipo)) return total;
+          return total + (turno.horas || 0);
+        }, 0);
+
+        const horasExcedentes = Math.max(horasTotales - horasMaximas, 0);
+        if (horasExcedentes > 0) {
+          nuevasHorasExtras[usuarioId] = horasExcedentes;
+        }
+      });
+
+      // Actualizar en Firebase y estado local
+      await set(ref(database, 'horas_extras'), nuevasHorasExtras);
+      
+    } catch (error) {
+      console.error('Error al recalcular horas extras:', error);
+    }
+  }, [semanaSeleccionada, semanaActual, obtenerClaveSemana, usuarios]);
+
+  const handleGuardarHorarios = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Consolidar buffer usando el estado actual de la semana visible
+      const currentWeekKey = obtenerClaveSemana(semanaSeleccionada);
+      const buffers = { ...bufferEditSemanas };
+      // No sobrescribir el buffer de la semana actual con vacío
+      if (horariosEditados && Object.keys(horariosEditados).length > 0) {
+        buffers[currentWeekKey] = horariosEditados;
+      }
+
+      const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+      const esAdmin = usuarioActual && (usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador');
+      let operaciones = 0;
+
+      // Construir un update en lote para minimizar roundtrips
+      const updates = {};
+      if (!esAdmin) {
+        for (const [weekKey, data] of Object.entries(buffers)) {
+          const propios = data?.[currentUser?.uid];
+          if (propios && Object.keys(propios).length > 0) {
+            updates[`horarios_registros/${weekKey}/${currentUser.uid}`] = propios;
+            operaciones += 1;
+          }
+        }
+      } else {
+        for (const [weekKey, data] of Object.entries(buffers)) {
+          if (!data || Object.keys(data).length === 0) continue;
+          for (const [uid, horariosUsuario] of Object.entries(data)) {
+            updates[`horarios_registros/${weekKey}/${uid}`] = horariosUsuario || {};
+            operaciones += 1;
+          }
+        }
+      }
+
+  if (operaciones > 0) {
+        // Si el número de operaciones es pequeño (p. ej. solo un usuario), usar la API granular por usuario
+        const paths = Object.keys(updates);
+        if (paths.length <= 10) {
+          // Intentar escribir por usuario/semana individualmente para evitar sobrescrituras
+          for (const p of paths) {
+            // p tiene el formato 'horarios_registros/${weekKey}/${uid}'
+            const parts = p.split('/');
+            const weekKey = parts[1];
+            const uid = parts[2];
+            try {
+              await guardarHorariosUsuarioSemana(weekKey, uid, updates[p]);
+            } catch (err) {
+              console.warn('Fallo al guardar usuario individualmente, se acumula para batch:', err);
+              // Si falla, lo dejamos en mergedBatch
+            }
+          }
+        } else {
+          // Para muchos cambios, usar el batch con merge interno
+          await guardarBatchHorarios(updates);
+        }
+      }
+
+      if (operaciones === 0) {
+        mostrarModal({
+          tipo: 'warning',
+          titulo: 'Sin cambios para guardar',
+          mensaje: 'No se detectaron modificaciones pendientes. Verifica que los horarios editados aparezcan en pantalla antes de guardar.',
+          soloInfo: true
+        });
+        setLoading(false);
+        return;
+      }
+
+    // Finalizar edición. Con la suscripción en tiempo real el estado se actualizará desde Firebase.
+    setEditando(false);
+    setBufferEditSemanas({});
+
+      // Recalcular horas extras solo para la semana actual
+      await recalcularHorasExtras();
+
+      mostrarModal({
+        tipo: 'success',
+        titulo: '✅ Horarios Guardados',
+        mensaje: 'Los horarios se han guardado correctamente.',
+        soloInfo: true
+      });
+    } catch (error) {
+      console.error('Error al guardar horarios:', error);
+      mostrarModal({
+        tipo: 'error',
+        titulo: '❌ Error al Guardar',
+        mensaje: `Ocurrió un error al guardar los horarios:\n\n${error.message}`,
+        soloInfo: true
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [bufferEditSemanas, horariosEditados, semanaSeleccionada, obtenerClaveSemana, usuarios, currentUser, mostrarModal, recalcularHorasExtras]);
+
+  const handleEliminarSeleccionado = async () => {
+    try {
+      setLoading(true);
+  const semanaKey = obtenerClaveSemana(semanaSeleccionada);
+  const refPath = `horarios_registros/${semanaKey}`;
+  const { tipo, usuarioId, dia, diasSeleccionados } = eliminacionSeleccionada;
+
+      // Verificar permisos
+      // Aseguramos que usuarioActual sea el objeto completo, no solo el UID
+      let usuarioActual = null;
+      if (currentUser && currentUser.rol) {
+        usuarioActual = currentUser;
+      } else if (currentUser && currentUser.uid) {
+        usuarioActual = usuarios.find(u => u.id === currentUser.uid);
+      }
+      if (!usuarioActual) {
+        mostrarModal({
+          tipo: 'error',
+          titulo: '🚫 Usuario no encontrado',
+          mensaje: 'No se pudo verificar tu identidad. Por favor, inicia sesión nuevamente.',
+          soloInfo: true
+        });
+        return;
+      }
+
+      let updates = { ...horarios };
+
+      switch (tipo) {
+        case 'todo':
+          // Solo administradores pueden eliminar todos los horarios
+          if (usuarioActual.rol !== 'Administrador') {
+            mostrarModal({
+              tipo: 'error',
+              titulo: '🚫 Permisos Insuficientes',
+              mensaje: 'Solo los administradores pueden eliminar todos los horarios.',
+              soloInfo: true
+            });
+            return;
+          }
+          // Elimina todos los horarios de la semana seleccionada
+          await set(ref(database, refPath), {});
+          setHorarios({});
+          setHorariosEditados({});
+          break;
+
+  case 'usuario':
+          // Validar que se haya seleccionado un usuario
+          if (!usuarioId) {
+            mostrarModal({
+              tipo: 'warning',
+              titulo: '👤 Usuario no seleccionado',
+              mensaje: 'Debes seleccionar un usuario para eliminar sus horarios.',
+              soloInfo: true
+            });
+            setLoading(false);
+            setDialogoEliminar(false);
+            return;
+          }
+          // Permitir que el administrador elimine horarios de cualquier usuario
+          // Los usuarios normales solo pueden eliminar sus propios horarios
+          if (usuarioActual.rol !== 'Administrador' && usuarioId !== currentUser.uid) {
+            mostrarModal({
+              tipo: 'error',
+              titulo: '🚫 Acceso Denegado',
+              mensaje: 'Solo puedes eliminar tus propios horarios.\n\nLos administradores pueden eliminar horarios de cualquier usuario.',
+              soloInfo: true
+            });
+            return;
+          }
+          // Si es admin o es el propio usuario, permite borrar
+          if (updates[usuarioId]) {
+            delete updates[usuarioId];
+            // Eliminar solo el nodo del usuario en la semana, sin tocar otros usuarios
+            await set(ref(database, `${refPath}/${usuarioId}`), null);
+            // Actualizar estado local en memoria
+            setHorarios(prev => {
+              const nuevo = { ...prev };
+              delete nuevo[usuarioId];
+              return nuevo;
+            });
+            setHorariosEditados(prev => {
+              const newState = { ...prev };
+              delete newState[usuarioId];
+              return newState;
+            });
+          } else {
+            mostrarModal({
+              tipo: 'warning',
+              titulo: '📅 Sin Horarios',
+              mensaje: 'El usuario seleccionado no tiene horarios asignados para eliminar.',
+              soloInfo: true
+            });
+            setLoading(false);
+            setDialogoEliminar(false);
+            return;
+          }
+          break;
+
+        case 'dia':
+          // Solo administradores pueden eliminar un día completo para todos
+          if (usuarioActual.rol !== 'Administrador') {
+            mostrarModal({
+              tipo: 'error',
+              titulo: '🚫 Permisos Insuficientes',
+              mensaje: 'Solo los administradores pueden eliminar horarios de un día completo para todos los usuarios.',
+              soloInfo: true
+            });
+            return;
+          }
+          let huboEliminacion = false;
+          Object.keys(updates).forEach(uid => {
+            if (updates[uid] && updates[uid][dia]) {
+              delete updates[uid][dia];
+              huboEliminacion = true;
+            }
+          });
+          if (huboEliminacion) {
+            await set(ref(database, refPath), updates);
+            // No sobrescribimos el estado local completamente: limpiar buffer de edición y dejar que el listener sincronice
+            setHorariosEditados({});
+            setBufferEditSemanas({});
+          } else {
+            mostrarModal({
+              tipo: 'warning',
+              titulo: '📅 Sin Horarios',
+              mensaje: 'No se encontraron horarios para ese día en ningún usuario.',
+              soloInfo: true
+            });
+            setLoading(false);
+            setDialogoEliminar(false);
+            return;
+          }
+          break;
+
+        case 'mis-dias':
+          // Eliminar días específicos del usuario actual
+          if (!currentUser?.uid) {
+            mostrarModal({
+              tipo: 'error',
+              titulo: '🚫 Usuario no encontrado',
+              mensaje: 'No se pudo verificar tu identidad. Por favor, inicia sesión nuevamente.',
+              soloInfo: true
+            });
+            return;
+          }
+
+          if (!updates[currentUser.uid]) {
+            mostrarModal({
+              tipo: 'warning',
+              titulo: '📅 Sin Horarios',
+              mensaje: 'No tienes horarios asignados para eliminar.',
+              soloInfo: true
+            });
+            return;
+          }
+
+          if (!diasSeleccionados || diasSeleccionados.length === 0) {
+            mostrarModal({
+              tipo: 'warning',
+              titulo: '📅 Días no Seleccionados',
+              mensaje: 'Debes seleccionar al menos un día para eliminar.',
+              soloInfo: true
+            });
+            return;
+          }
+
+          diasSeleccionados.forEach(diaKey => {
+            if (updates[currentUser.uid] && updates[currentUser.uid][diaKey]) {
+              delete updates[currentUser.uid][diaKey];
+            }
+          });
+
+          await set(ref(database, refPath), updates);
+          // Limpiar buffer de edición y dejar que el listener actualice el estado
+          setHorariosEditados({});
+          setBufferEditSemanas({});
+          break;
+
+        default:
+          console.log('Tipo de eliminación no reconocido:', tipo);
+          break;
+      }
+      
+      mostrarModal({
+        tipo: 'success',
+        titulo: '✅ Horarios Eliminados',
+        mensaje: 'Los horarios seleccionados se han eliminado correctamente.',
+        soloInfo: true
+      });
+
+      // Recalcular horas extras después de la eliminación
+      await recalcularHorasExtras();
+      
+    } catch (error) {
+      console.error('Error al eliminar horarios:', error);
+      mostrarModal({
+        tipo: 'error',
+        titulo: '❌ Error al Eliminar',
+        mensaje: `Ocurrió un error al eliminar los horarios:\n\n${error.message}`,
+        soloInfo: true
+      });
+    } finally {
+      setLoading(false);
+      setDialogoEliminar(false);
+    }
+  };
+
+  const abrirDialogoHorario = useCallback((usuarioId, diaKey) => {
+    // Buscar datos actuales del horario
+    const horariosEditados = window.__HORARIOS_EDITADOS__ || {};
+    const horarios = window.__HORARIOS__ || {};
+    const horarioActual = (horariosEditados[usuarioId]?.[diaKey]) || (horarios[usuarioId]?.[diaKey]);
+    setHorarioPersonalizado({
+      usuarioId,
+      diaKey,
+      tipo: horarioActual?.tipo || 'personalizado',
+      horaInicio: horarioActual?.horaInicio || '',
+      horaFin: horarioActual?.horaFin || '',
+      horaInicioLibre: horarioActual?.horaInicioLibre || '',
+      horaFinLibre: horarioActual?.horaFinLibre || '',
+      nota: horarioActual?.nota || ''
+    });
+    setDialogoHorario(true);
+  }, []);
+
+  // Función para manejar copiar horario
+  const handleCopiarHorario = useCallback((usuarioId, diaKey, event) => {
+    if (event) {
+      event.stopPropagation(); // Evitar que se active el click del TimeSlot
+    }
+    
+    const horariosUsuario = editando ? horariosEditados[usuarioId] : horarios[usuarioId];
+    const horarioACopiar = horariosUsuario?.[diaKey];
+    
+    if (!horarioACopiar || !horarioACopiar.tipo || horarioACopiar.tipo === 'libre') {
+      mostrarModal({
+        tipo: 'warning',
+        titulo: '⚠️ Sin Horario',
+        mensaje: 'No hay un horario establecido para copiar en este día.',
+        soloInfo: true
+      });
+      return;
+    }
+
+    setHorarioACopiar({
+      ...horarioACopiar,
+      usuarioId,
+      diaOriginal: diaKey
+    });
+    setDialogoCopiar(true);
+  }, [editando, horariosEditados, horarios, mostrarModal]);
+
+  // Función para ejecutar la copia del horario
+  const ejecutarCopiarHorario = useCallback(async (diaDestino) => {
+    if (!horarioACopiar || !diaDestino) return;
+
+    try {
+      const nuevoHorario = {
+        tipo: horarioACopiar.tipo,
+        horaInicio: horarioACopiar.horaInicio || '',
+        horaFin: horarioACopiar.horaFin || '',
+        horas: horarioACopiar.horas || 0
+      };
+
+      if (editando) {
+        // Si estamos editando, actualizar el estado temporal
+        setHorariosEditados(prev => ({
+          ...prev,
+          [horarioACopiar.usuarioId]: {
+            ...prev[horarioACopiar.usuarioId],
+            [diaDestino]: nuevoHorario
+          }
+        }));
+      } else {
+        // Si no estamos editando, guardar directamente en Firebase
+        const semanaKey = obtenerClaveSemana(semanaSeleccionada);
+        const horariosRef = ref(database, `horarios_registros/${semanaKey}/${horarioACopiar.usuarioId}/${diaDestino}`);
+        await set(horariosRef, nuevoHorario);
+        
+        // Actualizar el estado local
+        setHorarios(prev => ({
+          ...prev,
+          [horarioACopiar.usuarioId]: {
+            ...prev[horarioACopiar.usuarioId],
+            [diaDestino]: nuevoHorario
+          }
+        }));
+      }
+
+      mostrarModal({
+        tipo: 'success',
+        titulo: '✅ Horario Copiado',
+        mensaje: `El horario se ha copiado exitosamente de ${DIAS_LABELS[horarioACopiar.diaOriginal]} a ${DIAS_LABELS[diaDestino]}.`,
+        soloInfo: true
+      });
+
+      setDialogoCopiar(false);
+      setHorarioACopiar(null);
+    } catch (error) {
+      console.error('Error al copiar horario:', error);
+      mostrarModal({
+        tipo: 'error',
+        titulo: '❌ Error al Copiar',
+        mensaje: `Ocurrió un error al copiar el horario:\n\n${error.message}`,
+        soloInfo: true
+      });
+    }
+  }, [horarioACopiar, editando, semanaSeleccionada, obtenerClaveSemana, mostrarModal]);
+
+  const handleCambiarTurno = useCallback((usuarioId, diaKey) => {
+    if (!editando) return;
+
+    const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+    const usuarioObjetivo = usuarios.find(u => u.id === usuarioId);
+
+    if (!usuarioActual || !usuarioObjetivo) return;
+
+    // Verificar permisos usando el nuevo sistema de roles
+    if (!puedeModificarHorarios(usuarioActual, usuarioObjetivo)) {
+      mostrarModal({
+        tipo: 'error',
+        titulo: '🚫 Acceso Denegado',
+        mensaje: 'No tienes permisos para modificar este horario.\n\nConsulta con un administrador si necesitas acceso.',
+        soloInfo: true
+      });
+      return;
+    }
+
+    abrirDialogoHorario(usuarioId, diaKey);
+  }, [editando, usuarios, currentUser, abrirDialogoHorario, mostrarModal]);
+
+  const guardarHorarioPersonalizado = () => {
+    const {
+      horaInicio,
+      horaFin,
+      horaInicioLibre,
+      horaFinLibre,
+      usuarioId,
+      diaKey,
+      tipo,
+      nota,
+      // nuevos campos para tele-presencial
+      horaInicioTele,
+      horaFinTele,
+      horaInicioPres,
+      horaFinPres
+    } = horarioPersonalizado;
+
+    const nuevosHorarios = { ...horariosEditados };
+
+    if (!nuevosHorarios[usuarioId]) {
+      nuevosHorarios[usuarioId] = {};
+    }
+
+    // Si es un tipo que no suma horas
+    if (NO_SUMAN_HORAS.includes(tipo)) {
+      nuevosHorarios[usuarioId][diaKey] = {
+        tipo,
+        horaInicio: '00:00',
+        horaFin: '00:00',
+        horas: 0,
+        nota: nota || ''
+      };
+      setHorariosEditados(nuevosHorarios);
+      setDialogoHorario(false);
+      return;
+    }
+
+    // Helper: validar formato HH:mm
+    const horaRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    const validarHora = (h) => horaRegex.test(h);
+
+    // Helper: calcular horas entre dos HH:mm (soporta cruce de medianoche)
+    const calcHoras = (s, e) => {
+      const [h1, m1] = s.split(':').map(Number);
+      const [h2, m2] = e.split(':').map(Number);
+      if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+        return (h2 - h1) + (m2 - m1) / 60;
+      } else {
+        return (24 - h1 + h2) + (m2 - m1) / 60;
+      }
+    };
+
+    // Rama para el nuevo tipo "tele-presencial"
+    if (tipo === 'tele-presencial') {
+      // Ambas parejas son obligatorias
+      if (!horaInicioTele || !horaFinTele || !horaInicioPres || !horaFinPres) {
+        mostrarModal({
+          tipo: 'error',
+          titulo: '⏰ Horario obligatorio',
+          mensaje: 'Debes ingresar los horarios de Teletrabajo y Presencial para guardar la asignación.',
+          soloInfo: true
+        });
+        return;
+      }
+      // Validar formatos
+      if (!validarHora(horaInicioTele) || !validarHora(horaFinTele) || !validarHora(horaInicioPres) || !validarHora(horaFinPres)) {
+        mostrarModal({
+          tipo: 'error',
+          titulo: '⏰ Formato de Hora Inválido',
+          mensaje: 'El formato de hora debe ser HH:mm (24 horas).',
+          soloInfo: true
+        });
+        return;
+      }
+
+      const horasTele = Number(calcHoras(horaInicioTele, horaFinTele).toFixed(1));
+      const horasPres = Number(calcHoras(horaInicioPres, horaFinPres).toFixed(1));
+      const horasTrabajadas = Number((horasTele + horasPres).toFixed(1));
+
+      // Verificar exceso como en los demás tipos
+      const horasActuales = calcularHorasTotales(
+        usuarioId,
+        editando,
+        horariosEditados,
+        horarios,
+        semanaSeleccionada,
+        semanaActual,
+        {}, // horasExtras
+        (id) => obtenerUsuario(usuarios, id),
+        obtenerHorasMaximas
+      );
+      const usuario = obtenerUsuario(usuarios, usuarioId);
+      const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
+
+      if (horasActuales + horasTrabajadas > horasMaximas) {
+        const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
+        const recomendacion = generarRecomendacionPracticantes(
+          usuario,
+          exceso,
+          (horasExceso, departamentoDestino, usuarioExcedidoId) => encontrarPracticantesDisponibles(
+            horasExceso,
+            usuarios,
+            (id, edit) => calcularHorasTotales(
+              id,
+              edit,
+              horariosEditados,
+              horarios,
+              semanaSeleccionada,
+              semanaActual,
+              {},
+              (uid) => obtenerUsuario(usuarios, uid),
+              obtenerHorasMaximas
+            ),
+            obtenerHorasMaximas,
+            departamentoDestino,
+            usuarioExcedidoId
+          )
+        );
+
+        mostrarModal({
+          tipo: 'warning',
+          titulo: '⚠️ Exceso de Horas Detectado',
+          mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
+          textoConfirmar: 'Continuar de todas formas',
+          textoCancelar: 'Cancelar',
+          onConfirmar: () => {
+            nuevosHorarios[usuarioId][diaKey] = {
+              tipo,
+              horaInicioTele,
+              horaFinTele,
+              horasTele,
+              horaInicioPres,
+              horaFinPres,
+              horasPres,
+              horas: horasTrabajadas,
+              nota: nota || ''
+            };
+            setHorariosEditados(nuevosHorarios);
+            setDialogoHorario(false);
+            cerrarModal();
+          },
+          onCancelar: cerrarModal
+        });
+        return;
+      }
+
+      // Si no excede, guardar normalmente
+      nuevosHorarios[usuarioId][diaKey] = {
+        tipo,
+        horaInicioTele,
+        horaFinTele,
+        horasTele,
+        horaInicioPres,
+        horaFinPres,
+        horasPres,
+        horas: horasTrabajadas,
+        nota: nota || ''
+      };
+
+      setHorariosEditados(nuevosHorarios);
+      setDialogoHorario(false);
+      return;
+    }
+
+    // Validación general para tipos que requieren horaInicio/horaFin
+    if (!horaInicio || !horaFin) {
+      mostrarModal({
+        tipo: 'error',
+        titulo: '⏰ Horario obligatorio',
+        mensaje: 'Debes ingresar la hora de inicio y la hora de fin para guardar el horario.',
+        soloInfo: true
+      });
+      return;
+    }
+
+    if (!validarHora(horaInicio) || !validarHora(horaFin)) {
+      mostrarModal({
+        tipo: 'error',
+        titulo: '⏰ Formato de Hora Inválido',
+        mensaje: 'El formato de hora debe ser HH:mm (24 horas).\n\nEjemplos válidos:\n• 08:30\n• 14:45\n• 23:00',
+        soloInfo: true
+      });
+      return;
+    }
+
+    const inicio = convertirA24h(horaInicio);
+    const fin = convertirA24h(horaFin);
+
+    let horasTrabajadas = 0;
+    if (fin.hora > inicio.hora || (fin.hora === inicio.hora && fin.minutos > inicio.minutos)) {
+      horasTrabajadas = (fin.hora - inicio.hora) + (fin.minutos - inicio.minutos) / 60;
+    } else {
+      horasTrabajadas = (24 - inicio.hora + fin.hora) + (fin.minutos - inicio.minutos) / 60;
+    }
+
+    // Exceso chequeo (reutiliza la lógica ya existente)
+    const horasActuales = calcularHorasTotales(
+      usuarioId,
+      editando,
+      horariosEditados,
+      horarios,
+      semanaSeleccionada,
+      semanaActual,
+      {}, // horasExtras
+      (id) => obtenerUsuario(usuarios, id),
+      obtenerHorasMaximas
+    );
+    const usuario = obtenerUsuario(usuarios, usuarioId);
+    const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
+
+    if (horasActuales + horasTrabajadas > horasMaximas) {
+      const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
+      const recomendacion = generarRecomendacionPracticantes(
+        usuario,
+        exceso,
+        (horasExceso, departamentoDestino, usuarioExcedidoId) => encontrarPracticantesDisponibles(
+          horasExceso,
+          usuarios,
+          (id, edit) => calcularHorasTotales(
+            id,
+            edit,
+            horariosEditados,
+            horarios,
+            semanaSeleccionada,
+            semanaActual,
+            {},
+            (uid) => obtenerUsuario(usuarios, uid),
+            obtenerHorasMaximas
+          ),
+          obtenerHorasMaximas,
+          departamentoDestino,
+          usuarioExcedidoId
+        )
+      );
+
+      mostrarModal({
+        tipo: 'warning',
+        titulo: '⚠️ Exceso de Horas Detectado',
+        mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
+        textoConfirmar: 'Continuar de todas formas',
+        textoCancelar: 'Cancelar',
+        onConfirmar: () => {
+          if (tipo === 'tarde-libre') {
+            nuevosHorarios[usuarioId][diaKey] = {
+              tipo,
+              horaInicio,
+              horaFin,
+              horaInicioLibre: horaInicioLibre || '',
+              horaFinLibre: horaFinLibre || '',
+              horas: horasTrabajadas,
+              nota: nota || ''
+            };
+          } else {
+            nuevosHorarios[usuarioId][diaKey] = {
+              tipo,
+              horaInicio,
+              horaFin,
+              horas: horasTrabajadas,
+              nota: nota || ''
+            };
+          }
+          setHorariosEditados(nuevosHorarios);
+          setDialogoHorario(false);
+          cerrarModal();
+        },
+        onCancelar: cerrarModal
+      });
+      return;
+    }
+
+    // Guardado normal para resto de tipos
+    if (tipo === 'tarde-libre') {
+      nuevosHorarios[usuarioId][diaKey] = {
+        tipo,
+        horaInicio,
+        horaFin,
+        horaInicioLibre: horaInicioLibre || '',
+        horaFinLibre: horaFinLibre || '',
+        horas: horasTrabajadas,
+        nota: nota || ''
+      };
+    } else {
+      nuevosHorarios[usuarioId][diaKey] = {
+        tipo,
+        horaInicio,
+        horaFin,
+        horas: horasTrabajadas,
+        nota: nota || ''
+      };
+    }
+
+    setHorariosEditados(nuevosHorarios);
+    setDialogoHorario(false);
+  };
+
+  // Vuelve a agregar la función helper:
+  const calcularExceso = useCallback((usuarioId) => {
+    return calcularHorasExcedentes(
+      usuarioId,
+      editando,
+      horariosEditados,
+      horarios,
+      (id) => obtenerUsuario(usuarios, id),
+      obtenerHorasMaximas
+    );
+  }, [editando, horariosEditados, horarios, usuarios]);
+
+  // Control de acceso visual: solo usuarios con permiso pueden ver el módulo
+  const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+  if (loading) {
+    return (
+      <Container component="main" maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
+        <Paper elevation={0} sx={{ p: 4, textAlign: 'center', boxShadow: 'none', background: 'none' }}>
+          <Typography variant="h6" color="text.secondary">Cargando...</Typography>
+        </Paper>
+      </Container>
+    );
+  }
+  if (!usuarioActual || !puedeVerHorarios(usuarioActual)) {
+    return null;
+  }
+
+  // Renderizado principal del componente
+  return (
+    <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 2, md: 3 } }}>
+      <StyledPaper elevation={3}>
+        <HeaderSemana
+          departamentos={departamentos}
+          departamentoSeleccionado={departamentoSeleccionado}
+          setDepartamentoSeleccionado={setDepartamentoSeleccionado}
+          loading={loading}
+          semanaSeleccionada={semanaSeleccionada}
+          setSemanaSeleccionada={setSemanaSeleccionada}
+          yearSelected={yearSelected}
+          setYearSelected={setYearSelected}
+          monthSelected={monthSelected}
+          setMonthSelected={setMonthSelected}
+          datePickerOpen={datePickerOpen}
+          setDatePickerOpen={setDatePickerOpen}
+          anchorEl={anchorEl}
+          setAnchorEl={setAnchorEl}
+          avanzarSemana={avanzarSemana}
+          retrocederSemana={retrocederSemana}
+        />
+
+        {/* Recomendaciones de practicantes */}
+        {editando && <RecomendacionesPracticantes 
+          usuariosFiltrados={usuariosFiltrados}
+          calcularHorasExcedentes={(usuarioId) =>
+            calcularHorasExcedentes(
+              usuarioId,
+              editando,
+              horariosEditados,
+              horarios,
+              (id) => obtenerUsuario(usuarios, id),
+              obtenerHorasMaximas
+            )
+          }
+          // Pasamos un wrapper que suministra los argumentos que la utilidad espera
+          encontrarPracticantesDisponibles={(horasNecesarias, departamentoDestino = null, usuarioExcedidoId = null) =>
+            encontrarPracticantesDisponibles(
+              horasNecesarias,
+              usuarios,
+              (id, edit) => calcularHorasTotales(
+                id,
+                edit,
+                horariosEditados,
+                horarios,
+                semanaSeleccionada,
+                semanaActual,
+                {},
+                (uid) => obtenerUsuario(usuarios, uid),
+                obtenerHorasMaximas
+              ),
+              obtenerHorasMaximas,
+              departamentoDestino,
+              usuarioExcedidoId
+            )
+          }
+        />}
+        {/* Mensaje informativo sobre consideraciones */}
+        <Alert severity="info" sx={{ m: 3, mb: 1, textAlign: 'left' }}>
+          <Typography variant="body2">
+            <strong>Consideraciones importantes:</strong>
+          </Typography>
+          <Typography variant="body2" component="div" sx={{ mt: 1, textAlign: 'left' }}>
+            • Recordar el tipo de jornada según su tipo de contrato<br />
+            • Verificar disponibilidad antes de asignar horarios<br />
+            • Recordar que el descanso minimo entre jornadas es de 12 horas<br />
+            • Las horas acumuladas deben compensarse a la semana siguiente<br />
+          </Typography>
+        </Alert>
+
+        {/* Tabla de horarios */}
+        <HorariosTable
+          isMobile={isMobile}
+          isSmallMobile={isSmallMobile}
+          usuariosFiltrados={usuariosFiltrados}
+          editando={editando}
+          horarios={horarios}
+          horariosEditados={horariosEditados}
+          currentUser={usuarios.find(u => u.id === currentUser?.uid)}
+          handleCambiarTurno={handleCambiarTurno}
+          abrirInfoTurno={abrirInfoTurno}
+          handleCopiarHorario={handleCopiarHorario}
+          NO_SUMAN_HORAS={NO_SUMAN_HORAS}
+          calcularExceso={calcularExceso}
+          calcularHorasTotales={calcularHorasTotales}
+          semanaSeleccionada={semanaSeleccionada}
+          semanaActual={semanaActual}
+          obtenerUsuario={obtenerUsuario}
+          obtenerHorasMaximas={obtenerHorasMaximas}
+          diasSemana={diasSemana}
+        />
+
+        {/* Botones de acción */}
+        <Box sx={{ 
+          p: { xs: 1.5, sm: 3, md: 3 },
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          display: 'flex',
+          gap: { xs: 1, sm: 2 },
+          flexDirection: isSmallMobile ? 'column' : 'row',
+          justifyContent: 'center',
+          alignItems: 'stretch',
+          position: 'relative'
+        }}>
+          {loading && (
+            <Box sx={{
+              position: 'absolute',
+              inset: 0,
+              bgcolor: 'rgba(255,255,255,0.5)',
+              backdropFilter: 'blur(1px)',
+              borderRadius: 1,
+              zIndex: 1
+            }} />
+          )}
+          {!editando ? (
+            <>
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={iniciarEdicion}
+                disabled={loading || !puedeEditarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
+                size={isMobile ? 'medium' : 'large'}
+                fullWidth={isSmallMobile}
+                sx={{
+                  flex: isSmallMobile ? 'none' : 1,
+                  maxWidth: isSmallMobile ? '100%' : '200px'
+                }}
+              >
+                Editar Horarios
+              </Button>
+              
+              <Button 
+                variant="outlined" 
+                sx={{
+                  borderColor: '#d32f2f',
+                  color: '#d32f2f',
+                  '&:hover': {
+                    borderColor: '#b71c1c',
+                    backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                  },
+                  flex: isSmallMobile ? 'none' : 1,
+                  maxWidth: isSmallMobile ? '100%' : '200px'
+                }}
+                onClick={() => setDialogoEliminar(true)}
+                disabled={loading || !puedeEliminarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
+                size={isMobile ? 'medium' : 'large'}
+                fullWidth={isSmallMobile}
+              >
+                Eliminar Horarios
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                variant="outlined" 
+                onClick={() => {
+                  setEditando(false);
+                  setHorariosEditados({});
+                }}
+                disabled={loading}
+                size={isMobile ? 'medium' : 'large'}
+                fullWidth={isSmallMobile}
+                sx={{
+                  flex: isSmallMobile ? 'none' : 1,
+                  maxWidth: isSmallMobile ? '100%' : '200px'
+                }}
+              >
+                Cancelar
+              </Button>
+              
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={handleGuardarHorarios}
+                disabled={loading}
+                size={isMobile ? 'medium' : 'large'}
+                fullWidth={isSmallMobile}
+                sx={{
+                  flex: isSmallMobile ? 'none' : 1,
+                  maxWidth: isSmallMobile ? '100%' : '200px'
+                }}
+              >
+                Guardar Horarios
+              </Button>
+            </>
+          )}
+        </Box>
+      </StyledPaper>
+
+      {/* Diálogos */}
+      <DialogoHorario 
+        dialogoHorario={dialogoHorario}
+        setDialogoHorario={setDialogoHorario}
+        horarioPersonalizado={horarioPersonalizado}
+        setHorarioPersonalizado={setHorarioPersonalizado}
+        guardarHorarioPersonalizado={guardarHorarioPersonalizado}
+        isMobile={isMobile}
+        isSmallMobile={isSmallMobile}
+        currentUser={usuarios.find(u => u.id === currentUser?.uid) || null}
+        usuarios={usuarios}
+        editando={editando}
+        horariosEditados={horariosEditados}
+        setHorariosEditados={setHorariosEditados}
+        horarios={horarios}
+        setHorarios={setHorarios}
+        semanaSeleccionada={semanaSeleccionada}
+        obtenerClaveSemana={obtenerClaveSemana}
+      />
+      <DialogoEliminar 
+        dialogoEliminar={dialogoEliminar}
+        setDialogoEliminar={setDialogoEliminar}
+        eliminacionSeleccionada={eliminacionSeleccionada}
+        setEliminacionSeleccionada={setEliminacionSeleccionada}
+        handleEliminarSeleccionado={handleEliminarSeleccionado}
+        currentUser={currentUser}
+        usuarios={usuarios}
+        horarios={horarios}
+        isMobile={isMobile}
+        isSmallMobile={isSmallMobile}
+      />
+      <DialogoCopiar 
+        dialogoCopiar={dialogoCopiar}
+        setDialogoCopiar={setDialogoCopiar}
+        horarioACopiar={horarioACopiar}
+        setHorarioACopiar={setHorarioACopiar}
+        ejecutarCopiarHorario={ejecutarCopiarHorario}
+        editando={editando}
+        horariosEditados={horariosEditados}
+        horarios={horarios}
+      />
+      <ModalConfirmacion modalConfirmacion={modalConfirmacion} cerrarModalConfirmacion={cerrarModal} />
+      <InfoTurnoModal
+        open={infoModalOpen}
+        onClose={() => { cerrarInfoTurno(); setModalDiaKey(null); }}
+        usuario={modalUsuario}
+        turno={modalTurno}
+        diaKey={modalDiaKey}
+        semanaSeleccionada={semanaSeleccionada}
+      />
+    </Container>
+  );
+};
+
+export default Horarios;

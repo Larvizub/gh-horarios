@@ -1,0 +1,79 @@
+.App {
+  text-align: center;
+}
+
+/* Animaciones para iconos de botones */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+.icon-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+.icon-rotate {
+  animation: rotate 1.5s infinite;
+  animation-timing-function: linear;
+}
+
+.icon-bounce {
+  animation: bounce 1s infinite;
+}
+
+.icon-shake {
+  animation: shake 0.5s infinite;
+}
+
+.icon-hover-pulse:hover .MuiSvgIcon-root {
+  animation: pulse 1s infinite;
+}
+
+.icon-hover-rotate:hover .MuiSvgIcon-root {
+  animation: rotate 1s infinite linear;
+}
+
+.icon-hover-bounce:hover .MuiSvgIcon-root {
+  animation: bounce 0.8s infinite;
+}
+
+.icon-hover-shake:hover .MuiSvgIcon-root {
+  animation: shake 0.5s infinite;
+}

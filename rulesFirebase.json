@@ -1,0 +1,19 @@
+
+{
+  "rules": {
+    "usuarios": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "(!data.exists() && auth == null) || (auth != null && (auth.uid === $uid || root.child('usuarios/' + auth.uid + '/rol').val() === 'Administrador'))"
+      }
+    },
+    "horarios_registros": {
+      "$semana": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}
