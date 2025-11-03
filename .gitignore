@@ -6,9 +6,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Production build
-build/
-dist/
 
 # Environment variables
 .env
@@ -86,7 +83,6 @@ dist
 
 # Gatsby files
 .cache/
-public
 
 # Storybook build outputs
 .out
