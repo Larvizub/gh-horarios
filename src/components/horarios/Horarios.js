@@ -1204,24 +1204,53 @@ const Horarios = () => {
                 mt: 2,
               }}
             >
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                📋 Consideraciones importantes:
-              </Typography>
-              <Typography variant="body2" component="div" sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-                gap: 0.5,
-                '& span': {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                }
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 4 },
               }}>
-                <span>• Verificar tipo de jornada según contrato</span>
-                <span>• Descanso mínimo entre jornadas: 12 horas</span>
-                <span>• Verificar disponibilidad antes de asignar</span>
-                <span>• Compensar horas acumuladas la semana siguiente</span>
-              </Typography>
+                {/* Columna izquierda - Antes de asignar */}
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    fontWeight: 600, 
+                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                  }}>
+                    ℹ️ Antes de asignar:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      • Verificar tipo de jornada según contrato
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      • Verificar disponibilidad antes de asignar
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Columna derecha - Consideraciones importantes */}
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    fontWeight: 600, 
+                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                  }}>
+                    📋 Consideraciones importantes:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      • Descanso mínimo entre jornadas: 12 horas
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      • Compensar horas acumuladas la semana siguiente
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
             </ModernAlert>
 
             {/* Tabla de horarios */}
