@@ -164,6 +164,7 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   padding: theme.spacing(1.5, 3),
   borderRadius: 14,
   background: 'linear-gradient(135deg, #00830e 0%, #006c0b 100%)',
+  color: '#ffffff',
   fontSize: '0.95rem',
   fontWeight: 600,
   textTransform: 'none',
@@ -176,6 +177,7 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   },
   '&:disabled': {
     background: 'rgba(0, 0, 0, 0.12)',
+    color: 'rgba(0, 0, 0, 0.26)',
     boxShadow: 'none',
   },
 }));
