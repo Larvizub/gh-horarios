@@ -506,6 +506,10 @@ const Configuracion = () => {
     }
   };
 
+  useEffect(() => {
+    window.dispatchEvent(new Event('closeUserMenu'));
+  }, []);
+
   if (loading && !userData) {
     return (
       <PageContainer>

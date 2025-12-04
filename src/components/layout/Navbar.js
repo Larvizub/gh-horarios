@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, database } from '../../firebase/config';
@@ -226,9 +226,10 @@ const Navbar = ({ user }) => {
     setAnchorElUser(event.currentTarget);
   };
 
-  const handleCloseUserMenu = () => {
+  // Mantener la referencia estable para useEffect
+  const handleCloseUserMenu = useCallback(() => {
     setAnchorElUser(null);
-  };
+  }, []);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -262,6 +263,28 @@ const Navbar = ({ user }) => {
   };
 
   const isPathActive = (path) => location.pathname === path;
+
+  // Ejemplo de estado típico:
+  // const [anchorUser, setAnchorUser] = useState(null);
+  // const handleUserMenuOpen = (e) => setAnchorUser(e.currentTarget);
+  // const handleUserMenuClose = () => setAnchorUser(null);
+
+  // Cerrar el menú de usuario cuando cambia la ruta (soluciona el bug del menú flotante)
+  useEffect(() => {
+    // Cerrar inmediatamente el menú y el drawer cuando cambia la ubicación
+    setAnchorElUser(null);
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    // Escucha el evento global 'closeUserMenu' y cierra correctamente el menú de usuario
+    const onCloseUserMenu = () => {
+      handleCloseUserMenu();
+    };
+
+    window.addEventListener('closeUserMenu', onCloseUserMenu);
+    return () => window.removeEventListener('closeUserMenu', onCloseUserMenu);
+  }, [handleCloseUserMenu]);
 
   return (
     <>
@@ -355,21 +378,24 @@ const Navbar = ({ user }) => {
                 </IconButton>
               </Tooltip>
 
-              <StyledMenu
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-                TransitionComponent={Fade}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right',
-                }}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-              >
+              {anchorElUser && (
+                <StyledMenu
+                  id="menu-appbar"
+                  anchorEl={anchorElUser}
+                  open={Boolean(anchorElUser)}
+                  onClose={handleCloseUserMenu}
+                  TransitionComponent={Fade}
+                  disableScrollLock
+                  keepMounted={false}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                >
                 {/* Header del menú con info del usuario */}
                 <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1a1a2e' }}>
@@ -398,6 +424,7 @@ const Navbar = ({ user }) => {
                   </Typography>
                 </MenuItem>
               </StyledMenu>
+              )}
             </Box>
           </Toolbar>
         </Container>
