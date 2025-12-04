@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ref, get, set } from 'firebase/database';
 import { database } from '../../firebase/config';
-import { Container, Paper, Typography, Box, Button, useMediaQuery, useTheme, Alert } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { Container, Paper, Typography, Box, Button, useMediaQuery, useTheme, Alert, Fade, Skeleton } from '@mui/material';
+import { styled, alpha } from '@mui/material/styles';
 import { format, getYear } from 'date-fns';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CloseIcon from '@mui/icons-material/Close';
 import HeaderSemana from './HeaderSemana';
 import RecomendacionesPracticantes from './RecomendacionesPracticantes';
 import DialogoHorario from './DialogoHorario';
@@ -39,19 +43,142 @@ import { useUsuariosYHorarios } from '../../hooks/useUsuariosYHorarios';
 import { useSemana } from '../../hooks/useSemana';
 import { useModalConfirm } from '../../hooks/useModalConfirm';
 
+// Styled Components modernos
+const PageContainer = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+  background: 'linear-gradient(135deg, #f8fafc 0%, #e8f5e9 50%, #f0f9ff 100%)',
+  [theme.breakpoints.down('md')]: {
+    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)',
+  },
+}));
+
+const ContentContainer = styled(Container)(({ theme }) => ({
+  paddingTop: theme.spacing(3),
+  paddingBottom: theme.spacing(3),
+  [theme.breakpoints.down('md')]: {
+    paddingTop: theme.spacing(2),
+    paddingLeft: theme.spacing(1.5),
+    paddingRight: theme.spacing(1.5),
+  },
+}));
+
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  borderRadius: '16px',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+  borderRadius: 20,
+  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
+  border: '1px solid rgba(0, 131, 14, 0.08)',
+  background: 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(10px)',
+  overflow: 'hidden',
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '4px',
+    background: 'linear-gradient(90deg, #00830e, #4caf50, #81c784)',
+  },
   [theme.breakpoints.down('md')]: {
     padding: theme.spacing(2),
-    borderRadius: '12px',
+    borderRadius: 16,
   },
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(1.5),
-    borderRadius: '8px',
-    margin: theme.spacing(0.5),
+    borderRadius: 12,
+    margin: 0,
   },
+}));
+
+const PageTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 700,
+  fontSize: '1.75rem',
+  color: '#1a1a2e',
+  marginBottom: theme.spacing(3),
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1.5),
+  '& .icon': {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    background: 'linear-gradient(135deg, #00830e, #4caf50)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '1.25rem',
+  },
+  [theme.breakpoints.down('sm')]: {
+    fontSize: '1.35rem',
+    marginBottom: theme.spacing(2),
+    '& .icon': {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+    },
+  },
+}));
+
+const ModernAlert = styled(Alert)(({ theme }) => ({
+  borderRadius: 12,
+  border: 'none',
+  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
+  '& .MuiAlert-icon': {
+    fontSize: '1.5rem',
+  },
+  '& .MuiAlert-message': {
+    width: '100%',
+  },
+}));
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  padding: '12px 24px',
+  fontWeight: 600,
+  textTransform: 'none',
+  fontSize: '0.95rem',
+  boxShadow: 'none',
+  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 20px rgba(0, 131, 14, 0.25)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: '10px 16px',
+    fontSize: '0.875rem',
+  },
+}));
+
+const ActionButtonsContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderTop: '1px solid',
+  borderColor: alpha(theme.palette.divider, 0.5),
+  display: 'flex',
+  gap: theme.spacing(2),
+  justifyContent: 'center',
+  alignItems: 'stretch',
+  background: 'linear-gradient(180deg, transparent, rgba(0, 131, 14, 0.02))',
+  position: 'relative',
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    gap: theme.spacing(1.5),
+    flexDirection: 'column',
+  },
+}));
+
+const LoadingContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  minHeight: '60vh',
+  gap: theme.spacing(2),
 }));
 
 const Horarios = () => {
@@ -983,11 +1110,19 @@ const Horarios = () => {
   const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
   if (loading) {
     return (
-      <Container component="main" maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
-        <Paper elevation={0} sx={{ p: 4, textAlign: 'center', boxShadow: 'none', background: 'none' }}>
-          <Typography variant="h6" color="text.secondary">Cargando...</Typography>
-        </Paper>
-      </Container>
+      <PageContainer>
+        <ContentContainer maxWidth="xl">
+          <StyledPaper elevation={0}>
+            <LoadingContainer>
+              <Box sx={{ width: '100%', maxWidth: 600 }}>
+                <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 2, mb: 2 }} />
+                <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, mb: 2 }} />
+                <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 2 }} />
+              </Box>
+            </LoadingContainer>
+          </StyledPaper>
+        </ContentContainer>
+      </PageContainer>
     );
   }
   if (!usuarioActual || !puedeVerHorarios(usuarioActual)) {
@@ -996,193 +1131,220 @@ const Horarios = () => {
 
   // Renderizado principal del componente
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 2, md: 3 } }}>
-      <StyledPaper elevation={3}>
-        <HeaderSemana
-          departamentos={departamentos}
-          departamentoSeleccionado={departamentoSeleccionado}
-          setDepartamentoSeleccionado={setDepartamentoSeleccionado}
-          loading={loading}
-          semanaSeleccionada={semanaSeleccionada}
-          setSemanaSeleccionada={setSemanaSeleccionada}
-          yearSelected={yearSelected}
-          setYearSelected={setYearSelected}
-          monthSelected={monthSelected}
-          setMonthSelected={setMonthSelected}
-          datePickerOpen={datePickerOpen}
-          setDatePickerOpen={setDatePickerOpen}
-          anchorEl={anchorEl}
-          setAnchorEl={setAnchorEl}
-          avanzarSemana={avanzarSemana}
-          retrocederSemana={retrocederSemana}
-        />
+    <PageContainer>
+      <ContentContainer maxWidth="xl">
+        <Fade in timeout={400}>
+          <StyledPaper elevation={0}>
+            <PageTitle>
+              <span className="icon">📅</span>
+              Gestión de Horarios
+            </PageTitle>
 
-        {/* Recomendaciones de practicantes */}
-        {editando && <RecomendacionesPracticantes 
-          usuariosFiltrados={usuariosFiltrados}
-          calcularHorasExcedentes={(usuarioId) =>
-            calcularHorasExcedentes(
-              usuarioId,
-              editando,
-              horariosEditados,
-              horarios,
-              (id) => obtenerUsuario(usuarios, id),
-              obtenerHorasMaximas
-            )
-          }
-          // Pasamos un wrapper que suministra los argumentos que la utilidad espera
-          encontrarPracticantesDisponibles={(horasNecesarias, departamentoDestino = null, usuarioExcedidoId = null) =>
-            encontrarPracticantesDisponibles(
-              horasNecesarias,
-              usuarios,
-              (id, edit) => calcularHorasTotales(
-                id,
-                edit,
-                horariosEditados,
-                horarios,
-                semanaSeleccionada,
-                semanaActual,
-                {},
-                (uid) => obtenerUsuario(usuarios, uid),
-                obtenerHorasMaximas
-              ),
-              obtenerHorasMaximas,
-              departamentoDestino,
-              usuarioExcedidoId
-            )
-          }
-        />}
-        {/* Mensaje informativo sobre consideraciones */}
-        <Alert severity="info" sx={{ m: 3, mb: 1, textAlign: 'left' }}>
-          <Typography variant="body2">
-            <strong>Consideraciones importantes:</strong>
-          </Typography>
-          <Typography variant="body2" component="div" sx={{ mt: 1, textAlign: 'left' }}>
-            • Recordar el tipo de jornada según su tipo de contrato<br />
-            • Verificar disponibilidad antes de asignar horarios<br />
-            • Recordar que el descanso minimo entre jornadas es de 12 horas<br />
-            • Las horas acumuladas deben compensarse a la semana siguiente<br />
-          </Typography>
-        </Alert>
+            <HeaderSemana
+              departamentos={departamentos}
+              departamentoSeleccionado={departamentoSeleccionado}
+              setDepartamentoSeleccionado={setDepartamentoSeleccionado}
+              loading={loading}
+              semanaSeleccionada={semanaSeleccionada}
+              setSemanaSeleccionada={setSemanaSeleccionada}
+              yearSelected={yearSelected}
+              setYearSelected={setYearSelected}
+              monthSelected={monthSelected}
+              setMonthSelected={setMonthSelected}
+              datePickerOpen={datePickerOpen}
+              setDatePickerOpen={setDatePickerOpen}
+              anchorEl={anchorEl}
+              setAnchorEl={setAnchorEl}
+              avanzarSemana={avanzarSemana}
+              retrocederSemana={retrocederSemana}
+            />
 
-        {/* Tabla de horarios */}
-        <HorariosTable
-          isMobile={isMobile}
-          isSmallMobile={isSmallMobile}
-          usuariosFiltrados={usuariosFiltrados}
-          editando={editando}
-          horarios={horarios}
-          horariosEditados={horariosEditados}
-          currentUser={usuarios.find(u => u.id === currentUser?.uid)}
-          handleCambiarTurno={handleCambiarTurno}
-          abrirInfoTurno={abrirInfoTurno}
-          handleCopiarHorario={handleCopiarHorario}
-          NO_SUMAN_HORAS={NO_SUMAN_HORAS}
-          calcularExceso={calcularExceso}
-          calcularHorasTotales={calcularHorasTotales}
-          semanaSeleccionada={semanaSeleccionada}
-          semanaActual={semanaActual}
-          obtenerUsuario={obtenerUsuario}
-          obtenerHorasMaximas={obtenerHorasMaximas}
-          diasSemana={diasSemana}
-        />
+            {/* Recomendaciones de practicantes */}
+            {editando && <RecomendacionesPracticantes 
+              usuariosFiltrados={usuariosFiltrados}
+              calcularHorasExcedentes={(usuarioId) =>
+                calcularHorasExcedentes(
+                  usuarioId,
+                  editando,
+                  horariosEditados,
+                  horarios,
+                  (id) => obtenerUsuario(usuarios, id),
+                  obtenerHorasMaximas
+                )
+              }
+              // Pasamos un wrapper que suministra los argumentos que la utilidad espera
+              encontrarPracticantesDisponibles={(horasNecesarias, departamentoDestino = null, usuarioExcedidoId = null) =>
+                encontrarPracticantesDisponibles(
+                  horasNecesarias,
+                  usuarios,
+                  (id, edit) => calcularHorasTotales(
+                    id,
+                    edit,
+                    horariosEditados,
+                    horarios,
+                    semanaSeleccionada,
+                    semanaActual,
+                    {},
+                    (uid) => obtenerUsuario(usuarios, uid),
+                    obtenerHorasMaximas
+                  ),
+                  obtenerHorasMaximas,
+                  departamentoDestino,
+                  usuarioExcedidoId
+                )
+              }
+            />}
 
-        {/* Botones de acción */}
-        <Box sx={{ 
-          p: { xs: 1.5, sm: 3, md: 3 },
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
-          gap: { xs: 1, sm: 2 },
-          flexDirection: isSmallMobile ? 'column' : 'row',
-          justifyContent: 'center',
-          alignItems: 'stretch',
-          position: 'relative'
-        }}>
-          {loading && (
-            <Box sx={{
-              position: 'absolute',
-              inset: 0,
-              bgcolor: 'rgba(255,255,255,0.5)',
-              backdropFilter: 'blur(1px)',
-              borderRadius: 1,
-              zIndex: 1
-            }} />
-          )}
-          {!editando ? (
-            <>
-              <Button 
-                variant="contained" 
-                color="primary"
-                onClick={iniciarEdicion}
-                disabled={loading || !puedeEditarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
-                size={isMobile ? 'medium' : 'large'}
-                fullWidth={isSmallMobile}
-                sx={{
-                  flex: isSmallMobile ? 'none' : 1,
-                  maxWidth: isSmallMobile ? '100%' : '200px'
-                }}
-              >
-                Editar Horarios
-              </Button>
-              
-              <Button 
-                variant="outlined" 
-                sx={{
-                  borderColor: '#d32f2f',
-                  color: '#d32f2f',
-                  '&:hover': {
-                    borderColor: '#b71c1c',
-                    backgroundColor: 'rgba(211, 47, 47, 0.04)'
-                  },
-                  flex: isSmallMobile ? 'none' : 1,
-                  maxWidth: isSmallMobile ? '100%' : '200px'
-                }}
-                onClick={() => setDialogoEliminar(true)}
-                disabled={loading || !puedeEliminarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
-                size={isMobile ? 'medium' : 'large'}
-                fullWidth={isSmallMobile}
-              >
-                Eliminar Horarios
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button 
-                variant="outlined" 
-                onClick={() => {
-                  setEditando(false);
-                  setHorariosEditados({});
-                }}
-                disabled={loading}
-                size={isMobile ? 'medium' : 'large'}
-                fullWidth={isSmallMobile}
-                sx={{
-                  flex: isSmallMobile ? 'none' : 1,
-                  maxWidth: isSmallMobile ? '100%' : '200px'
-                }}
-              >
-                Cancelar
-              </Button>
-              
-              <Button 
-                variant="contained" 
-                color="primary"
-                onClick={handleGuardarHorarios}
-                disabled={loading}
-                size={isMobile ? 'medium' : 'large'}
-                fullWidth={isSmallMobile}
-                sx={{
-                  flex: isSmallMobile ? 'none' : 1,
-                  maxWidth: isSmallMobile ? '100%' : '200px'
-                }}
-              >
-                Guardar Horarios
-              </Button>
-            </>
-          )}
-        </Box>
-      </StyledPaper>
+            {/* Mensaje informativo sobre consideraciones */}
+            <ModernAlert 
+              severity="info" 
+              sx={{ 
+                mx: { xs: 1, sm: 2, md: 3 }, 
+                mb: 2, 
+                mt: 2,
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                📋 Consideraciones importantes:
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                gap: 0.5,
+                '& span': {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }
+              }}>
+                <span>• Verificar tipo de jornada según contrato</span>
+                <span>• Descanso mínimo entre jornadas: 12 horas</span>
+                <span>• Verificar disponibilidad antes de asignar</span>
+                <span>• Compensar horas acumuladas la semana siguiente</span>
+              </Typography>
+            </ModernAlert>
+
+            {/* Tabla de horarios */}
+            <HorariosTable
+              isMobile={isMobile}
+              isSmallMobile={isSmallMobile}
+              usuariosFiltrados={usuariosFiltrados}
+              editando={editando}
+              horarios={horarios}
+              horariosEditados={horariosEditados}
+              currentUser={usuarios.find(u => u.id === currentUser?.uid)}
+              handleCambiarTurno={handleCambiarTurno}
+              abrirInfoTurno={abrirInfoTurno}
+              handleCopiarHorario={handleCopiarHorario}
+              NO_SUMAN_HORAS={NO_SUMAN_HORAS}
+              calcularExceso={calcularExceso}
+              calcularHorasTotales={calcularHorasTotales}
+              semanaSeleccionada={semanaSeleccionada}
+              semanaActual={semanaActual}
+              obtenerUsuario={obtenerUsuario}
+              obtenerHorasMaximas={obtenerHorasMaximas}
+              diasSemana={diasSemana}
+            />
+
+            {/* Botones de acción */}
+            <ActionButtonsContainer>
+              {loading && (
+                <Box sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  bgcolor: 'rgba(255,255,255,0.7)',
+                  backdropFilter: 'blur(2px)',
+                  borderRadius: 1,
+                  zIndex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }} />
+              )}
+              {!editando ? (
+                <>
+                  <ActionButton 
+                    variant="contained" 
+                    color="primary"
+                    onClick={iniciarEdicion}
+                    disabled={loading || !puedeEditarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
+                    startIcon={<EditIcon />}
+                    sx={{
+                      flex: { xs: 1, sm: 'none' },
+                      minWidth: { sm: 180 },
+                    }}
+                  >
+                    Editar Horarios
+                  </ActionButton>
+                  
+                  <ActionButton 
+                    variant="outlined" 
+                    sx={{
+                      borderColor: '#d32f2f',
+                      color: '#d32f2f',
+                      borderWidth: 2,
+                      '&:hover': {
+                        borderColor: '#b71c1c',
+                        backgroundColor: 'rgba(211, 47, 47, 0.04)',
+                        borderWidth: 2,
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 20px rgba(211, 47, 47, 0.2)',
+                      },
+                      flex: { xs: 1, sm: 'none' },
+                      minWidth: { sm: 180 },
+                    }}
+                    onClick={() => setDialogoEliminar(true)}
+                    disabled={loading || !puedeEliminarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
+                    startIcon={<DeleteOutlineIcon />}
+                  >
+                    Eliminar Horarios
+                  </ActionButton>
+                </>
+              ) : (
+                <>
+                  <ActionButton 
+                    variant="outlined" 
+                    onClick={() => {
+                      setEditando(false);
+                      setHorariosEditados({});
+                    }}
+                    disabled={loading}
+                    startIcon={<CloseIcon />}
+                    sx={{
+                      flex: { xs: 1, sm: 'none' },
+                      minWidth: { sm: 150 },
+                      borderWidth: 2,
+                      '&:hover': {
+                        borderWidth: 2,
+                      },
+                    }}
+                  >
+                    Cancelar
+                  </ActionButton>
+                  
+                  <ActionButton 
+                    variant="contained" 
+                    color="primary"
+                    onClick={handleGuardarHorarios}
+                    disabled={loading}
+                    startIcon={<SaveIcon />}
+                    sx={{
+                      flex: { xs: 1, sm: 'none' },
+                      minWidth: { sm: 180 },
+                      background: 'linear-gradient(135deg, #00830e 0%, #4caf50 100%)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #006b0b 0%, #388e3c 100%)',
+                      },
+                    }}
+                  >
+                    Guardar Horarios
+                  </ActionButton>
+                </>
+              )}
+            </ActionButtonsContainer>
+          </StyledPaper>
+        </Fade>
+      </ContentContainer>
 
       {/* Diálogos */}
       <DialogoHorario 
@@ -1234,7 +1396,7 @@ const Horarios = () => {
         diaKey={modalDiaKey}
         semanaSeleccionada={semanaSeleccionada}
       />
-    </Container>
+    </PageContainer>
   );
 };
 

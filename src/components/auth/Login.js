@@ -8,74 +8,175 @@ import {
   Button, 
   Paper, 
   Typography, 
-  Box, 
-  Container, 
+  Box,
   CircularProgress, 
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  InputAdornment,
+  IconButton,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import EmailIcon from '@mui/icons-material/Email';
+import LockIcon from '@mui/icons-material/Lock';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { ref, get, update } from 'firebase/database';
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
+// Contenedor principal con fondo moderno
+const LoginContainer = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  borderRadius: '16px',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-}));
-
-const Logo = styled('img')({
-  width: '200px',
-  marginBottom: '24px'
-});
-
-const AnimatedButton = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(3),
-  marginBottom: theme.spacing(2),
-  paddingTop: theme.spacing(1.5),
-  paddingBottom: theme.spacing(1.5),
-  borderRadius: '8px',
-  backgroundColor: 'var(--primary-color)',
-  transition: 'all 0.3s ease',
+  justifyContent: 'center',
+  background: 'linear-gradient(135deg, #f8fafc 0%, #e8f5e9 50%, #c8e6c9 100%)',
   position: 'relative',
   overflow: 'hidden',
-  '&:hover': {
-    backgroundColor: '#006c0b',
-    transform: 'translateY(-3px)',
-    boxShadow: '0 6px 15px rgba(0, 0, 0, 0.2)'
-  },
-  '&:hover .MuiSvgIcon-root': {
-    animation: 'pulse 1s infinite'
+  padding: theme.spacing(2),
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: '-50%',
+    right: '-20%',
+    width: '70%',
+    height: '100%',
+    background: 'radial-gradient(circle, rgba(0, 131, 14, 0.08) 0%, transparent 70%)',
+    borderRadius: '50%',
   },
   '&::after': {
     content: '""',
     position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: '5px',
-    height: '5px',
-    background: 'rgba(255, 255, 255, 0.5)',
-    opacity: 0,
-    borderRadius: '100%',
-    transform: 'scale(1, 1) translate(-50%)',
-    transformOrigin: '50% 50%'
+    bottom: '-30%',
+    left: '-10%',
+    width: '50%',
+    height: '80%',
+    background: 'radial-gradient(circle, rgba(0, 131, 14, 0.05) 0%, transparent 70%)',
+    borderRadius: '50%',
   },
-  '&:focus:not(:active)::after': {
-    animation: 'ripple 1s ease-out'
-  }
+}));
+
+// Card de login con glassmorphism
+const LoginCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(5),
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  borderRadius: 28,
+  background: 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(20px)',
+  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.5)',
+  border: '1px solid rgba(255, 255, 255, 0.8)',
+  position: 'relative',
+  zIndex: 1,
+  maxWidth: 440,
+  width: '100%',
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(3.5),
+    borderRadius: 24,
+    margin: theme.spacing(1),
+  },
+}));
+
+// Logo con animación sutil
+const Logo = styled('img')({
+  width: 180,
+  marginBottom: 32,
+  filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
+  transition: 'transform 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.02)',
+  },
+});
+
+// Input estilizado
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 14,
+    backgroundColor: 'rgba(248, 250, 252, 0.8)',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: 'rgba(248, 250, 252, 1)',
+    },
+    '&.Mui-focused': {
+      backgroundColor: '#ffffff',
+      boxShadow: '0 0 0 3px rgba(0, 131, 14, 0.1)',
+    },
+    '& fieldset': {
+      borderColor: 'rgba(0, 0, 0, 0.08)',
+      borderWidth: 1.5,
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(0, 131, 14, 0.3)',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#00830e',
+      borderWidth: 2,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 500,
+  },
+}));
+
+// Botón principal con gradiente
+const PrimaryButton = styled(Button)(({ theme }) => ({
+  marginTop: theme.spacing(3),
+  marginBottom: theme.spacing(2),
+  padding: theme.spacing(1.75),
+  borderRadius: 14,
+  background: 'linear-gradient(135deg, #00830e 0%, #006c0b 100%)',
+  fontSize: '1rem',
+  fontWeight: 600,
+  textTransform: 'none',
+  boxShadow: '0 4px 14px rgba(0, 131, 14, 0.35)',
+  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&:hover': {
+    background: 'linear-gradient(135deg, #006c0b 0%, #005a09 100%)',
+    boxShadow: '0 6px 20px rgba(0, 131, 14, 0.45)',
+    transform: 'translateY(-2px)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
+  },
+  '&:disabled': {
+    background: 'rgba(0, 0, 0, 0.12)',
+    boxShadow: 'none',
+  },
+}));
+
+// Botón secundario
+const SecondaryButton = styled(Button)(({ theme }) => ({
+  padding: theme.spacing(1.5),
+  borderRadius: 14,
+  borderColor: 'rgba(0, 131, 14, 0.3)',
+  borderWidth: 1.5,
+  color: '#00830e',
+  fontWeight: 500,
+  textTransform: 'none',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: '#00830e',
+    borderWidth: 1.5,
+    backgroundColor: alpha('#00830e', 0.04),
+    transform: 'translateY(-1px)',
+  },
 }));
 
 const Login = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [openChangePassword, setOpenChangePassword] = useState(false);
   const [openInstructions, setOpenInstructions] = useState(false);
@@ -103,17 +204,16 @@ const Login = () => {
       }
 
       if (debeCambiarPassword) {
-        // Mostrar diálogo para cambiar contraseña
         setOpenChangePassword(true);
         setLoading(false);
         return;
       }
 
-      toast.success('Inicio de sesión exitoso');
+      toast.success('¡Bienvenido de vuelta!');
       navigate('/dashboard');
     } catch (error) {
       console.error('Error al iniciar sesión:', error.message);
-      toast.error('Error al iniciar sesión: ' + error.message);
+      toast.error('Credenciales incorrectas. Verifica tu email y contraseña.');
     } finally {
       setLoading(false);
     }
@@ -155,117 +255,162 @@ const Login = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <StyledPaper elevation={6}>
-          <Logo
-            src="https://costaricacc.com/cccr/Logocccr.png"
-            alt="Logo Centro de Convenciones"
-          />
-          <Typography component="h1" variant="h4" sx={{ mb: 3, color: 'var(--primary-color)', fontWeight: 'bold' }}>
-            Iniciar Sesión
-          </Typography>
-          <Box component="form" onSubmit={handleLogin} sx={{ mt: 1, width: '100%' }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Correo Electrónico"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              variant="outlined"
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Contraseña"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              variant="outlined"
-            />
-            <AnimatedButton
-              type="submit"
-              fullWidth
-              variant="contained"
-              disabled={loading}
-              startIcon={<LockOpenIcon />}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Iniciar Sesión'}
-            </AnimatedButton>
+    <LoginContainer>
+      <LoginCard elevation={0}>
+        <Logo
+          src="https://costaricacc.com/cccr/Logocccr.png"
+          alt="Logo Centro de Convenciones"
+        />
+        
+        <Typography 
+          component="h1" 
+          variant="h4" 
+          sx={{ 
+            mb: 1, 
+            color: '#1a1a2e', 
+            fontWeight: 700,
+            textAlign: 'center',
+          }}
+        >
+          ¡Bienvenido!
+        </Typography>
+        
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            mb: 4, 
+            color: '#64748b',
+            textAlign: 'center',
+          }}
+        >
+          Ingresa tus credenciales para continuar
+        </Typography>
 
-            {/* Botón para crear usuario */}
-            <Button
+        <Box 
+          component="form" 
+          onSubmit={handleLogin} 
+          sx={{ width: '100%' }}
+        >
+          <StyledTextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Correo Electrónico"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <EmailIcon sx={{ color: '#64748b' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <StyledTextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Contraseña"
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockIcon sx={{ color: '#64748b' }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                    sx={{ color: '#64748b' }}
+                  >
+                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <PrimaryButton
+            type="submit"
+            fullWidth
+            variant="contained"
+            disabled={loading}
+            startIcon={loading ? null : <LockOpenIcon />}
+          >
+            {loading ? (
+              <CircularProgress size={24} sx={{ color: 'white' }} />
+            ) : (
+              'Iniciar Sesión'
+            )}
+          </PrimaryButton>
+
+          <Box sx={{ display: 'flex', gap: 1.5, mt: 2, flexDirection: isMobile ? 'column' : 'row' }}>
+            <SecondaryButton
               fullWidth
               variant="outlined"
               onClick={() => navigate('/registro')}
-              sx={{ 
-                mt: 2, 
-                borderRadius: '8px',
-                borderColor: 'var(--primary-color)',
-                color: 'var(--primary-color)',
-                '&:hover': {
-                  borderColor: '#006c0b',
-                  bgcolor: 'rgba(0, 108, 11, 0.04)'
-                }
-              }}
               startIcon={<PersonAddIcon />}
             >
               Crear Usuario
-            </Button>
+            </SecondaryButton>
 
-            {/* Botón para instrucciones */}
-            <Button
+            <SecondaryButton
               fullWidth
               variant="outlined"
               onClick={() => setOpenInstructions(true)}
-              sx={{ 
-                mt: 1, 
-                borderRadius: '8px',
-                borderColor: 'var(--primary-color)',
-                color: 'var(--primary-color)',
-                '&:hover': {
-                  borderColor: '#006c0b',
-                  bgcolor: 'rgba(0, 108, 11, 0.04)'
-                }
-              }}
               startIcon={<HelpOutlineIcon />}
             >
-              Instrucciones de Uso
-            </Button>
+              Ayuda
+            </SecondaryButton>
           </Box>
-        </StyledPaper>
-      </Box>
+        </Box>
+      </LoginCard>
+
+      {/* Texto inferior */}
+      <Typography 
+        variant="caption" 
+        sx={{ 
+          mt: 4, 
+          color: '#94a3b8',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        Centro de Convenciones de Costa Rica © {new Date().getFullYear()}
+      </Typography>
 
       {/* Modal para cambiar contraseña */}
       <Dialog
         open={openChangePassword}
         onClose={() => {}}
-        aria-labelledby="change-password-dialog-title"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            p: 1,
+          }
+        }}
       >
-        <DialogTitle id="change-password-dialog-title">
-          Cambio de Contraseña
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          🔐 Cambio de Contraseña
         </DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText sx={{ mb: 2 }}>
             Por seguridad, debes cambiar tu contraseña inicial. Por favor, introduce una nueva contraseña de al menos 6 caracteres.
           </DialogContentText>
-          <TextField
+          <StyledTextField
             autoFocus
             margin="dense"
             label="Nueva Contraseña"
@@ -273,29 +418,27 @@ const Login = () => {
             fullWidth
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            variant="outlined"
           />
-          <TextField
+          <StyledTextField
             margin="dense"
             label="Confirmar Nueva Contraseña"
             type="password"
             fullWidth
             value={confirmNewPassword}
             onChange={(e) => setConfirmNewPassword(e.target.value)}
-            variant="outlined"
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleSkipPasswordChange} color="primary">
-            Omitir por ahora
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleSkipPasswordChange} sx={{ color: '#64748b' }}>
+            Omitir
           </Button>
           <Button 
             onClick={handleChangePassword} 
-            color="primary"
-            disabled={loading}
             variant="contained"
+            disabled={loading}
+            sx={{ borderRadius: 2 }}
           >
-            {loading ? <CircularProgress size={24} /> : 'Cambiar Contraseña'}
+            {loading ? <CircularProgress size={24} /> : 'Cambiar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -304,61 +447,86 @@ const Login = () => {
       <Dialog
         open={openInstructions}
         onClose={() => setOpenInstructions(false)}
-        aria-labelledby="instructions-dialog-title"
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: '80vh',
+          }
+        }}
       >
-        <DialogTitle id="instructions-dialog-title">
-          Guía de Uso de la Plataforma de Horarios
+        <DialogTitle sx={{ fontWeight: 600, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+          📖 Guía de Uso de la Plataforma
         </DialogTitle>
-        <DialogContent dividers>
-          <Typography gutterBottom variant="h6">1. Inicio de Sesión</Typography>
-          <DialogContentText component="div" paragraph>
-            - Ingresa tu correo electrónico y contraseña proporcionados.
-            <br />
-            - Si es tu primer inicio de sesión, el sistema te pedirá que cambies tu contraseña por una nueva y segura.
-          </DialogContentText>
+        <DialogContent dividers sx={{ pt: 3 }}>
+          <Box sx={{ '& > *': { mb: 3 } }}>
+            <Box>
+              <Typography variant="h6" sx={{ color: '#00830e', fontWeight: 600, mb: 1 }}>
+                1. Inicio de Sesión
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ingresa tu correo electrónico y contraseña proporcionados. Si es tu primer inicio de sesión, el sistema te pedirá que cambies tu contraseña.
+              </Typography>
+            </Box>
 
-          <Typography gutterBottom variant="h6">2. Dashboard</Typography>
-          <DialogContentText component="div" paragraph>
-            - Al iniciar sesión, verás el Dashboard, que te muestra un resumen de tu información, horas trabajadas en la semana y otras estadísticas relevantes.
-          </DialogContentText>
+            <Box>
+              <Typography variant="h6" sx={{ color: '#00830e', fontWeight: 600, mb: 1 }}>
+                2. Dashboard
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Al iniciar sesión, verás el Dashboard con un resumen de tu información, horas trabajadas y estadísticas relevantes.
+              </Typography>
+            </Box>
 
-          <Typography gutterBottom variant="h6">3. Módulo de Horarios</Typography>
-          <DialogContentText component="div" paragraph>
-            - Aquí puedes ver y gestionar los horarios de tu departamento.
-            <br />
-            - Para hacer cambios, haz clic en el botón "Editar Horarios".
-            <br />
-            - Haz clic en una casilla de día/usuario para asignar o cambiar un turno (presencial, teletrabajo, descanso, etc.).
-            <br />
-            - Una vez finalizados los cambios, no olvides hacer clic en "Guardar Horarios".
-          </DialogContentText>
+            <Box>
+              <Typography variant="h6" sx={{ color: '#00830e', fontWeight: 600, mb: 1 }}>
+                3. Módulo de Horarios
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Aquí puedes ver y gestionar los horarios de tu departamento. Haz clic en "Editar Horarios" para hacer cambios y no olvides "Guardar Horarios" al finalizar.
+              </Typography>
+            </Box>
 
-          <Typography gutterBottom variant="h6">4. Módulo de Consulta de Horarios</Typography>
-          <DialogContentText component="div" paragraph>
-            - Esta sección te permite visualizar los horarios de todos los colaboradores de la empresa.
-            <br />
-            - Puedes usar los filtros por semana, departamento o buscar un colaborador específico para encontrar la información que necesitas.
-          </DialogContentText>
+            <Box>
+              <Typography variant="h6" sx={{ color: '#00830e', fontWeight: 600, mb: 1 }}>
+                4. Consulta de Horarios
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Visualiza los horarios de todos los colaboradores. Usa los filtros por semana, departamento o busca un colaborador específico.
+              </Typography>
+            </Box>
 
-          <Typography gutterBottom variant="h6">5. Módulo de Personal (Administradores y Talento Humano)</Typography>
-          <DialogContentText component="div" paragraph>
-            - Si tienes los permisos necesarios, aquí podrás gestionar a los usuarios del sistema. Puedes agregar nuevos usuarios, editar su información (nombre, cargo, departamento, rol) y eliminarlos.
-          </DialogContentText>
+            <Box>
+              <Typography variant="h6" sx={{ color: '#00830e', fontWeight: 600, mb: 1 }}>
+                5. Módulo de Personal
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Si tienes los permisos necesarios, aquí podrás gestionar usuarios: agregar, editar información o eliminar colaboradores.
+              </Typography>
+            </Box>
 
-          <Typography gutterBottom variant="h6">6. Configuración</Typography>
-          <DialogContentText component="div" paragraph>
-            - En la esquina superior derecha, al hacer clic en tu avatar, puedes acceder a tu "Perfil". Desde aquí puedes actualizar tu información personal y cambiar tu contraseña en cualquier momento.
-          </DialogContentText>
+            <Box>
+              <Typography variant="h6" sx={{ color: '#00830e', fontWeight: 600, mb: 1 }}>
+                6. Configuración
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Accede a tu perfil haciendo clic en tu avatar en la esquina superior derecha. Desde ahí puedes actualizar tu información y cambiar tu contraseña.
+              </Typography>
+            </Box>
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenInstructions(false)} color="primary" variant="contained">
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => setOpenInstructions(false)} 
+            variant="contained"
+            sx={{ borderRadius: 2 }}
+          >
             Entendido
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </LoginContainer>
   );
 };
 

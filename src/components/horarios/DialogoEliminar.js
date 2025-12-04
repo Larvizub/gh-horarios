@@ -1,7 +1,102 @@
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button, FormControl, InputLabel, Select, MenuItem, Box, Alert, Grid } from '@mui/material';
+import { styled, alpha } from '@mui/material/styles';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import PersonIcon from '@mui/icons-material/Person';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import CloseIcon from '@mui/icons-material/Close';
 
 const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+// Styled Components
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialog-paper': {
+    borderRadius: 20,
+    overflow: 'hidden',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  },
+}));
+
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #d32f2f 0%, #ef5350 100%)',
+  color: 'white',
+  padding: theme.spacing(2.5, 3),
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1.5),
+  '& .MuiSvgIcon-root': {
+    fontSize: 28,
+  },
+}));
+
+const ContentBox = styled(DialogContent)(({ theme }) => ({
+  padding: theme.spacing(3),
+  backgroundColor: '#fafafa',
+}));
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: 'white',
+    transition: 'all 0.2s ease',
+    '&.Mui-focused': {
+      boxShadow: '0 0 0 3px rgba(211, 47, 47, 0.1)',
+    },
+  },
+}));
+
+const DayButton = styled(Button)(({ selected, disabled: isDisabled }) => ({
+  borderRadius: 12,
+  padding: '12px 16px',
+  fontWeight: 600,
+  textTransform: 'none',
+  transition: 'all 0.2s ease',
+  ...(selected && {
+    background: 'linear-gradient(135deg, #d32f2f 0%, #ef5350 100%)',
+    color: 'white',
+    '&:hover': {
+      background: 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)',
+      transform: 'translateY(-2px)',
+      boxShadow: '0 6px 16px rgba(211, 47, 47, 0.3)',
+    },
+  }),
+  ...(!selected && !isDisabled && {
+    backgroundColor: 'white',
+    borderColor: 'rgba(0, 0, 0, 0.15)',
+    '&:hover': {
+      borderColor: '#d32f2f',
+      backgroundColor: alpha('#d32f2f', 0.04),
+    },
+  }),
+}));
+
+const StyledAlert = styled(Alert)(({ theme }) => ({
+  borderRadius: 12,
+  '& .MuiAlert-icon': {
+    alignItems: 'center',
+  },
+}));
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  padding: '12px 24px',
+  fontWeight: 600,
+  textTransform: 'none',
+  transition: 'all 0.2s ease',
+}));
+
+const DeleteButton = styled(ActionButton)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #d32f2f 0%, #ef5350 100%)',
+  '&:hover': {
+    background: 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 20px rgba(211, 47, 47, 0.3)',
+  },
+  '&:disabled': {
+    background: '#e0e0e0',
+  },
+}));
 
 const DialogoEliminar = ({
   dialogoEliminar,
@@ -36,7 +131,6 @@ const DialogoEliminar = ({
         usuarioId: null,
         dia: null,
         diasSeleccionados: [],
-        // tipo: prev.tipo // No forzar tipo, mantener el último seleccionado
       }));
     }
     // eslint-disable-next-line
@@ -47,168 +141,183 @@ const DialogoEliminar = ({
   const diasConHorarios = Object.keys(horariosUsuarioActual);
 
   return (
-    <Dialog 
+    <StyledDialog 
       open={dialogoEliminar} 
       onClose={() => setDialogoEliminar(false)}
       fullScreen={isSmallMobile}
       maxWidth={isMobile ? 'sm' : 'md'}
       fullWidth
     >
-      <DialogTitle>
+      <StyledDialogTitle>
+        <DeleteOutlineIcon />
         Eliminar Horarios
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ mt: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Tipo de eliminación</InputLabel>
+      </StyledDialogTitle>
+      <ContentBox>
+        <StyledFormControl fullWidth>
+          <InputLabel>Tipo de eliminación</InputLabel>
+          <Select
+            value={eliminacionSeleccionada.tipo}
+            onChange={(e) => {
+              setEliminacionSeleccionada(prev => ({ 
+                ...prev, 
+                tipo: e.target.value,
+                diasSeleccionados: [],
+                usuarioId: null,
+                dia: null
+              }));
+            }}
+            size={isMobile ? 'small' : 'medium'}
+            label="Tipo de eliminación"
+          >
+            <MenuItem value="mis-dias">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                Mis días específicos
+              </Box>
+            </MenuItem>
+            {esAdministrador && (
+              <>
+                <MenuItem value="todo">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WarningAmberIcon sx={{ fontSize: 18, color: 'error.main' }} />
+                    Todos los horarios (Solo Admin)
+                  </Box>
+                </MenuItem>
+                <MenuItem value="usuario">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PersonIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    Por usuario (Solo Admin)
+                  </Box>
+                </MenuItem>
+                <MenuItem value="dia">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    Por día completo (Solo Admin)
+                  </Box>
+                </MenuItem>
+              </>
+            )}
+          </Select>
+        </StyledFormControl>
+
+        {!esAdministrador && (
+          <StyledAlert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              Solo puedes eliminar tus propios horarios. Los administradores tienen permisos adicionales.
+            </Typography>
+          </StyledAlert>
+        )}
+
+        {eliminacionSeleccionada.tipo === 'mis-dias' && (
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+              Selecciona los días que deseas eliminar:
+            </Typography>
+            
+            {diasConHorarios.length === 0 ? (
+              <StyledAlert severity="warning">
+                <Typography variant="body2">
+                  No tienes horarios asignados en esta semana.
+                </Typography>
+              </StyledAlert>
+            ) : (
+              <Grid container spacing={1.5}>
+                {diasSemana.map((dia, index) => {
+                  const diaKey = `dia${index + 1}`;
+                  const tieneHorario = diasConHorarios.includes(diaKey);
+                  const estaSeleccionado = eliminacionSeleccionada.diasSeleccionados.includes(diaKey);
+                  
+                  return (
+                    <Grid item xs={6} sm={4} key={diaKey}>
+                      <DayButton
+                        variant={estaSeleccionado ? "contained" : "outlined"}
+                        fullWidth
+                        disabled={!tieneHorario}
+                        onClick={() => toggleDiaSeleccionado(diaKey)}
+                        selected={estaSeleccionado}
+                      >
+                        {dia} {!tieneHorario && '•'}
+                      </DayButton>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            )}
+
+            {eliminacionSeleccionada.diasSeleccionados.length > 0 && (
+              <StyledAlert severity="warning" sx={{ mt: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  Se eliminarán: {eliminacionSeleccionada.diasSeleccionados.map(dia => {
+                    const diaIndex = parseInt(dia.replace('dia', '')) - 1;
+                    return diasSemana[diaIndex];
+                  }).join(', ')}
+                </Typography>
+              </StyledAlert>
+            )}
+          </Box>
+        )}
+
+        {esAdministrador && eliminacionSeleccionada.tipo === 'usuario' && (
+          <StyledFormControl fullWidth sx={{ mt: 3 }}>
+            <InputLabel>Usuario</InputLabel>
             <Select
-              value={eliminacionSeleccionada.tipo}
-              onChange={(e) => {
-                setEliminacionSeleccionada(prev => ({ 
-                  ...prev, 
-                  tipo: e.target.value,
-                  diasSeleccionados: [],
-                  usuarioId: null,
-                  dia: null
-                }));
-              }}
+              value={eliminacionSeleccionada.usuarioId || ''}
+              onChange={(e) => setEliminacionSeleccionada(prev => ({ ...prev, usuarioId: e.target.value }))}
               size={isMobile ? 'small' : 'medium'}
+              label="Usuario"
             >
-              <MenuItem value="mis-dias">Mis días específicos</MenuItem>
-              {esAdministrador && (
-                <>
-                  <MenuItem value="todo">Todos los horarios (Solo Admin)</MenuItem>
-                  <MenuItem value="usuario">Por usuario (Solo Admin)</MenuItem>
-                  <MenuItem value="dia">Por día completo (Solo Admin)</MenuItem>
-                </>
-              )}
+              {usuarios.map(usuario => (
+                <MenuItem key={usuario.id} value={usuario.id}>
+                  {usuario.nombre} {usuario.apellidos}
+                  {usuario.id === currentUser?.uid && ' (Tú)'}
+                </MenuItem>
+              ))}
             </Select>
-          </FormControl>
+          </StyledFormControl>
+        )}
 
-          {!esAdministrador && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                Solo puedes eliminar tus propios horarios. Los administradores tienen permisos adicionales.
-              </Typography>
-            </Alert>
-          )}
+        {esAdministrador && eliminacionSeleccionada.tipo === 'dia' && (
+          <StyledFormControl fullWidth sx={{ mt: 3 }}>
+            <InputLabel>Día</InputLabel>
+            <Select
+              value={eliminacionSeleccionada.dia || ''}
+              onChange={(e) => setEliminacionSeleccionada(prev => ({ ...prev, dia: e.target.value }))}
+              size={isMobile ? 'small' : 'medium'}
+              label="Día"
+            >
+              {diasSemana.map((dia, index) => (
+                <MenuItem key={dia} value={`dia${index + 1}`}>
+                  {dia}
+                </MenuItem>
+              ))}
+            </Select>
+          </StyledFormControl>
+        )}
 
-          {eliminacionSeleccionada.tipo === 'mis-dias' && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-                Selecciona los días que deseas eliminar:
-              </Typography>
-              
-              {diasConHorarios.length === 0 ? (
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    No tienes horarios asignados en esta semana.
-                  </Typography>
-                </Alert>
-              ) : (
-                <Grid container spacing={1}>
-                  {diasSemana.map((dia, index) => {
-                    const diaKey = `dia${index + 1}`;
-                    const tieneHorario = diasConHorarios.includes(diaKey);
-                    const estaSeleccionado = eliminacionSeleccionada.diasSeleccionados.includes(diaKey);
-                    
-                    return (
-                      <Grid item xs={12} sm={6} md={4} key={diaKey}>
-                        <Button
-                          variant={estaSeleccionado ? "contained" : "outlined"}
-                          sx={{
-                            backgroundColor: estaSeleccionado ? '#d32f2f' : 'transparent',
-                            color: estaSeleccionado ? 'white' : 'inherit',
-                            borderColor: estaSeleccionado ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)',
-                            '&:hover': {
-                              backgroundColor: estaSeleccionado ? '#b71c1c' : 'rgba(211, 47, 47, 0.04)',
-                              borderColor: '#d32f2f'
-                            }
-                          }}
-                          fullWidth
-                          disabled={!tieneHorario}
-                          onClick={() => toggleDiaSeleccionado(diaKey)}
-                        >
-                          {dia} {!tieneHorario && '(Sin horario)'}
-                        </Button>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              )}
-
-              {eliminacionSeleccionada.diasSeleccionados.length > 0 && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    Se eliminarán los horarios de: {eliminacionSeleccionada.diasSeleccionados.map(dia => {
-                      const diaIndex = parseInt(dia.replace('dia', '')) - 1;
-                      return diasSemana[diaIndex];
-                    }).join(', ')}
-                  </Typography>
-                </Alert>
-              )}
-            </Box>
-          )}
-
-          {esAdministrador && eliminacionSeleccionada.tipo === 'usuario' && (
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Usuario</InputLabel>
-              <Select
-                value={eliminacionSeleccionada.usuarioId || ''}
-                onChange={(e) => setEliminacionSeleccionada(prev => ({ ...prev, usuarioId: e.target.value }))}
-                size={isMobile ? 'small' : 'medium'}
-              >
-                {usuarios.map(usuario => (
-                  <MenuItem key={usuario.id} value={usuario.id}>
-                    {usuario.nombre} {usuario.apellidos}
-                    {usuario.id === currentUser?.uid && ' (Tú)'}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-
-          {esAdministrador && eliminacionSeleccionada.tipo === 'dia' && (
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Día</InputLabel>
-              <Select
-                value={eliminacionSeleccionada.dia || ''}
-                onChange={(e) => setEliminacionSeleccionada(prev => ({ ...prev, dia: e.target.value }))}
-                size={isMobile ? 'small' : 'medium'}
-              >
-                {diasSemana.map((dia, index) => (
-                  <MenuItem key={dia} value={`dia${index + 1}`}>
-                    {dia}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-
-          {esAdministrador && eliminacionSeleccionada.tipo === 'todo' && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                ⚠️ Esta acción eliminará TODOS los horarios de TODOS los usuarios para esta semana.
-              </Typography>
-            </Alert>
-          )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button 
+        {esAdministrador && eliminacionSeleccionada.tipo === 'todo' && (
+          <StyledAlert severity="error" sx={{ mt: 3 }} icon={<WarningAmberIcon />}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              ⚠️ Esta acción eliminará TODOS los horarios de TODOS los usuarios para esta semana.
+            </Typography>
+          </StyledAlert>
+        )}
+      </ContentBox>
+      <DialogActions sx={{ 
+        p: 3, 
+        gap: 1.5,
+        backgroundColor: '#fafafa',
+        borderTop: '1px solid rgba(0, 0, 0, 0.06)'
+      }}>
+        <ActionButton 
           onClick={() => setDialogoEliminar(false)}
+          startIcon={<CloseIcon />}
         >
           Cancelar
-        </Button>
-        <Button 
+        </ActionButton>
+        <DeleteButton 
           onClick={handleEliminarSeleccionado} 
           variant="contained" 
-          sx={{
-            backgroundColor: '#d32f2f',
-            '&:hover': {
-              backgroundColor: '#b71c1c'
-            }
-          }}
+          startIcon={<DeleteOutlineIcon />}
           disabled={
             (eliminacionSeleccionada.tipo === 'mis-dias' && eliminacionSeleccionada.diasSeleccionados.length === 0) ||
             (eliminacionSeleccionada.tipo === 'usuario' && (!eliminacionSeleccionada.usuarioId || eliminacionSeleccionada.usuarioId === '')) ||
@@ -216,9 +325,9 @@ const DialogoEliminar = ({
           }
         >
           Eliminar
-        </Button>
+        </DeleteButton>
       </DialogActions>
-    </Dialog>
+    </StyledDialog>
   );
 };
 

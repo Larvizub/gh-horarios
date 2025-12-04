@@ -4,11 +4,9 @@ import { database, auth } from '../../firebase/config';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { 
-  obtenerMensajeRestriccionHoras, 
   puedeModificarTipoContrato, 
   puedeAsignarRoles,
   obtenerColorRol,
-  obtenerDescripcionRol,
   TIPOS_CONTRATO,
   ROLES 
 } from '../../utils/contratoUtils';
@@ -31,7 +29,6 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Tooltip,
   Avatar,
   Chip,
   FormControl,
@@ -39,100 +36,156 @@ import {
   MenuItem,
   useTheme,
   useMediaQuery,
-  Checkbox,
-  FormControlLabel,
-  FormGroup,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Card,
+  CardContent,
+  Skeleton,
+  InputAdornment,
+  TextField,
+  Fab,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import WorkIcon from '@mui/icons-material/Work';
+import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
+import PeopleIcon from '@mui/icons-material/People';
+import EmailIcon from '@mui/icons-material/Email';
+import BusinessIcon from '@mui/icons-material/Business';
 
-// Estilo coherente con el resto de la app
-const StyledPaper = styled(Paper)(({ theme }) => ({
+// Styled Components
+const PageContainer = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+  paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)',
+  [theme.breakpoints.up('md')]: {
+    paddingBottom: theme.spacing(4),
+  },
+}));
+
+const HeaderCard = styled(Paper)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #00830e 0%, #006c0b 50%, #005a09 100%)',
+  color: 'white',
+  borderRadius: 24,
   padding: theme.spacing(3),
-  borderRadius: '16px',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
-  background: 'linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%)',
+  marginBottom: theme.spacing(3),
+  position: 'relative',
+  overflow: 'hidden',
+  boxShadow: '0 10px 40px rgba(0, 131, 14, 0.3)',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: '-50%',
+    right: '-20%',
+    width: '60%',
+    height: '150%',
+    background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+    borderRadius: '50%',
+  },
+  [theme.breakpoints.down('sm')]: {
+    borderRadius: 0,
+    marginLeft: theme.spacing(-2),
+    marginRight: theme.spacing(-2),
+    marginTop: theme.spacing(-2),
+    padding: theme.spacing(2.5),
+  },
+}));
+
+const StyledCard = styled(Card)(({ theme }) => ({
+  borderRadius: 20,
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+  border: '1px solid rgba(0, 0, 0, 0.04)',
+  overflow: 'hidden',
+}));
+
+const SearchBar = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 16,
+    backgroundColor: 'white',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+    },
+    '&.Mui-focused': {
+      boxShadow: '0 0 0 3px rgba(0, 131, 14, 0.1)',
+    },
+    '& fieldset': {
+      borderColor: 'rgba(0, 0, 0, 0.08)',
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(0, 131, 14, 0.3)',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#00830e',
+      borderWidth: 2,
+    },
+  },
+}));
+
+// Card para vista móvil
+const UserCard = styled(Card)(({ theme }) => ({
+  borderRadius: 16,
+  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
+  border: '1px solid rgba(0, 0, 0, 0.04)',
+  marginBottom: theme.spacing(2),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
+  },
 }));
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
-  borderRadius: '12px',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-  marginTop: theme.spacing(2),
-  background: 'white',
+  borderRadius: 16,
+  boxShadow: 'none',
+  border: '1px solid rgba(0, 0, 0, 0.04)',
   width: '100%',
-  // En móvil permitir scroll horizontal, en desktop expandir
-  [theme.breakpoints.down('md')]: {
-    overflowX: 'auto',
-  },
-  [theme.breakpoints.up('md')]: {
-    '& .MuiTable-root': {
-      width: '100%',
-      tableLayout: 'fixed', // Fuerza que las columnas usen el ancho disponible
-    },
-  },
 }));
 
 const StyledTableHead = styled(TableHead)(({ theme }) => ({
-  background: 'var(--primary-color)',
+  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
   '& th': {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: '1rem',
+    color: '#1e293b',
+    fontWeight: 600,
+    fontSize: '0.85rem',
     border: 0,
-    // En mobile, width auto. En desktop, ancho mínimo y distribución equitativa
-    [theme.breakpoints.down('md')]: {
-      whiteSpace: 'nowrap',
-    },
-    [theme.breakpoints.up('md')]: {
-      // Distribución de anchos para desktop que sume 100%
-      '&:nth-of-type(1)': { width: '18%' }, // Nombre
-      '&:nth-of-type(2)': { width: '18%' }, // Email
-      '&:nth-of-type(3)': { width: '12%' }, // Departamento
-      '&:nth-of-type(4)': { width: '12%' }, // Cargo
-      '&:nth-of-type(5)': { width: '12%' }, // Tipo de Contrato
-      '&:nth-of-type(6)': { width: '8%' }, // Rol
-      '&:nth-of-type(7)': { width: '15%' }, // Departamentos Autorizados
-      '&:nth-of-type(8)': { width: '5%' }, // Acciones
-    },
+    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+    padding: theme.spacing(1.5, 2),
+    whiteSpace: 'nowrap',
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  '&:nth-of-type(odd)': {
-    backgroundColor: '#f6fafd',
-  },
   '&:hover': {
-    backgroundColor: '#e3f2fd',
-    transition: 'background 0.2s',
+    backgroundColor: alpha('#00830e', 0.04),
   },
-  // Aplicar el mismo ancho que los headers para las celdas del cuerpo
   '& td': {
-    [theme.breakpoints.down('md')]: {
-      whiteSpace: 'nowrap',
-    },
-    [theme.breakpoints.up('md')]: {
-      // Misma distribución que los headers
-      '&:nth-of-type(1)': { width: '18%' }, // Nombre
-      '&:nth-of-type(2)': { width: '18%' }, // Email
-      '&:nth-of-type(3)': { width: '12%' }, // Departamento
-      '&:nth-of-type(4)': { width: '12%' }, // Cargo
-      '&:nth-of-type(5)': { width: '12%' }, // Tipo de Contrato
-      '&:nth-of-type(6)': { width: '8%' }, // Rol
-      '&:nth-of-type(7)': { width: '15%' }, // Departamentos Autorizados
-      '&:nth-of-type(8)': { width: '5%' }, // Acciones
-    },
+    padding: theme.spacing(1.5, 2),
+    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
   },
 }));
 
-const NameCell = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
+const ActionButton = styled(IconButton)(({ theme }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 10,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+  },
+}));
+
+const FloatingButton = styled(Fab)(({ theme }) => ({
+  position: 'fixed',
+  bottom: 'calc(env(safe-area-inset-bottom) + 80px)',
+  right: 20,
+  background: 'linear-gradient(135deg, #00830e 0%, #006c0b 100%)',
+  boxShadow: '0 6px 20px rgba(0, 131, 14, 0.4)',
+  '&:hover': {
+    background: 'linear-gradient(135deg, #006c0b 0%, #005a09 100%)',
+  },
+  [theme.breakpoints.up('md')]: {
+    display: 'none',
+  },
 }));
 
 const puedeAgregarUsuarios = (usuario) => {
@@ -145,33 +198,34 @@ const puedeEliminarUsuarios = (usuario) => {
          usuario?.rol === ROLES.ADMINISTRADOR;
 };
 
-// Lista de departamentos disponibles para autorización
-const departamentosDisponibles = [
-  'Planeación de Eventos',
-  'Gestión de la Protección',
-  'Áreas & Sostenibilidad',
-  'Gastronomía',
-  'Infraestructura',
-  'Financiero',
-  'Talento Humano',
-  'Calidad',
-  'Sistemas'
-];
-
 const Personal = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [usuarios, setUsuarios] = useState([]);
+  const [filteredUsuarios, setFilteredUsuarios] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [dialogoEliminar, setDialogoEliminar] = useState(false);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Estados para manejar departamentos autorizados
-  const [departamentosExpandidos, setDepartamentosExpandidos] = useState({});
-  const [departamentosAutorizados, setDepartamentosAutorizados] = useState([]);
-  const [nuevoDepartamento, setNuevoDepartamento] = useState('');
   const navigate = useNavigate();
+
+  // Filtrar usuarios cuando cambia el término de búsqueda
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredUsuarios(usuarios);
+    } else {
+      const term = searchTerm.toLowerCase();
+      setFilteredUsuarios(usuarios.filter(u => 
+        u.nombre?.toLowerCase().includes(term) ||
+        u.apellidos?.toLowerCase().includes(term) ||
+        u.email?.toLowerCase().includes(term) ||
+        u.departamento?.toLowerCase().includes(term) ||
+        u.cargo?.toLowerCase().includes(term)
+      ));
+    }
+  }, [searchTerm, usuarios]);
 
   useEffect(() => {
     const cargarUsuarios = async () => {
@@ -211,11 +265,6 @@ const Personal = () => {
           setUsuarios(usuariosArray);
         } else {
           setUsuarios([]);
-        }
-
-        // Cargar departamentos autorizados para el usuario actual
-        if (userDataWithEmail.departamento) {
-          setDepartamentosAutorizados([userDataWithEmail.departamento]);
         }
       } catch (error) {
         console.error('Error al cargar usuarios:', error);
@@ -305,470 +354,367 @@ const Personal = () => {
     }
   };
 
-  // Función para manejar cambios en departamentos autorizados
-  const handleCambiarDepartamentosAutorizados = async (usuarioId, departamento, autorizado) => {
-    if (!puedeAsignarRoles(currentUser)) {
-      toast.error('No tienes permisos para modificar autorizaciones');
-      return;
-    }
-
-    try {
-      const usuario = usuarios.find(u => u.id === usuarioId);
-      if (!usuario || usuario.departamento !== 'Practicantes/Crosstraining') {
-        toast.error('Solo usuarios de Practicantes/Crosstraining pueden tener departamentos autorizados');
-        return;
-      }
-
-      const departamentosActuales = usuario.departamentosAutorizados || [];
-      let nuevosDepartamentos;
-
-      if (autorizado) {
-        // Agregar departamento si no está ya autorizado
-        nuevosDepartamentos = departamentosActuales.includes(departamento) 
-          ? departamentosActuales 
-          : [...departamentosActuales, departamento];
-      } else {
-        // Remover departamento
-        nuevosDepartamentos = departamentosActuales.filter(d => d !== departamento);
-      }
-
-      await update(dbRef(database, `usuarios/${usuarioId}`), {
-        departamentosAutorizados: nuevosDepartamentos
-      });
-
-      // Actualizar el estado local
-      setUsuarios(usuarios.map(u => 
-        u.id === usuarioId ? { ...u, departamentosAutorizados: nuevosDepartamentos } : u
-      ));
-
-      toast.success(`Autorización para ${departamento} ${autorizado ? 'agregada' : 'removida'}`);
-    } catch (error) {
-      console.error('Error al actualizar departamentos autorizados:', error);
-      toast.error('Error al actualizar autorizaciones: ' + error.message);
-    }
-  };
-
-  // Función para manejar expansión de acordeones
-  const handleExpandirDepartamentos = (usuarioId) => {
-    setDepartamentosExpandidos(prev => ({
-      ...prev,
-      [usuarioId]: !prev[usuarioId]
-    }));
-  };
-
-  const handleDepartamentoChange = (e) => {
-    const { value, checked } = e.target;
-    if (checked) {
-      setDepartamentosAutorizados([...departamentosAutorizados, value]);
-    } else {
-      setDepartamentosAutorizados(departamentosAutorizados.filter(dep => dep !== value));
-    }
-  };
-
-  const handleAgregarDepartamento = async () => {
-    if (!nuevoDepartamento || !currentUser?.id) return;
-    try {
-      await update(dbRef(database, `usuarios/${currentUser.id}`), {
-        departamentosAutorizados: [...departamentosAutorizados, nuevoDepartamento]
-      });
-      setDepartamentosAutorizados([...departamentosAutorizados, nuevoDepartamento]);
-      setNuevoDepartamento('');
-      toast.success('Departamento agregado correctamente');
-    } catch (error) {
-      console.error('Error al agregar departamento:', error);
-      toast.error('Error al agregar departamento: ' + error.message);
-    }
-  };
-
   // Mostrar loading mientras se cargan los datos
   if (loading || !currentUser) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <Typography>Cargando...</Typography>
-        </Box>
-      </Container>
+      <PageContainer>
+        <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+          <Skeleton variant="rounded" height={140} sx={{ borderRadius: 5, mb: 3 }} />
+          <Skeleton variant="rounded" height={60} sx={{ borderRadius: 4, mb: 2 }} />
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} variant="rounded" height={80} sx={{ borderRadius: 4, mb: 2 }} />
+          ))}
+        </Container>
+      </PageContainer>
     );
   }
 
-  return (
-    <Container 
-      maxWidth={isMobile ? "lg" : false} 
-      sx={{ 
-        mt: 4, 
-        mb: 4,
-        // En desktop, permitir que se expanda más con máximo y padding lateral
-        ...(!isMobile && {
-          maxWidth: '98vw',
-          px: 2
-        })
-      }}
-    >
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-        Gestión de Personal
-      </Typography>
-
-      <StyledPaper elevation={3}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>
-            Listado de Usuarios Registrados
-          </Typography>
-          {puedeAgregarUsuarios(currentUser) && (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={irARegistro}
-              sx={{ borderRadius: 2, fontWeight: 'bold', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}
-            >
-              Agregar Usuario
-            </Button>
-          )}
-        </Box>
-
-        <StyledTableContainer>
-          <Table>
-            <StyledTableHead>
-              <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Departamento</TableCell>
-                <TableCell>Cargo</TableCell>
-                <TableCell>Tipo de Contrato</TableCell>
-                <TableCell>Rol</TableCell>
-                <TableCell>Departamentos Autorizados</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </StyledTableHead>
-            <TableBody>
-              {usuarios.map((usuario) => (
-                <StyledTableRow key={usuario.id}>
-                  <TableCell>
-                    <NameCell>
-                      <Avatar sx={{ mr: 2, bgcolor: 'var(--secondary-color)', width: 36, height: 36, fontSize: '1rem' }}>
-                        {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
-                          {usuario.nombre} {usuario.apellidos}
-                        </Typography>
-                        {/* Eliminado el id del usuario */}
-                      </Box>
-                    </NameCell>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{usuario.email}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={usuario.departamento}
-                      color={
-                        usuario.departamento === 'Talento Humano' ? 'secondary' : 
-                        usuario.departamento === 'Calidad' ? 'warning' : 'default'
-                      }
-                      size="small"
-                      sx={{ fontWeight: 500 }}
+  // Vista móvil con cards
+  const renderMobileView = () => (
+    <Box>
+      {filteredUsuarios.map((usuario) => (
+        <UserCard key={usuario.id}>
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+              <Avatar 
+                sx={{ 
+                  width: 50, 
+                  height: 50, 
+                  bgcolor: '#00830e',
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                }}
+              >
+                {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  {usuario.nombre} {usuario.apellidos}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                  <EmailIcon sx={{ fontSize: 14, color: '#64748b' }} />
+                  <Typography variant="caption" color="text.secondary" sx={{ 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {usuario.email}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                  <Chip 
+                    icon={<BusinessIcon sx={{ fontSize: '14px !important' }} />}
+                    label={usuario.departamento} 
+                    size="small" 
+                    sx={{ height: 24, fontSize: '0.7rem' }}
+                  />
+                  <Chip 
+                    label={usuario.tipoContrato || 'Operativo'} 
+                    size="small" 
+                    color={usuario.tipoContrato === 'Confianza' ? 'success' : 'info'}
+                    sx={{ height: 24, fontSize: '0.7rem' }}
+                  />
+                  {usuario.rol && (
+                    <Chip 
+                      label={usuario.rol} 
+                      size="small" 
+                      color={obtenerColorRol(usuario.rol)}
+                      sx={{ height: 24, fontSize: '0.7rem' }}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{usuario.cargo}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    {puedeModificarTipoContrato(currentUser) ? (
-                      <FormControl size="small" sx={{ minWidth: 120, width: '100%' }}>
-                        <Select
-                          value={usuario.tipoContrato || 'Operativo'}
-                          onChange={(e) => handleCambiarTipoContrato(usuario.id, e.target.value)}
-                          sx={{ 
-                            bgcolor: 'white', 
-                            '& .MuiSelect-select': { 
-                              py: 0.5,
-                              fontSize: '0.875rem'
-                            }
-                          }}
-                        >
-                          <MenuItem value={TIPOS_CONTRATO.OPERATIVO}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip 
-                                label="Operativo" 
-                                color="info" 
-                                size="small" 
-                                sx={{ fontSize: '0.75rem' }}
-                              />
-                              <Typography variant="caption">(48h)</Typography>
-                            </Box>
-                          </MenuItem>
-                          <MenuItem value={TIPOS_CONTRATO.CONFIANZA}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip 
-                                label="Confianza" 
-                                color="success" 
-                                size="small" 
-                                sx={{ fontSize: '0.75rem' }}
-                              />
-                              <Typography variant="caption">(72h)</Typography>
-                            </Box>
-                          </MenuItem>
-                        </Select>
-                      </FormControl>
-                    ) : (
-                      <Tooltip title={obtenerMensajeRestriccionHoras(usuario.tipoContrato || 'Operativo')}>
-                        <Chip
-                          label={usuario.tipoContrato || 'No definido'}
-                          color={
-                            usuario.tipoContrato === 'Confianza' ? 'success' : 
-                            usuario.tipoContrato === 'Operativo' ? 'info' : 'default'
-                          }
-                          size="small"
-                          sx={{ fontWeight: 500, cursor: 'help' }}
-                        />
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {puedeAsignarRoles(currentUser) ? (
-                      <FormControl size="small" sx={{ minWidth: 120, width: '100%' }}>
-                        <Select
-                          value={usuario.rol || 'Sin rol'}
-                          onChange={(e) => handleCambiarRol(usuario.id, e.target.value)}
-                          sx={{ 
-                            bgcolor: 'white', 
-                            '& .MuiSelect-select': { 
-                              py: 0.5,
-                              fontSize: '0.875rem'
-                            }
-                          }}
-                        >
-                          <MenuItem value="Sin rol">
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip 
-                                label="Sin rol" 
-                                color="default" 
-                                size="small" 
-                                sx={{ fontSize: '0.75rem' }}
-                              />
-                            </Box>
-                          </MenuItem>
-                          <MenuItem value={ROLES.ADMINISTRADOR}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip 
-                                label="Administrador" 
-                                color="error" 
-                                size="small" 
-                                sx={{ fontSize: '0.75rem' }}
-                              />
-                            </Box>
-                          </MenuItem>
-                          <MenuItem value={ROLES.MODIFICADOR}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip 
-                                label="Modificador" 
-                                color="warning" 
-                                size="small" 
-                                sx={{ fontSize: '0.75rem' }}
-                              />
-                            </Box>
-                          </MenuItem>
-                          <MenuItem value={ROLES.VISOR}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip 
-                                label="Visor" 
-                                color="info" 
-                                size="small" 
-                                sx={{ fontSize: '0.75rem' }}
-                              />
-                            </Box>
-                          </MenuItem>
-                        </Select>
-                      </FormControl>
-                    ) : (
-                      <Tooltip title={obtenerDescripcionRol(usuario.rol)}>
-                        <Chip
-                          label={usuario.rol || 'Sin rol'}
-                          color={obtenerColorRol(usuario.rol)}
-                          size="small"
-                          sx={{ fontWeight: 500, cursor: 'help' }}
-                        />
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {usuario.departamento === 'Practicantes/Crosstraining' ? (
-                      puedeAsignarRoles(currentUser) ? (
-                        <Box>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<WorkIcon />}
-                            onClick={() => handleExpandirDepartamentos(usuario.id)}
-                            sx={{ mb: 1, fontSize: '0.75rem' }}
-                          >
-                            Autorizar Departamentos
-                          </Button>
-                          {departamentosExpandidos[usuario.id] && (
-                            <Box sx={{ mt: 1, maxWidth: 200 }}>
-                              <FormGroup>
-                                {departamentosDisponibles.map(departamento => (
-                                  <FormControlLabel
-                                    key={departamento}
-                                    control={
-                                      <Checkbox
-                                        checked={usuario.departamentosAutorizados?.includes(departamento) || false}
-                                        onChange={(e) => handleCambiarDepartamentosAutorizados(
-                                          usuario.id, 
-                                          departamento, 
-                                          e.target.checked
-                                        )}
-                                        size="small"
-                                      />
-                                    }
-                                    label={
-                                      <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                                        {departamento}
-                                      </Typography>
-                                    }
-                                    sx={{ margin: 0, height: 28 }}
-                                  />
-                                ))}
-                              </FormGroup>
-                            </Box>
-                          )}
-                        </Box>
-                      ) : (
-                        <Box>
-                          {usuario.departamentosAutorizados?.length > 0 ? (
-                            usuario.departamentosAutorizados.map(dep => (
-                              <Chip
-                                key={dep}
-                                label={dep}
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                                sx={{ mr: 0.5, mb: 0.5, fontSize: '0.7rem' }}
-                              />
-                            ))
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">
-                              Sin autorizaciones
-                            </Typography>
-                          )}
-                        </Box>
-                      )
-                    ) : (
-                      <Typography variant="caption" color="text.secondary">
-                        Solo para Practicantes
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Editar Usuario">
-                      <IconButton onClick={() => irAEdicion(usuario)} color="primary" size="small">
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    {puedeEliminarUsuarios(currentUser) && (
-                      <Tooltip title="Eliminar Usuario">
-                        <IconButton onClick={() => handleEliminarClick(usuario)} color="error" size="small">
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                </StyledTableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </StyledTableContainer>
+                  )}
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <ActionButton 
+                  onClick={() => irAEdicion(usuario)} 
+                  sx={{ bgcolor: alpha('#00830e', 0.1), color: '#00830e' }}
+                >
+                  <EditIcon fontSize="small" />
+                </ActionButton>
+                {puedeEliminarUsuarios(currentUser) && (
+                  <ActionButton 
+                    onClick={() => handleEliminarClick(usuario)} 
+                    sx={{ bgcolor: alpha('#ef4444', 0.1), color: '#ef4444' }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </ActionButton>
+                )}
+              </Box>
+            </Box>
+          </CardContent>
+        </UserCard>
+      ))}
+    </Box>
+  );
 
-        {/* Sección para gestionar departamentos autorizados (solo visible para Talento Humano) */}
-        {currentUser?.rol === ROLES.ADMINISTRADOR && (
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" sx={{ color: 'var(--primary-color)', fontWeight: 'bold', mb: 2 }}>
-              Gestión de Departamentos Autorizados
-            </Typography>
-            <Accordion>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography>Departamentos Autorizados</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <FormGroup>
-                  {departamentosDisponibles.map((dep) => (
-                    <FormControlLabel
-                      key={dep}
-                      control={
-                        <Checkbox 
-                          checked={departamentosAutorizados.includes(dep)} 
-                          onChange={handleDepartamentoChange}
-                          value={dep}
-                          color="primary"
-                        />
-                      }
-                      label={dep}
-                    />
-                  ))}
-                </FormGroup>
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                  <FormControl size="small" sx={{ minWidth: 120, flexGrow: 1, mr: 1 }}>
+  // Vista desktop con tabla
+  const renderDesktopView = () => (
+    <StyledTableContainer>
+      <Table>
+        <StyledTableHead>
+          <TableRow>
+            <TableCell>Nombre</TableCell>
+            <TableCell>Email</TableCell>
+            <TableCell>Departamento</TableCell>
+            <TableCell>Cargo</TableCell>
+            <TableCell>Contrato</TableCell>
+            <TableCell>Rol</TableCell>
+            <TableCell>Autorizaciones</TableCell>
+            <TableCell align="right">Acciones</TableCell>
+          </TableRow>
+        </StyledTableHead>
+        <TableBody>
+          {filteredUsuarios.map((usuario) => (
+            <StyledTableRow key={usuario.id}>
+              <TableCell>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#00830e', fontSize: '0.85rem' }}>
+                    {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
+                  </Avatar>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {usuario.nombre} {usuario.apellidos}
+                  </Typography>
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" color="text.secondary">{usuario.email}</Typography>
+              </TableCell>
+              <TableCell>
+                <Chip
+                  label={usuario.departamento}
+                  size="small"
+                  sx={{ 
+                    fontWeight: 500, 
+                    bgcolor: alpha('#00830e', 0.1),
+                    color: '#00830e',
+                  }}
+                />
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{usuario.cargo}</Typography>
+              </TableCell>
+              <TableCell>
+                {puedeModificarTipoContrato(currentUser) ? (
+                  <FormControl size="small" sx={{ minWidth: 100 }}>
                     <Select
-                      value={nuevoDepartamento}
-                      onChange={(e) => setNuevoDepartamento(e.target.value)}
-                      displayEmpty
+                      value={usuario.tipoContrato || 'Operativo'}
+                      onChange={(e) => handleCambiarTipoContrato(usuario.id, e.target.value)}
                       sx={{ 
                         bgcolor: 'white', 
-                        '& .MuiSelect-select': { 
-                          py: 0.5,
-                          fontSize: '0.875rem'
-                        }
+                        borderRadius: 2,
+                        '& .MuiSelect-select': { py: 0.75, fontSize: '0.8rem' }
                       }}
                     >
-                      <MenuItem value="">
-                        <em>Agregar nuevo departamento</em>
-                      </MenuItem>
-                      {departamentosDisponibles.map((dep) => (
-                        <MenuItem key={dep} value={dep}>{dep}</MenuItem>
-                      ))}
+                      <MenuItem value={TIPOS_CONTRATO.OPERATIVO}>Operativo</MenuItem>
+                      <MenuItem value={TIPOS_CONTRATO.CONFIANZA}>Confianza</MenuItem>
                     </Select>
                   </FormControl>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleAgregarDepartamento}
-                    disabled={!nuevoDepartamento}
-                    sx={{ borderRadius: 2, fontWeight: 'bold' }}
+                ) : (
+                  <Chip
+                    label={usuario.tipoContrato || 'Operativo'}
+                    color={usuario.tipoContrato === 'Confianza' ? 'success' : 'info'}
+                    size="small"
+                  />
+                )}
+              </TableCell>
+              <TableCell>
+                {puedeAsignarRoles(currentUser) ? (
+                  <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <Select
+                      value={usuario.rol || 'Sin rol'}
+                      onChange={(e) => handleCambiarRol(usuario.id, e.target.value)}
+                      sx={{ 
+                        bgcolor: 'white', 
+                        borderRadius: 2,
+                        '& .MuiSelect-select': { py: 0.75, fontSize: '0.8rem' }
+                      }}
+                    >
+                      <MenuItem value="Sin rol">Sin rol</MenuItem>
+                      <MenuItem value={ROLES.ADMINISTRADOR}>Admin</MenuItem>
+                      <MenuItem value={ROLES.MODIFICADOR}>Modificador</MenuItem>
+                      <MenuItem value={ROLES.VISOR}>Visor</MenuItem>
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <Chip
+                    label={usuario.rol || 'Sin rol'}
+                    color={obtenerColorRol(usuario.rol)}
+                    size="small"
+                  />
+                )}
+              </TableCell>
+              <TableCell>
+                {usuario.departamento === 'Practicantes/Crosstraining' ? (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {usuario.departamentosAutorizados?.slice(0, 2).map(dep => (
+                      <Chip
+                        key={dep}
+                        label={dep}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.65rem', height: 22 }}
+                      />
+                    ))}
+                    {(usuario.departamentosAutorizados?.length || 0) > 2 && (
+                      <Chip
+                        label={`+${usuario.departamentosAutorizados.length - 2}`}
+                        size="small"
+                        sx={{ fontSize: '0.65rem', height: 22 }}
+                      />
+                    )}
+                  </Box>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">—</Typography>
+                )}
+              </TableCell>
+              <TableCell align="right">
+                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                  <ActionButton 
+                    onClick={() => irAEdicion(usuario)} 
+                    sx={{ bgcolor: alpha('#00830e', 0.1), color: '#00830e' }}
                   >
-                    Agregar
-                  </Button>
+                    <EditIcon fontSize="small" />
+                  </ActionButton>
+                  {puedeEliminarUsuarios(currentUser) && (
+                    <ActionButton 
+                      onClick={() => handleEliminarClick(usuario)} 
+                      sx={{ bgcolor: alpha('#ef4444', 0.1), color: '#ef4444' }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </ActionButton>
+                  )}
                 </Box>
-              </AccordionDetails>
-            </Accordion>
-          </Box>
-        )}
-      </StyledPaper>
+              </TableCell>
+            </StyledTableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </StyledTableContainer>
+  );
 
+  return (
+    <PageContainer>
+      <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+        {/* Header */}
+        <HeaderCard elevation={0}>
+          <Box sx={{ position: 'relative', zIndex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+              <Box sx={{ 
+                p: 1.5, 
+                borderRadius: 3, 
+                bgcolor: 'rgba(255,255,255,0.2)',
+                display: 'flex',
+              }}>
+                <PeopleIcon sx={{ fontSize: 28 }} />
+              </Box>
+              <Box>
+                <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ fontWeight: 700 }}>
+                  Gestión de Personal
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  {usuarios.length} usuarios registrados
+                </Typography>
+              </Box>
+            </Box>
+            
+            {!isMobile && puedeAgregarUsuarios(currentUser) && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={irARegistro}
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: 0,
+                  transform: 'translateY(-50%)',
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  borderRadius: 3,
+                  px: 3,
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.3)',
+                  },
+                }}
+              >
+                Agregar Usuario
+              </Button>
+            )}
+          </Box>
+        </HeaderCard>
+
+        {/* Search Bar */}
+        <Box sx={{ mb: 3 }}>
+          <SearchBar
+            fullWidth
+            placeholder="Buscar por nombre, email, departamento..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: '#64748b' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        {/* Content */}
+        <StyledCard>
+          <Box sx={{ p: { xs: 2, md: 3 } }}>
+            {filteredUsuarios.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <PeopleIcon sx={{ fontSize: 64, color: '#94a3b8', mb: 2 }} />
+                <Typography color="text.secondary">
+                  {searchTerm ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
+                </Typography>
+              </Box>
+            ) : isMobile ? (
+              renderMobileView()
+            ) : (
+              renderDesktopView()
+            )}
+          </Box>
+        </StyledCard>
+
+        {/* FAB para móvil */}
+        {puedeAgregarUsuarios(currentUser) && (
+          <FloatingButton color="primary" onClick={irARegistro}>
+            <AddIcon />
+          </FloatingButton>
+        )}
+      </Container>
+
+      {/* Dialog de eliminación */}
       <Dialog
         open={dialogoEliminar}
         onClose={cerrarDialogoEliminar}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
+        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
       >
-        <DialogTitle id="alert-dialog-title" sx={{ color: 'var(--error-color)' }}>
-          Confirmar eliminación
+        <DialogTitle sx={{ fontWeight: 600, color: '#ef4444' }}>
+          ⚠️ Confirmar eliminación
         </DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            ¿Estás seguro de que deseas eliminar al usuario {usuarioSeleccionado?.nombre} {usuarioSeleccionado?.apellidos}?
+          <DialogContentText>
+            ¿Estás seguro de que deseas eliminar al usuario <strong>{usuarioSeleccionado?.nombre} {usuarioSeleccionado?.apellidos}</strong>?
             Esta acción no se puede deshacer.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={cerrarDialogoEliminar} color="primary">
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={cerrarDialogoEliminar} sx={{ color: '#64748b', borderRadius: 2 }}>
             Cancelar
           </Button>
-          <Button onClick={eliminarUsuario} color="error" autoFocus>
+          <Button 
+            onClick={eliminarUsuario} 
+            variant="contained"
+            color="error"
+            sx={{ borderRadius: 2 }}
+          >
             Eliminar
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

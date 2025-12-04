@@ -14,39 +14,166 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Grid
+  Grid,
+  Fade,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PersonIcon from '@mui/icons-material/Person';
+import EmailIcon from '@mui/icons-material/Email';
+import WorkIcon from '@mui/icons-material/Work';
+import BusinessIcon from '@mui/icons-material/Business';
+import LockIcon from '@mui/icons-material/Lock';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import BadgeIcon from '@mui/icons-material/Badge';
 import { ref, get } from 'firebase/database';
 import { puedeAsignarRoles, ROLES } from '../../utils/contratoUtils';
 import { departamentos } from '../../utils/horariosConstants';
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
+// Styled Components modernos
+const PageContainer = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'linear-gradient(135deg, #f8fafc 0%, #e8f5e9 50%, #f0f9ff 100%)',
+  padding: theme.spacing(3),
+  paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+}));
+
+const RegisterCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  borderRadius: '16px',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+  borderRadius: 24,
+  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
+  background: 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(10px)',
+  border: '1px solid rgba(0, 131, 14, 0.1)',
+  maxWidth: 800,
+  width: '100%',
+  position: 'relative',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    background: 'linear-gradient(90deg, #00830e, #4caf50, #81c784)',
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(3),
+    borderRadius: 20,
+  },
 }));
 
 const Logo = styled('img')({
-  width: '200px',
-  marginBottom: '24px'
+  width: 180,
+  marginBottom: 24,
+  filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))',
 });
 
-const AnimatedButton = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(3),
-  marginBottom: theme.spacing(2),
-  paddingTop: theme.spacing(1.5),
-  paddingBottom: theme.spacing(1.5),
-  borderRadius: '8px',
-  transition: 'all 0.3s ease',
+const PageTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 700,
+  fontSize: '1.75rem',
+  color: '#1a1a2e',
+  marginBottom: theme.spacing(0.5),
+  textAlign: 'center',
+  [theme.breakpoints.down('sm')]: {
+    fontSize: '1.5rem',
+  },
+}));
+
+const PageSubtitle = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  marginBottom: theme.spacing(3),
+  textAlign: 'center',
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    transition: 'all 0.2s ease',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 1)',
+    },
+    '&.Mui-focused': {
+      backgroundColor: 'rgba(255, 255, 255, 1)',
+      boxShadow: '0 0 0 3px rgba(0, 131, 14, 0.1)',
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 500,
+  },
+}));
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    transition: 'all 0.2s ease',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 1)',
+    },
+    '&.Mui-focused': {
+      backgroundColor: 'rgba(255, 255, 255, 1)',
+      boxShadow: '0 0 0 3px rgba(0, 131, 14, 0.1)',
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 500,
+  },
+}));
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  padding: '14px 28px',
+  fontWeight: 600,
+  textTransform: 'none',
+  fontSize: '1rem',
+  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+    boxShadow: '0 8px 25px rgba(0, 131, 14, 0.3)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
+  },
+}));
+
+const BackButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  padding: '12px 24px',
+  fontWeight: 600,
+  textTransform: 'none',
+  borderWidth: 2,
+  '&:hover': {
+    borderWidth: 2,
+    transform: 'translateY(-2px)',
+  },
+}));
+
+const SectionDivider = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(2),
+  margin: theme.spacing(3, 0, 2),
+  '& .line': {
+    flex: 1,
+    height: 1,
+    background: 'linear-gradient(90deg, transparent, rgba(0, 131, 14, 0.2), transparent)',
+  },
+  '& .icon': {
+    color: '#00830e',
+    opacity: 0.6,
   },
 }));
 
@@ -59,6 +186,8 @@ const rolesDisponibles = [
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentUserData, setCurrentUserData] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -67,7 +196,7 @@ const Register = () => {
     cargo: '',
     departamento: '',
     tipoContrato: 'Operativo',
-    rol: ROLES.VISOR, // Rol por defecto según contrato Operativo
+    rol: ROLES.VISOR,
     password: '',
     confirmPassword: ''
   });
@@ -337,200 +466,294 @@ const Register = () => {
   };
 
   return (
-    <Container component="main" maxWidth="md">
-      <Box
-        sx={{
-          marginTop: 4,
-          marginBottom: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <StyledPaper elevation={6}>
-          <Logo 
-            src="/costa-rica-logo.png" 
-            alt="Costa Rica Centro de Convenciones" 
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
-          
-          <Typography component="h1" variant="h4" sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
-            Registro de Personal
-          </Typography>
+    <PageContainer>
+      <Container maxWidth="md">
+        <Fade in timeout={600}>
+          <RegisterCard elevation={0}>
+            <Logo 
+              src="/costa-rica-logo.png" 
+              alt="Costa Rica Centro de Convenciones" 
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+            
+            <PageTitle>
+              Registro de Personal
+            </PageTitle>
+            <PageSubtitle variant="body2">
+              Completa el formulario para crear una nueva cuenta
+            </PageSubtitle>
 
-          <Box component="form" onSubmit={handleRegister} sx={{ width: '100%' }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  name="nombre"
-                  required
-                  fullWidth
-                  label="Nombre"
-                  value={formData.nombre}
-                  onChange={handleChange}
-                  autoFocus
-                />
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  name="apellidos"
-                  required
-                  fullWidth
-                  label="Apellidos"
-                  value={formData.apellidos}
-                  onChange={handleChange}
-                />
-              </Grid>
+            <Box component="form" onSubmit={handleRegister} sx={{ width: '100%' }}>
+              {/* Sección: Información Personal */}
+              <SectionDivider>
+                <span className="line" />
+                <PersonIcon className="icon" />
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                  Información Personal
+                </Typography>
+                <span className="line" />
+              </SectionDivider>
 
-              <Grid item xs={12}>
-                <TextField
-                  name="email"
-                  required
-                  fullWidth
-                  label="Correo Electrónico"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  name="cargo"
-                  required
-                  fullWidth
-                  label="Cargo"
-                  value={formData.cargo}
-                  onChange={handleChange}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Departamento</InputLabel>
-                  <Select
-                    name="departamento"
-                    value={formData.departamento}
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    name="nombre"
+                    required
+                    fullWidth
+                    label="Nombre"
+                    value={formData.nombre}
                     onChange={handleChange}
-                    label="Departamento"
-                  >
-                    {departamentos.map((depto) => (
-                      <MenuItem key={depto} value={depto}>
-                        {depto}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Tipo de Contrato - Ancho completo */}
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Tipo de Contrato</InputLabel>
-                  <Select
-                    name="tipoContrato"
-                    value={formData.tipoContrato}
+                    autoFocus
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PersonIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    name="apellidos"
+                    required
+                    fullWidth
+                    label="Apellidos"
+                    value={formData.apellidos}
                     onChange={handleChange}
-                    label="Tipo de Contrato"
-                  >
-                    <MenuItem value="Operativo">Operativo</MenuItem>
-                    <MenuItem value="Confianza">Confianza</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <BadgeIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
 
-              {/* Solo mostrar rol si el usuario actual puede asignar roles (registro interno). Si es público, no mostrar el selector y se asigna Visor automáticamente. */}
-              {currentUserData && puedeAsignarRoles(currentUserData) && (
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Rol en el Sistema</InputLabel>
+                  <StyledTextField
+                    name="email"
+                    required
+                    fullWidth
+                    label="Correo Electrónico"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmailIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Sección: Información Laboral */}
+              <SectionDivider>
+                <span className="line" />
+                <WorkIcon className="icon" />
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                  Información Laboral
+                </Typography>
+                <span className="line" />
+              </SectionDivider>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    name="cargo"
+                    required
+                    fullWidth
+                    label="Cargo"
+                    value={formData.cargo}
+                    onChange={handleChange}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <WorkIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <StyledFormControl fullWidth required>
+                    <InputLabel>Departamento</InputLabel>
                     <Select
-                      name="rol"
-                      value={formData.rol || ''}
+                      name="departamento"
+                      value={formData.departamento}
                       onChange={handleChange}
-                      label="Rol en el Sistema"
+                      label="Departamento"
+                      startAdornment={
+                        <InputAdornment position="start">
+                          <BusinessIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      }
                     >
-                      {rolesDisponibles.map((rol) => (
-                        <MenuItem key={rol.value || 'sin-rol'} value={rol.value || ''}>
-                          {rol.label}
+                      {departamentos.map((depto) => (
+                        <MenuItem key={depto} value={depto}>
+                          {depto}
                         </MenuItem>
                       ))}
                     </Select>
-                  </FormControl>
+                  </StyledFormControl>
                 </Grid>
-              )}
 
-              {/* Campos de contraseña uno al lado del otro */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  name="password"
-                  required
-                  fullWidth
-                  label="Contraseña"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  helperText="Mínimo 6 caracteres"
-                />
+                <Grid item xs={12}>
+                  <StyledFormControl fullWidth>
+                    <InputLabel>Tipo de Contrato</InputLabel>
+                    <Select
+                      name="tipoContrato"
+                      value={formData.tipoContrato}
+                      onChange={handleChange}
+                      label="Tipo de Contrato"
+                    >
+                      <MenuItem value="Operativo">Operativo</MenuItem>
+                      <MenuItem value="Confianza">Confianza</MenuItem>
+                    </Select>
+                  </StyledFormControl>
+                </Grid>
+
+                {currentUserData && puedeAsignarRoles(currentUserData) && (
+                  <Grid item xs={12}>
+                    <StyledFormControl fullWidth>
+                      <InputLabel>Rol en el Sistema</InputLabel>
+                      <Select
+                        name="rol"
+                        value={formData.rol || ''}
+                        onChange={handleChange}
+                        label="Rol en el Sistema"
+                      >
+                        {rolesDisponibles.map((rol) => (
+                          <MenuItem key={rol.value || 'sin-rol'} value={rol.value || ''}>
+                            {rol.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </StyledFormControl>
+                  </Grid>
+                )}
               </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  name="confirmPassword"
-                  required
-                  fullWidth
-                  label="Confirmar Contraseña"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                />
-              </Grid>
+              {/* Sección: Seguridad */}
+              <SectionDivider>
+                <span className="line" />
+                <LockIcon className="icon" />
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                  Seguridad
+                </Typography>
+                <span className="line" />
+              </SectionDivider>
 
-              <Grid item xs={12}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: 2, 
-                  justifyContent: 'center', 
-                  mt: 3,
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  alignItems: 'center'
-                }}>
-                  <Button
-                    onClick={volverAtras}
-                    variant="outlined"
-                    startIcon={<ArrowBackIcon />}
-                    disabled={loading}
-                    sx={{ 
-                      minWidth: { xs: '100%', sm: '140px' },
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontWeight: 'bold'
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    name="password"
+                    required
+                    fullWidth
+                    label="Contraseña"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={handleChange}
+                    helperText="Mínimo 6 caracteres"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LockIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            size="small"
+                          >
+                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
                     }}
-                  >
-                    Volver
-                  </Button>
-                  
-                  <AnimatedButton
-                    type="submit"
-                    variant="contained"
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : <PersonAddIcon />}
-                    sx={{ 
-                      minWidth: { xs: '100%', sm: '200px' },
-                      textTransform: 'none',
-                      fontWeight: 'bold'
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    name="confirmPassword"
+                    required
+                    fullWidth
+                    label="Confirmar Contraseña"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LockIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            edge="end"
+                            size="small"
+                          >
+                            {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
                     }}
-                  >
-                    {loading ? 'Registrando...' : 'Registrar Usuario'}
-                  </AnimatedButton>
-                </Box>
+                  />
+                </Grid>
               </Grid>
-            </Grid>
-          </Box>
-        </StyledPaper>
-      </Box>
-    </Container>
+
+              {/* Botones de acción */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 2, 
+                justifyContent: 'center', 
+                mt: 4,
+                flexDirection: { xs: 'column-reverse', sm: 'row' },
+                alignItems: 'stretch'
+              }}>
+                <BackButton
+                  onClick={volverAtras}
+                  variant="outlined"
+                  startIcon={<ArrowBackIcon />}
+                  disabled={loading}
+                  fullWidth={false}
+                  sx={{ minWidth: { xs: '100%', sm: 140 } }}
+                >
+                  Volver
+                </BackButton>
+                
+                <ActionButton
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PersonAddIcon />}
+                  sx={{ 
+                    minWidth: { xs: '100%', sm: 200 },
+                    background: 'linear-gradient(135deg, #00830e 0%, #4caf50 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #006b0b 0%, #388e3c 100%)',
+                    },
+                  }}
+                >
+                  {loading ? 'Registrando...' : 'Registrar Usuario'}
+                </ActionButton>
+              </Box>
+            </Box>
+          </RegisterCard>
+        </Fade>
+      </Container>
+    </PageContainer>
   );
 };
 

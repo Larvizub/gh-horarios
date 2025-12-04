@@ -26,19 +26,170 @@ import {
   Tabs,
   Tab,
   Divider,
-  Alert
+  Alert,
+  Avatar,
+  Skeleton,
+  InputAdornment,
+  IconButton,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import SaveIcon from '@mui/icons-material/Save';
 import LockIcon from '@mui/icons-material/Lock';
 import PersonIcon from '@mui/icons-material/Person';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import EmailIcon from '@mui/icons-material/Email';
+import BadgeIcon from '@mui/icons-material/Badge';
+import BusinessIcon from '@mui/icons-material/Business';
+import WorkIcon from '@mui/icons-material/Work';
+import SecurityIcon from '@mui/icons-material/Security';
 import { departamentos } from '../../utils/horariosConstants';
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: '16px',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+// Styled Components
+const PageContainer = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+  paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)',
+  [theme.breakpoints.up('md')]: {
+    paddingBottom: theme.spacing(4),
+  },
+}));
+
+const ProfileHeader = styled(Box)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #00830e 0%, #006c0b 50%, #005a09 100%)',
+  borderRadius: 24,
+  padding: theme.spacing(4),
+  marginBottom: theme.spacing(3),
+  position: 'relative',
+  overflow: 'hidden',
+  boxShadow: '0 10px 40px rgba(0, 131, 14, 0.3)',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: '-50%',
+    right: '-20%',
+    width: '60%',
+    height: '150%',
+    background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+    borderRadius: '50%',
+  },
+  [theme.breakpoints.down('sm')]: {
+    borderRadius: 0,
+    marginLeft: theme.spacing(-2),
+    marginRight: theme.spacing(-2),
+    marginTop: theme.spacing(-2),
+    padding: theme.spacing(3),
+  },
+}));
+
+const StyledCard = styled(Paper)(({ theme }) => ({
+  borderRadius: 20,
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+  border: '1px solid rgba(0, 0, 0, 0.04)',
+  overflow: 'hidden',
+}));
+
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+  '& .MuiTabs-indicator': {
+    height: 3,
+    borderRadius: '3px 3px 0 0',
+    backgroundColor: '#00830e',
+  },
+  '& .MuiTab-root': {
+    textTransform: 'none',
+    fontWeight: 500,
+    fontSize: '0.95rem',
+    minHeight: 56,
+    '&.Mui-selected': {
+      color: '#00830e',
+      fontWeight: 600,
+    },
+  },
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 14,
+    backgroundColor: 'rgba(248, 250, 252, 0.8)',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#ffffff',
+    },
+    '&.Mui-focused': {
+      backgroundColor: '#ffffff',
+      boxShadow: '0 0 0 3px rgba(0, 131, 14, 0.1)',
+    },
+    '& fieldset': {
+      borderColor: 'rgba(0, 0, 0, 0.08)',
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(0, 131, 14, 0.3)',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#00830e',
+      borderWidth: 2,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 500,
+  },
+}));
+
+const StyledSelect = styled(Select)(({ theme }) => ({
+  borderRadius: 14,
+  backgroundColor: 'rgba(248, 250, 252, 0.8)',
+  '&:hover': {
+    backgroundColor: '#ffffff',
+  },
+  '&.Mui-focused': {
+    backgroundColor: '#ffffff',
+  },
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: 'rgba(0, 131, 14, 0.3)',
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#00830e',
+    borderWidth: 2,
+  },
+}));
+
+const PrimaryButton = styled(Button)(({ theme }) => ({
+  padding: theme.spacing(1.5, 3),
+  borderRadius: 14,
+  background: 'linear-gradient(135deg, #00830e 0%, #006c0b 100%)',
+  fontSize: '0.95rem',
+  fontWeight: 600,
+  textTransform: 'none',
+  boxShadow: '0 4px 14px rgba(0, 131, 14, 0.35)',
+  transition: 'all 0.25s ease',
+  '&:hover': {
+    background: 'linear-gradient(135deg, #006c0b 0%, #005a09 100%)',
+    boxShadow: '0 6px 20px rgba(0, 131, 14, 0.45)',
+    transform: 'translateY(-2px)',
+  },
+  '&:disabled': {
+    background: 'rgba(0, 0, 0, 0.12)',
+    boxShadow: 'none',
+  },
+}));
+
+const SectionTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 600,
+  color: '#1e293b',
+  marginBottom: theme.spacing(2),
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  '& svg': {
+    color: '#00830e',
+  },
 }));
 
 const rolesDisponibles = [
@@ -49,6 +200,9 @@ const rolesDisponibles = [
 ];
 
 const Configuracion = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [loading, setLoading] = useState(true);
   const [tabIndex, setTabIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
@@ -56,6 +210,11 @@ const Configuracion = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [usuarios, setUsuarios] = useState([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -347,317 +506,178 @@ const Configuracion = () => {
 
   if (loading && !userData) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-        <CircularProgress />
-      </Box>
+      <PageContainer>
+        <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+          <Skeleton variant="rounded" height={180} sx={{ borderRadius: 5, mb: 3 }} />
+          <Skeleton variant="rounded" height={400} sx={{ borderRadius: 5 }} />
+        </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-        Configuración
-      </Typography>
-
-      <StyledPaper sx={{ mt: 3 }}>
-        <Tabs
-          value={tabIndex}
-          onChange={handleChangeTab}
-          variant="fullWidth"
-          sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
-        >
-          <Tab 
-            icon={<PersonIcon />} 
-            label="Perfil" 
-            sx={{ '&.Mui-selected': { color: 'var(--primary-color)' } }}
-          />
-          <Tab 
-            icon={<LockIcon />} 
-            label="Contraseña" 
-            sx={{ '&.Mui-selected': { color: 'var(--primary-color)' } }}
-          />
-          {isAdmin && (
-            <Tab 
-              icon={<AdminPanelSettingsIcon />} 
-              label="Administración" 
-              sx={{ '&.Mui-selected': { color: 'var(--primary-color)' } }}
-            />
-          )}
-        </Tabs>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Pestaña de Perfil */}
-        {tabIndex === 0 && (
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ color: 'var(--primary-color)' }}>
-              Información Personal
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Nombre"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleFormChange}
-                  margin="normal"
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Apellidos"
-                  name="apellidos"
-                  value={formData.apellidos}
-                  onChange={handleFormChange}
-                  margin="normal"
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Correo Electrónico"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                  disabled
-                  helperText="El correo electrónico no puede ser modificado"
-                  margin="normal"
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Cargo"
-                  name="cargo"
-                  value={formData.cargo}
-                  onChange={handleFormChange}
-                  margin="normal"
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="departamento-label">Departamento</InputLabel>
-                  <Select
-                    labelId="departamento-label"
-                    name="departamento"
-                    value={formData.departamento}
-                    onChange={handleFormChange}
-                    label="Departamento"
-                  >
-                    {departamentos.map((depto) => (
-                      <MenuItem key={depto} value={depto}>
-                        {depto}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="tipo-contrato-label">Tipo de Contrato</InputLabel>
-                  <Select
-                    labelId="tipo-contrato-label"
-                    name="tipoContrato"
-                    value={formData.tipoContrato}
-                    onChange={handleFormChange}
-                    label="Tipo de Contrato"
-                    disabled={!puedeModificarTipoContrato(userData)}
-                  >
-                    <MenuItem value="Operativo">Operativo (48 horas semanales)</MenuItem>
-                    <MenuItem value="Confianza">Confianza (72 horas semanales)</MenuItem>
-                  </Select>
-                </FormControl>
-                {!puedeModificarTipoContrato(userData) && (
-                  <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                    Solo Talento Humano puede modificar este campo
+    <PageContainer>
+      <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+        {/* Profile Header */}
+        <ProfileHeader>
+          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Avatar
+              sx={{
+                width: { xs: 70, md: 90 },
+                height: { xs: 70, md: 90 },
+                bgcolor: 'rgba(255,255,255,0.2)',
+                fontSize: { xs: '1.8rem', md: '2.2rem' },
+                fontWeight: 600,
+                border: '3px solid rgba(255,255,255,0.3)',
+              }}
+            >
+              {userData?.nombre?.charAt(0)}{userData?.apellidos?.charAt(0)}
+            </Avatar>
+            <Box sx={{ flex: 1, color: 'white' }}>
+              <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ fontWeight: 700 }}>
+                {userData?.nombre} {userData?.apellidos}
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9, mt: 0.5 }}>
+                {userData?.cargo} • {userData?.departamento}
+              </Typography>
+              {userData?.rol && (
+                <Box sx={{ 
+                  mt: 1, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 0.5,
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 2,
+                }}>
+                  <SecurityIcon sx={{ fontSize: 16 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                    {userData.rol}
                   </Typography>
-                )}
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<SaveIcon />}
-                  onClick={guardarPerfil}
-                  disabled={loading}
-                  sx={{ mt: 2, borderRadius: '8px' }}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Guardar Cambios'}
-                </Button>
-              </Grid>
-            </Grid>
+                </Box>
+              )}
+            </Box>
           </Box>
-        )}
+        </ProfileHeader>
 
-        {/* Pestaña de Contraseña */}
-        {tabIndex === 1 && (
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ color: 'var(--primary-color)' }}>
-              Cambiar Contraseña
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Contraseña Actual"
-                  name="currentPassword"
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={handlePasswordChange}
-                  margin="normal"
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Nueva Contraseña"
-                  name="newPassword"
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  margin="normal"
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Confirmar Nueva Contraseña"
-                  name="confirmPassword"
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  margin="normal"
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<LockIcon />}
-                  onClick={cambiarContrasena}
-                  disabled={loading}
-                  sx={{ mt: 2, borderRadius: '8px' }}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Cambiar Contraseña'}
-                </Button>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
+        {/* Main Card */}
+        <StyledCard>
+          <StyledTabs
+            value={tabIndex}
+            onChange={handleChangeTab}
+            variant={isMobile ? 'fullWidth' : 'standard'}
+            centered={!isMobile}
+          >
+            <Tab icon={<PersonIcon />} label={isMobile ? '' : 'Perfil'} iconPosition="start" />
+            <Tab icon={<LockIcon />} label={isMobile ? '' : 'Contraseña'} iconPosition="start" />
+            {isAdmin && (
+              <Tab icon={<AdminPanelSettingsIcon />} label={isMobile ? '' : 'Administración'} iconPosition="start" />
+            )}
+          </StyledTabs>
 
-        {/* Pestaña de Administración (solo para admins) */}
-        {tabIndex === 2 && isAdmin && (
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ color: 'var(--primary-color)' }}>
-              Administración de Usuarios
-            </Typography>
-            <FormControl fullWidth margin="normal" sx={{ mb: 3 }}>
-              <InputLabel id="usuario-select-label">Seleccionar Usuario</InputLabel>
-              <Select
-                labelId="usuario-select-label"
-                value={usuarioSeleccionado ? usuarioSeleccionado.id : ''}
-                onChange={handleUsuarioChange}
-                label="Seleccionar Usuario"
+          <Box sx={{ p: { xs: 2, md: 4 } }}>
+            {error && (
+              <Alert 
+                severity="error" 
+                sx={{ mb: 3, borderRadius: 3 }}
+                onClose={() => setError('')}
               >
-                {usuarios.map((usuario) => (
-                  <MenuItem key={usuario.id} value={usuario.id}>
-                    {usuario.nombre} {usuario.apellidos} - {usuario.email}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                {error}
+              </Alert>
+            )}
 
-            {usuarioSeleccionado && (
-              <>
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="subtitle1" gutterBottom>
-                  Editando a: {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellidos}
-                </Typography>
+            {/* Pestaña de Perfil */}
+            {tabIndex === 0 && (
+              <Box>
+                <SectionTitle variant="h6">
+                  <PersonIcon /> Información Personal
+                </SectionTitle>
+                
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <TextField
+                    <StyledTextField
                       fullWidth
                       label="Nombre"
                       name="nombre"
                       value={formData.nombre}
                       onChange={handleFormChange}
-                      margin="normal"
-                      variant="outlined"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <BadgeIcon sx={{ color: '#64748b' }} />
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField
+                    <StyledTextField
                       fullWidth
                       label="Apellidos"
                       name="apellidos"
                       value={formData.apellidos}
                       onChange={handleFormChange}
-                      margin="normal"
-                      variant="outlined"
                     />
                   </Grid>
                   <Grid item xs={12}>
-                    <TextField
+                    <StyledTextField
                       fullWidth
                       label="Correo Electrónico"
                       name="email"
                       type="email"
                       value={formData.email}
-                      onChange={handleFormChange}
-                      margin="normal"
-                      variant="outlined"
+                      disabled
+                      helperText="El correo electrónico no puede ser modificado"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <EmailIcon sx={{ color: '#64748b' }} />
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField
+                    <StyledTextField
                       fullWidth
                       label="Cargo"
                       name="cargo"
                       value={formData.cargo}
                       onChange={handleFormChange}
-                      margin="normal"
-                      variant="outlined"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <WorkIcon sx={{ color: '#64748b' }} />
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel id="departamento-label">Departamento</InputLabel>
-                      <Select
-                        labelId="departamento-label"
+                    <FormControl fullWidth>
+                      <InputLabel>Departamento</InputLabel>
+                      <StyledSelect
                         name="departamento"
                         value={formData.departamento}
                         onChange={handleFormChange}
                         label="Departamento"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <BusinessIcon sx={{ color: '#64748b' }} />
+                          </InputAdornment>
+                        }
                       >
                         {departamentos.map((depto) => (
-                          <MenuItem key={depto} value={depto}>
-                            {depto}
-                          </MenuItem>
+                          <MenuItem key={depto} value={depto}>{depto}</MenuItem>
                         ))}
-                      </Select>
+                      </StyledSelect>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel id="tipo-contrato-admin-label">Tipo de Contrato</InputLabel>
-                      <Select
-                        labelId="tipo-contrato-admin-label"
+                  <Grid item xs={12}>
+                    <FormControl fullWidth>
+                      <InputLabel>Tipo de Contrato</InputLabel>
+                      <StyledSelect
                         name="tipoContrato"
                         value={formData.tipoContrato}
                         onChange={handleFormChange}
@@ -666,85 +686,320 @@ const Configuracion = () => {
                       >
                         <MenuItem value="Operativo">Operativo (48 horas semanales)</MenuItem>
                         <MenuItem value="Confianza">Confianza (72 horas semanales)</MenuItem>
-                      </Select>
+                      </StyledSelect>
                     </FormControl>
                     {!puedeModificarTipoContrato(userData) && (
-                      <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                         Solo Talento Humano puede modificar este campo
                       </Typography>
                     )}
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel id="rol-label">Rol</InputLabel>
-                      <Select
-                        labelId="rol-label"
-                        name="rol"
-                        value={formData.rol || 'Sin rol'}
-                        onChange={handleFormChange}
-                        label="Rol"
-                        disabled={!puedeAsignarRoles(userData)}
-                      >
-                        {rolesDisponibles.map((rol) => (
-                          <MenuItem key={rol.value || 'Sin rol'} value={rol.value || 'Sin rol'}>
-                            {rol.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    {!puedeAsignarRoles(userData) && (
-                      <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                        Solo Administradores y Talento Humano pueden modificar roles
-                      </Typography>
-                    )}
-                  </Grid>
                   <Grid item xs={12}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<SaveIcon />}
+                    <PrimaryButton
+                      startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                       onClick={guardarPerfil}
                       disabled={loading}
-                      sx={{ mt: 2, borderRadius: '8px' }}
                     >
-                      {loading ? <CircularProgress size={24} /> : 'Guardar Cambios'}
-                    </Button>
+                      Guardar Cambios
+                    </PrimaryButton>
                   </Grid>
                 </Grid>
-              </>
+              </Box>
+            )}
+
+            {/* Pestaña de Contraseña */}
+            {tabIndex === 1 && (
+              <Box>
+                <SectionTitle variant="h6">
+                  <LockIcon /> Cambiar Contraseña
+                </SectionTitle>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <StyledTextField
+                      fullWidth
+                      label="Contraseña Actual"
+                      name="currentPassword"
+                      type={showPasswords.current ? 'text' : 'password'}
+                      value={passwordData.currentPassword}
+                      onChange={handlePasswordChange}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowPasswords(p => ({ ...p, current: !p.current }))}
+                              edge="end"
+                            >
+                              {showPasswords.current ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <StyledTextField
+                      fullWidth
+                      label="Nueva Contraseña"
+                      name="newPassword"
+                      type={showPasswords.new ? 'text' : 'password'}
+                      value={passwordData.newPassword}
+                      onChange={handlePasswordChange}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowPasswords(p => ({ ...p, new: !p.new }))}
+                              edge="end"
+                            >
+                              {showPasswords.new ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <StyledTextField
+                      fullWidth
+                      label="Confirmar Contraseña"
+                      name="confirmPassword"
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      value={passwordData.confirmPassword}
+                      onChange={handlePasswordChange}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowPasswords(p => ({ ...p, confirm: !p.confirm }))}
+                              edge="end"
+                            >
+                              {showPasswords.confirm ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                      La contraseña debe tener al menos 6 caracteres
+                    </Typography>
+                    <PrimaryButton
+                      startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LockIcon />}
+                      onClick={cambiarContrasena}
+                      disabled={loading}
+                    >
+                      Cambiar Contraseña
+                    </PrimaryButton>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+
+            {/* Pestaña de Administración */}
+            {tabIndex === 2 && isAdmin && (
+              <Box>
+                <SectionTitle variant="h6">
+                  <AdminPanelSettingsIcon /> Administración de Usuarios
+                </SectionTitle>
+                
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel>Seleccionar Usuario</InputLabel>
+                  <StyledSelect
+                    value={usuarioSeleccionado ? usuarioSeleccionado.id : ''}
+                    onChange={handleUsuarioChange}
+                    label="Seleccionar Usuario"
+                  >
+                    {usuarios.map((usuario) => (
+                      <MenuItem key={usuario.id} value={usuario.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: '#00830e' }}>
+                            {usuario.nombre?.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {usuario.nombre} {usuario.apellidos}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {usuario.email}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </StyledSelect>
+                </FormControl>
+
+                {usuarioSeleccionado && (
+                  <>
+                    <Divider sx={{ my: 3 }} />
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: alpha('#00830e', 0.05), 
+                      borderRadius: 3, 
+                      mb: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                    }}>
+                      <Avatar sx={{ bgcolor: '#00830e' }}>
+                        {usuarioSeleccionado.nombre?.charAt(0)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          Editando: {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellidos}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {usuarioSeleccionado.email}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <StyledTextField
+                          fullWidth
+                          label="Nombre"
+                          name="nombre"
+                          value={formData.nombre}
+                          onChange={handleFormChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <StyledTextField
+                          fullWidth
+                          label="Apellidos"
+                          name="apellidos"
+                          value={formData.apellidos}
+                          onChange={handleFormChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <StyledTextField
+                          fullWidth
+                          label="Correo Electrónico"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleFormChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <StyledTextField
+                          fullWidth
+                          label="Cargo"
+                          name="cargo"
+                          value={formData.cargo}
+                          onChange={handleFormChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Departamento</InputLabel>
+                          <StyledSelect
+                            name="departamento"
+                            value={formData.departamento}
+                            onChange={handleFormChange}
+                            label="Departamento"
+                          >
+                            {departamentos.map((depto) => (
+                              <MenuItem key={depto} value={depto}>{depto}</MenuItem>
+                            ))}
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Tipo de Contrato</InputLabel>
+                          <StyledSelect
+                            name="tipoContrato"
+                            value={formData.tipoContrato}
+                            onChange={handleFormChange}
+                            label="Tipo de Contrato"
+                            disabled={!puedeModificarTipoContrato(userData)}
+                          >
+                            <MenuItem value="Operativo">Operativo (48h)</MenuItem>
+                            <MenuItem value="Confianza">Confianza (72h)</MenuItem>
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Rol</InputLabel>
+                          <StyledSelect
+                            name="rol"
+                            value={formData.rol || 'Sin rol'}
+                            onChange={handleFormChange}
+                            label="Rol"
+                            disabled={!puedeAsignarRoles(userData)}
+                          >
+                            {rolesDisponibles.map((rol) => (
+                              <MenuItem key={rol.value || 'Sin rol'} value={rol.value || 'Sin rol'}>
+                                {rol.label}
+                              </MenuItem>
+                            ))}
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <PrimaryButton
+                          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                          onClick={guardarPerfil}
+                          disabled={loading}
+                        >
+                          Guardar Cambios
+                        </PrimaryButton>
+                      </Grid>
+                    </Grid>
+                  </>
+                )}
+              </Box>
             )}
           </Box>
-        )}
-      </StyledPaper>
+        </StyledCard>
+      </Container>
 
       {/* Diálogo de reautenticación */}
-      <Dialog open={dialogoReautenticacion} onClose={() => setDialogoReautenticacion(false)}>
-        <DialogTitle>Verificación de seguridad</DialogTitle>
+      <Dialog 
+        open={dialogoReautenticacion} 
+        onClose={() => setDialogoReautenticacion(false)}
+        PaperProps={{
+          sx: { borderRadius: 4, p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          🔒 Verificación de seguridad
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Para continuar, por favor ingresa tu contraseña actual para verificar tu identidad.
+          <DialogContentText sx={{ mb: 2 }}>
+            Para continuar, ingresa tu contraseña actual para verificar tu identidad.
           </DialogContentText>
-          <TextField
+          <StyledTextField
             autoFocus
-            margin="dense"
+            fullWidth
             label="Contraseña actual"
             type="password"
-            fullWidth
-            variant="outlined"
             value={reautenticacionPassword}
             onChange={(e) => setReautenticacionPassword(e.target.value)}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogoReautenticacion(false)} color="primary">
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setDialogoReautenticacion(false)} 
+            sx={{ color: '#64748b', borderRadius: 2 }}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleReautenticacion} color="primary" disabled={loading}>
-            {loading ? <CircularProgress size={24} /> : 'Verificar'}
-          </Button>
+          <PrimaryButton 
+            onClick={handleReautenticacion} 
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={20} color="inherit" /> : 'Verificar'}
+          </PrimaryButton>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

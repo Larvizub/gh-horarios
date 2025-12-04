@@ -1,57 +1,117 @@
 .App {
   text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Animaciones para iconos de botones */
+/* === ANIMACIONES MEJORADAS === */
+
+/* Pulse suave */
 @keyframes pulse {
-  0% {
+  0%, 100% {
     transform: scale(1);
+    opacity: 1;
   }
   50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
+    transform: scale(1.05);
+    opacity: 0.9;
   }
 }
 
+/* Rotación suave */
 @keyframes rotate {
-  0% {
+  from {
     transform: rotate(0deg);
   }
-  100% {
+  to {
     transform: rotate(360deg);
   }
 }
 
+/* Bounce elegante */
 @keyframes bounce {
   0%, 100% {
     transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
   }
   50% {
-    transform: translateY(-5px);
+    transform: translateY(-6px);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
 
+/* Shake sutil */
 @keyframes shake {
   0%, 100% {
     transform: translateX(0);
   }
-  25% {
-    transform: translateX(-3px);
+  20% {
+    transform: translateX(-2px);
   }
-  75% {
-    transform: translateX(3px);
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
   }
 }
 
+/* Fade in slide */
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale in */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Shimmer para loading */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Glow pulsante */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 131, 14, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 131, 14, 0.4);
+  }
+}
+
+/* === CLASES DE ANIMACIÓN === */
+
 .icon-pulse {
-  animation: pulse 1.5s infinite;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .icon-rotate {
-  animation: rotate 1.5s infinite;
-  animation-timing-function: linear;
+  animation: rotate 2s linear infinite;
 }
 
 .icon-bounce {
@@ -59,21 +119,230 @@
 }
 
 .icon-shake {
-  animation: shake 0.5s infinite;
+  animation: shake 0.5s ease-in-out;
 }
 
+.animate-fade-in {
+  animation: fadeInSlide 0.4s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Hover animations */
 .icon-hover-pulse:hover .MuiSvgIcon-root {
   animation: pulse 1s infinite;
 }
 
 .icon-hover-rotate:hover .MuiSvgIcon-root {
-  animation: rotate 1s infinite linear;
+  animation: rotate 1s linear infinite;
 }
 
 .icon-hover-bounce:hover .MuiSvgIcon-root {
-  animation: bounce 0.8s infinite;
+  animation: bounce 0.6s infinite;
 }
 
 .icon-hover-shake:hover .MuiSvgIcon-root {
-  animation: shake 0.5s infinite;
+  animation: shake 0.5s ease-in-out;
+}
+
+/* === EFECTOS DE TRANSICIÓN === */
+
+.transition-all {
+  transition: all var(--transition-normal);
+}
+
+.transition-transform {
+  transition: transform var(--transition-fast);
+}
+
+.transition-opacity {
+  transition: opacity var(--transition-normal);
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Hover scale effect */
+.hover-scale {
+  transition: transform var(--transition-fast);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* === COMPONENTES VISUALES === */
+
+/* Cards mejoradas */
+.card-modern {
+  background: var(--background-secondary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-normal);
+}
+
+.card-modern:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: transparent;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--border-radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-primary {
+  background: rgba(0, 131, 14, 0.1);
+  color: var(--primary-color);
+}
+
+.badge-success {
+  background: rgba(46, 125, 50, 0.1);
+  color: var(--success-color);
+}
+
+.badge-warning {
+  background: rgba(245, 124, 0, 0.1);
+  color: var(--warning-color);
+}
+
+.badge-error {
+  background: rgba(211, 47, 47, 0.1);
+  color: var(--error-color);
+}
+
+/* Divider con gradiente */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+  border: none;
+  margin: var(--spacing-md) 0;
+}
+
+/* === LAYOUT HELPERS === */
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* === RESPONSIVE UTILITIES === */
+
+/* Ocultar en móvil */
+@media (max-width: 599px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Ocultar en desktop */
+@media (min-width: 600px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* === ESTADOS INTERACTIVOS === */
+
+/* Ripple effect container */
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Active state para touch */
+@media (hover: none) {
+  .touch-active:active {
+    background-color: rgba(0, 131, 14, 0.08);
+    transform: scale(0.98);
+  }
+}
+
+/* === LOADING STATES === */
+
+.loading-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--background-primary) 0%,
+    var(--background-secondary) 50%,
+    var(--background-primary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--border-radius-sm);
+}
+
+/* === SCROLLBAR CUSTOM === */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--secondary-light);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-color);
+}
+
+/* === MOBILE APP SPECIFIC === */
+
+@media (max-width: 599px) {
+  /* Bottom navigation space */
+  .main-content {
+    padding-bottom: calc(56px + var(--safe-area-bottom));
+  }
+  
+  /* Full width containers */
+  .mobile-full-width {
+    margin-left: calc(-1 * var(--spacing-md));
+    margin-right: calc(-1 * var(--spacing-md));
+    border-radius: 0;
+  }
+  
+  /* Larger touch targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

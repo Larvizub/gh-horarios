@@ -1,8 +1,120 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button, FormControl, InputLabel, Select, MenuItem, Box, Slide, TextField } from '@mui/material';
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  Typography, 
+  Button, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem, 
+  Box, 
+  Slide, 
+  TextField,
+  Chip
+} from '@mui/material';
+import { styled, alpha } from '@mui/material/styles';
 import TimeInput from './TimeInput';
 import { eliminarHorarioDeUsuario } from '../../services/firebaseHorarios';
 import { puedeModificarHorarios } from '../../utils/permissionsUtils';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import WorkIcon from '@mui/icons-material/Work';
+import HomeWorkIcon from '@mui/icons-material/HomeWork';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import SaveIcon from '@mui/icons-material/Save';
+import CloseIcon from '@mui/icons-material/Close';
+
+// Styled Components
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialog-paper': {
+    borderRadius: 20,
+    overflow: 'hidden',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  },
+}));
+
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #00830e 0%, #4caf50 100%)',
+  color: 'white',
+  padding: theme.spacing(2.5, 3),
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1.5),
+  '& .MuiSvgIcon-root': {
+    fontSize: 28,
+  },
+}));
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  padding: theme.spacing(3),
+  backgroundColor: '#fafafa',
+}));
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: 'white',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: 'white',
+    },
+    '&.Mui-focused': {
+      boxShadow: '0 0 0 3px rgba(0, 131, 14, 0.1)',
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 500,
+  },
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: 'white',
+    '&.Mui-focused': {
+      boxShadow: '0 0 0 3px rgba(0, 131, 14, 0.1)',
+    },
+  },
+}));
+
+const HoursDisplay = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  padding: theme.spacing(1.5, 2),
+  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  borderRadius: 12,
+  marginTop: theme.spacing(2),
+  '& .hours-value': {
+    fontWeight: 700,
+    fontSize: '1.25rem',
+    color: theme.palette.primary.main,
+  },
+}));
+
+const SectionTitle = styled(Typography)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  fontWeight: 600,
+  color: theme.palette.text.secondary,
+  marginTop: theme.spacing(2),
+  marginBottom: theme.spacing(1.5),
+  fontSize: '0.875rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+}));
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  padding: '12px 24px',
+  fontWeight: 600,
+  textTransform: 'none',
+  transition: 'all 0.2s ease',
+}));
 
 const DialogoHorario = ({
   dialogoHorario,
@@ -129,7 +241,7 @@ const DialogoHorario = ({
   };
 
   return (
-    <Dialog 
+    <StyledDialog 
       open={dialogoHorario} 
       onClose={() => setDialogoHorario(false)}
       fullScreen={isSmallMobile}
@@ -138,15 +250,13 @@ const DialogoHorario = ({
       TransitionComponent={Slide}
       TransitionProps={{ direction: 'up' }}
     >
-      <DialogTitle sx={{ 
-        fontSize: isMobile ? '1.1rem' : '1.25rem',
-        pb: isMobile ? 1 : 2
-      }}>
+      <StyledDialogTitle>
+        <AccessTimeIcon />
         Asignar Horario
-      </DialogTitle>
-      <DialogContent sx={{ pb: isMobile ? 1 : 2 }}>
+      </StyledDialogTitle>
+      <StyledDialogContent>
         <Box sx={{ mt: 2 }}>
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <StyledFormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Tipo de asignación</InputLabel>
             <Select
               value={tipo}
@@ -167,11 +277,26 @@ const DialogoHorario = ({
               }}
               size={isMobile ? 'small' : 'medium'}
             >
-              <MenuItem value="personalizado">Presencial</MenuItem>
-              <MenuItem value="teletrabajo">Teletrabajo</MenuItem>
+              <MenuItem value="personalizado">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <WorkIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                  Presencial
+                </Box>
+              </MenuItem>
+              <MenuItem value="teletrabajo">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <HomeWorkIcon sx={{ fontSize: 18, color: 'info.main' }} />
+                  Teletrabajo
+                </Box>
+              </MenuItem>
               <MenuItem value="tele-presencial">Teletrabajo & Presencial</MenuItem>
               <MenuItem value="cambio">Cambio</MenuItem>
-              <MenuItem value="descanso">Descanso</MenuItem>
+              <MenuItem value="descanso">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <EventBusyIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                  Descanso
+                </Box>
+              </MenuItem>
               <MenuItem value="vacaciones">Vacaciones</MenuItem>
               <MenuItem value="feriado">Feriado</MenuItem>
               <MenuItem value="permiso">Permiso Otorgado por Jefatura</MenuItem>
@@ -182,14 +307,15 @@ const DialogoHorario = ({
               <MenuItem value="incapacidad-enfermedad">Incapacidad por Enfermedad</MenuItem>
               <MenuItem value="incapacidad-accidente">Incapacidad por Accidente</MenuItem>
             </Select>
-          </FormControl>
+          </StyledFormControl>
 
           {tipo === 'viaje-trabajo' ? null
           : tipo === 'tarde-libre' ? (
             <>
-              <Typography variant="subtitle2" sx={{ mt: 1, mb: 1 }}>
+              <SectionTitle>
+                <WorkIcon sx={{ fontSize: 18 }} />
                 Presencial
-              </Typography>
+              </SectionTitle>
               <TimeInput
                 label="Hora de inicio trabajo"
                 value={horarioPersonalizado.horaInicio}
@@ -202,9 +328,10 @@ const DialogoHorario = ({
                 onChange={(e) => handleTimeChange('horaFin', e.target.value)}
                 isMobile={isMobile}
               />
-              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+              <SectionTitle>
+                <EventBusyIcon sx={{ fontSize: 18 }} />
                 Tiempo Libre
-              </Typography>
+              </SectionTitle>
               <TimeInput
                 label="Inicio tarde libre"
                 value={horarioPersonalizado.horaInicioLibre}
@@ -217,15 +344,18 @@ const DialogoHorario = ({
                 onChange={(e) => handleTimeChange('horaFinLibre', e.target.value)}
                 isMobile={isMobile}
               />
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>
-                Horas laboradas: {horasLaboradas.toFixed(1)}h
-              </Typography>
+              <HoursDisplay>
+                <AccessTimeIcon color="primary" />
+                <Typography variant="body2" color="text.secondary">Horas laboradas:</Typography>
+                <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
+              </HoursDisplay>
             </>
           ) : tipo === 'tele-presencial' ? (
             <>
-              <Typography variant="subtitle2" sx={{ mt: 1, mb: 1 }}>
+              <SectionTitle>
+                <HomeWorkIcon sx={{ fontSize: 18 }} />
                 Teletrabajo
-              </Typography>
+              </SectionTitle>
               <TimeInput
                 label="Inicio Teletrabajo"
                 value={horarioPersonalizado.horaInicioTele || ''}
@@ -239,9 +369,10 @@ const DialogoHorario = ({
                 isMobile={isMobile}
               />
 
-              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+              <SectionTitle>
+                <WorkIcon sx={{ fontSize: 18 }} />
                 Presencial
-              </Typography>
+              </SectionTitle>
               <TimeInput
                 label="Inicio Presencial"
                 value={horarioPersonalizado.horaInicioPres || ''}
@@ -256,62 +387,73 @@ const DialogoHorario = ({
               />
 
               {/* Mostrar horas calculadas */}
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>
-                Horas Teletrabajo: {(() => {
-                  const s = horarioPersonalizado.horaInicioTele;
-                  const e = horarioPersonalizado.horaFinTele;
-                  if (!s || !e) return '0.0';
-                  try {
-                    const [h1, m1] = s.split(':').map(Number);
-                    const [h2, m2] = e.split(':').map(Number);
-                    let v = 0;
-                    if (h2 > h1 || (h2 === h1 && m2 > m1)) {
-                      v = (h2 - h1) + (m2 - m1) / 60;
-                    } else {
-                      v = (24 - h1 + h2) + (m2 - m1) / 60;
-                    }
-                    return v.toFixed(1) + 'h';
-                  } catch { return '0.0'; }
-                })()}
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 0.5 }}>
-                Horas Presencial: {(() => {
-                  const s = horarioPersonalizado.horaInicioPres;
-                  const e = horarioPersonalizado.horaFinPres;
-                  if (!s || !e) return '0.0';
-                  try {
-                    const [h1, m1] = s.split(':').map(Number);
-                    const [h2, m2] = e.split(':').map(Number);
-                    let v = 0;
-                    if (h2 > h1 || (h2 === h1 && m2 > m1)) {
-                      v = (h2 - h1) + (m2 - m1) / 60;
-                    } else {
-                      v = (24 - h1 + h2) + (m2 - m1) / 60;
-                    }
-                    return v.toFixed(1) + 'h';
-                  } catch { return '0.0'; }
-                })()}
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 0.5 }}>
-                Total: {(() => {
-                  // Reusar cálculos anteriores
-                  const calc = (s, e) => {
-                    if (!s || !e) return 0;
-                    const [h1, m1] = s.split(':').map(Number);
-                    const [h2, m2] = e.split(':').map(Number);
-                    let v = 0;
-                    if (h2 > h1 || (h2 === h1 && m2 > m1)) {
-                      v = (h2 - h1) + (m2 - m1) / 60;
-                    } else {
-                      v = (24 - h1 + h2) + (m2 - m1) / 60;
-                    }
-                    return v;
-                  };
-                  const tele = calc(horarioPersonalizado.horaInicioTele, horarioPersonalizado.horaFinTele);
-                  const pres = calc(horarioPersonalizado.horaInicioPres, horarioPersonalizado.horaFinPres);
-                  return (tele + pres).toFixed(1) + 'h';
-                })()}
-              </Typography>
+              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Chip 
+                  icon={<HomeWorkIcon />}
+                  label={`Teletrabajo: ${(() => {
+                    const s = horarioPersonalizado.horaInicioTele;
+                    const e = horarioPersonalizado.horaFinTele;
+                    if (!s || !e) return '0.0h';
+                    try {
+                      const [h1, m1] = s.split(':').map(Number);
+                      const [h2, m2] = e.split(':').map(Number);
+                      let v = 0;
+                      if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+                        v = (h2 - h1) + (m2 - m1) / 60;
+                      } else {
+                        v = (24 - h1 + h2) + (m2 - m1) / 60;
+                      }
+                      return v.toFixed(1) + 'h';
+                    } catch { return '0.0h'; }
+                  })()}`}
+                  color="info"
+                  variant="outlined"
+                  sx={{ justifyContent: 'flex-start' }}
+                />
+                <Chip 
+                  icon={<WorkIcon />}
+                  label={`Presencial: ${(() => {
+                    const s = horarioPersonalizado.horaInicioPres;
+                    const e = horarioPersonalizado.horaFinPres;
+                    if (!s || !e) return '0.0h';
+                    try {
+                      const [h1, m1] = s.split(':').map(Number);
+                      const [h2, m2] = e.split(':').map(Number);
+                      let v = 0;
+                      if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+                        v = (h2 - h1) + (m2 - m1) / 60;
+                      } else {
+                        v = (24 - h1 + h2) + (m2 - m1) / 60;
+                      }
+                      return v.toFixed(1) + 'h';
+                    } catch { return '0.0h'; }
+                  })()}`}
+                  color="success"
+                  variant="outlined"
+                  sx={{ justifyContent: 'flex-start' }}
+                />
+                <HoursDisplay>
+                  <AccessTimeIcon color="primary" />
+                  <Typography variant="body2" color="text.secondary">Total:</Typography>
+                  <span className="hours-value">{(() => {
+                    const calc = (s, e) => {
+                      if (!s || !e) return 0;
+                      const [h1, m1] = s.split(':').map(Number);
+                      const [h2, m2] = e.split(':').map(Number);
+                      let v = 0;
+                      if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+                        v = (h2 - h1) + (m2 - m1) / 60;
+                      } else {
+                        v = (24 - h1 + h2) + (m2 - m1) / 60;
+                      }
+                      return v;
+                    };
+                    const tele = calc(horarioPersonalizado.horaInicioTele, horarioPersonalizado.horaFinTele);
+                    const pres = calc(horarioPersonalizado.horaInicioPres, horarioPersonalizado.horaFinPres);
+                    return (tele + pres).toFixed(1) + 'h';
+                  })()}</span>
+                </HoursDisplay>
+              </Box>
             </>
           ) : tipo !== 'descanso' && tipo !== 'vacaciones' && tipo !== 'feriado' && tipo !== 'permiso' && tipo !== 'dia-brigada' && tipo !== 'incapacidad-enfermedad' && tipo !== 'incapacidad-accidente' ? (
             <>
@@ -327,14 +469,16 @@ const DialogoHorario = ({
                 onChange={(e) => handleTimeChange('horaFin', e.target.value)}
                 isMobile={isMobile}
               />
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>
-                Horas laboradas: {horasLaboradas.toFixed(1)}h
-              </Typography>
+              <HoursDisplay>
+                <AccessTimeIcon color="primary" />
+                <Typography variant="body2" color="text.secondary">Horas laboradas:</Typography>
+                <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
+              </HoursDisplay>
             </>
           ) : null}
 
           {/* Campo para nota */}
-          <TextField
+          <StyledTextField
             label="Nota (opcional)"
             value={horarioPersonalizado.nota || ''}
             onChange={e => setHorarioPersonalizado(prev => ({ ...prev, nota: e.target.value }))}
@@ -342,44 +486,62 @@ const DialogoHorario = ({
             multiline
             minRows={1}
             maxRows={3}
-            sx={{ mt: 2 }}
+            sx={{ mt: 3 }}
             size={isMobile ? 'small' : 'medium'}
+            placeholder="Agrega una nota o comentario..."
           />
         </Box>
-      </DialogContent>
+      </StyledDialogContent>
       <DialogActions sx={{ 
         p: isMobile ? 2 : 3,
         flexDirection: isSmallMobile ? 'column' : 'row',
-        gap: isSmallMobile ? 1 : 0
+        gap: 1.5,
+        backgroundColor: '#fafafa',
+        borderTop: '1px solid rgba(0, 0, 0, 0.08)'
       }}>
-        <Button 
+        <ActionButton 
           onClick={() => setDialogoHorario(false)}
           fullWidth={isSmallMobile}
           size={isMobile ? 'medium' : 'large'}
+          startIcon={<CloseIcon />}
+          sx={{ color: 'text.secondary' }}
         >
           Cancelar
-        </Button>
-        <Button
+        </ActionButton>
+        <ActionButton
           onClick={handleEliminarHorario}
           color="error"
           variant="outlined"
           fullWidth={isSmallMobile}
           size={isMobile ? 'medium' : 'large'}
-          sx={{ ml: isSmallMobile ? 0 : 1 }}
+          startIcon={<DeleteOutlineIcon />}
           disabled={!puedeEliminar}
+          sx={{ 
+            borderWidth: 2,
+            '&:hover': { borderWidth: 2 }
+          }}
         >
           Eliminar
-        </Button>
-        <Button 
+        </ActionButton>
+        <ActionButton 
           onClick={guardarHorarioPersonalizado} 
           variant="contained"
           fullWidth={isSmallMobile}
           size={isMobile ? 'medium' : 'large'}
+          startIcon={<SaveIcon />}
+          sx={{
+            background: 'linear-gradient(135deg, #00830e 0%, #4caf50 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #006b0b 0%, #388e3c 100%)',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 20px rgba(0, 131, 14, 0.3)',
+            },
+          }}
         >
           Guardar
-        </Button>
+        </ActionButton>
       </DialogActions>
-    </Dialog>
+    </StyledDialog>
   );
 };
 export default DialogoHorario;

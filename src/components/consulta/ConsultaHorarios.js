@@ -43,9 +43,10 @@ import {
   Avatar,
   Divider,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Fade
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import { format, addDays, startOfWeek, getISOWeek, getYear, addWeeks, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SearchIcon from '@mui/icons-material/Search';
@@ -54,30 +55,153 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import PersonIcon from '@mui/icons-material/Person';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { departamentos } from '../../utils/horariosConstants';
 import * as XLSX from 'xlsx';
 
+// Styled Components modernos
+const PageContainer = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+  background: 'linear-gradient(135deg, #f8fafc 0%, #e8f5e9 50%, #f0f9ff 100%)',
+  [theme.breakpoints.down('md')]: {
+    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)',
+  },
+}));
+
+const ContentContainer = styled(Container)(({ theme }) => ({
+  paddingTop: theme.spacing(3),
+  paddingBottom: theme.spacing(3),
+  [theme.breakpoints.down('md')]: {
+    paddingTop: theme.spacing(2),
+    paddingLeft: theme.spacing(1.5),
+    paddingRight: theme.spacing(1.5),
+  },
+}));
+
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  borderRadius: '16px',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+  borderRadius: 20,
+  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
+  border: '1px solid rgba(0, 131, 14, 0.08)',
+  background: 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(10px)',
+  overflow: 'hidden',
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '4px',
+    background: 'linear-gradient(90deg, #00830e, #4caf50, #81c784)',
+  },
   [theme.breakpoints.down('md')]: {
     padding: theme.spacing(2),
-    borderRadius: '12px',
+    borderRadius: 16,
   },
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(1.5),
-    borderRadius: '8px',
-    margin: theme.spacing(0.5),
+    borderRadius: 12,
+  },
+}));
+
+const PageTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 700,
+  fontSize: '1.75rem',
+  color: '#1a1a2e',
+  marginBottom: theme.spacing(3),
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1.5),
+  '& .icon': {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    background: 'linear-gradient(135deg, #00830e, #4caf50)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '1.25rem',
+  },
+  [theme.breakpoints.down('sm')]: {
+    fontSize: '1.35rem',
+    marginBottom: theme.spacing(2),
+    justifyContent: 'center',
+    '& .icon': {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+    },
+  },
+}));
+
+const FilterCard = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2.5),
+  borderRadius: 16,
+  background: 'linear-gradient(135deg, rgba(0, 131, 14, 0.03), rgba(76, 175, 80, 0.05))',
+  border: '1px solid rgba(0, 131, 14, 0.1)',
+  marginBottom: theme.spacing(3),
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    borderRadius: 12,
+  },
+}));
+
+const WeekHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: theme.spacing(2),
+  padding: theme.spacing(2),
+  background: 'linear-gradient(135deg, #00830e, #4caf50)',
+  borderRadius: 12,
+  color: 'white',
+  marginBottom: theme.spacing(3),
+  boxShadow: '0 4px 15px rgba(0, 131, 14, 0.3)',
+  '& .MuiIconButton-root': {
+    color: 'white',
+    background: 'rgba(255, 255, 255, 0.15)',
+    '&:hover': {
+      background: 'rgba(255, 255, 255, 0.25)',
+    },
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(1.5),
+    gap: theme.spacing(1),
+    borderRadius: 10,
+  },
+}));
+
+const UserCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  borderRadius: 16,
+  overflow: 'visible',
+  border: '1px solid rgba(0, 0, 0, 0.06)',
+  transition: 'all 0.25s ease-in-out',
+  '&:hover': {
+    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+    borderColor: 'rgba(0, 131, 14, 0.2)',
+    transform: 'translateY(-2px)',
+  },
+  [theme.breakpoints.down('sm')]: {
+    borderRadius: 12,
+    marginBottom: theme.spacing(1.5),
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  transition: 'background-color 0.15s ease',
   '&:nth-of-type(odd)': {
-    backgroundColor: theme.palette.action.hover,
+    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+  },
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.06),
   },
   '&:last-child td, &:last-child th': {
     border: 0,
@@ -86,10 +210,42 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 
 const TimeCell = styled(TableCell)(({ theme, tipo }) => ({
   backgroundColor: tipo === 'teletrabajo' || tipo === 'tele-presencial'
-    ? 'rgba(46, 125, 50, 0.06)'
-    : (tipo === 'personalizado' ? 'rgba(63, 81, 181, 0.06)' : 'inherit'),
-  fontWeight: tipo === 'descanso' ? 'normal' : 'bold',
+    ? alpha('#2e7d32', 0.06)
+    : (tipo === 'personalizado' ? alpha('#3f51b5', 0.06) : 'inherit'),
+  fontWeight: tipo === 'descanso' ? 'normal' : 600,
   color: tipo === 'descanso' ? theme.palette.text.secondary : theme.palette.text.primary,
+  borderRadius: 8,
+}));
+
+const HoursChip = styled(Chip)(({ theme, exceeded }) => ({
+  fontWeight: 600,
+  borderRadius: 8,
+  ...(exceeded && {
+    background: 'linear-gradient(135deg, #f44336, #e91e63)',
+    color: 'white',
+    animation: 'pulse 2s infinite',
+  }),
+}));
+
+const ExportButton = styled(Button)(({ theme }) => ({
+  borderRadius: 10,
+  textTransform: 'none',
+  fontWeight: 600,
+  padding: '8px 16px',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+  },
+}));
+
+const LoadingContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  minHeight: '60vh',
+  gap: theme.spacing(3),
 }));
 
 const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -610,332 +766,407 @@ const ConsultaHorarios = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-        <CircularProgress />
-      </Box>
+      <PageContainer>
+        <ContentContainer maxWidth="lg">
+          <StyledPaper>
+            <LoadingContainer>
+              <CircularProgress size={48} sx={{ color: '#00830e' }} />
+              <Typography variant="h6" color="text.secondary">
+                Cargando horarios...
+              </Typography>
+            </LoadingContainer>
+          </StyledPaper>
+        </ContentContainer>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ 
-      mt: { xs: 2, md: 4 }, 
-      mb: { xs: 2, md: 4 },
-      px: { xs: 1, sm: 2, md: 3 }
-    }}>
-      <Typography
-        variant="h4"
-        component="h1"
-        gutterBottom
-        sx={{
-          fontWeight: 'bold',
-          color: 'var(--primary-color)',
-          textAlign: { xs: 'center', md: 'left' },
-          mb: { xs: 2, md: 3 },
-          fontSize: { xs: '1.5rem', md: '2.125rem' }
-        }}
-      >
-        Consulta de Horarios
-      </Typography>
-      {/* Botones de exportación visibles solo para administradores */}
-      {esAdministrador && (
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, justifyContent: { xs: 'center', md: 'flex-end' } }}>
-          <Button
-            variant="outlined"
-            startIcon={<GetAppIcon />}
-            onClick={() => exportToXLSX()}
-            size={isMobile ? 'small' : 'medium'}
-          >
-            Exportar a Excel
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<PictureAsPdfIcon />}
-            onClick={() => exportToPDF()}
-            size={isMobile ? 'small' : 'medium'}
-          >
-            Exportar a PDF
-          </Button>
-        </Box>
-      )}
-      
-      <StyledPaper elevation={3} sx={{ mb: { xs: 2, md: 4 }, p: { xs: 1.5, sm: 2, md: 3 } }}>
-        {/* Filtros de búsqueda */}
-        <Grid container spacing={{ xs: 2, md: 3 }} alignItems="center" sx={{ mb: { xs: 3, md: 4 } }}>
-          <Grid item xs={12} md={4}>
-            <Stack 
-              direction={{ xs: 'column', sm: 'row' }} 
-              spacing={1} 
-              alignItems="center"
-              sx={{ width: '100%' }}
-            >
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ justifyContent: 'center' }}>
-                <IconButton onClick={retrocederSemana} size="small">
-                  <ArrowBackIosNewIcon fontSize="small" />
-                </IconButton>
-                
-                <CustomDateSelector />
-                
-                <IconButton onClick={avanzarSemana} size="small">
-                  <ArrowForwardIosIcon fontSize="small" />
-                </IconButton>
-              </Stack>
-            </Stack>
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
-              <InputLabel id="departamento-select-label">Departamento</InputLabel>
-              <Select
-                labelId="departamento-select-label"
-                value={departamentoSeleccionado}
-                label="Departamento"
-                onChange={(e) => {
-                  setDepartamentoSeleccionado(e.target.value);
-                  setColaboradorSeleccionado(null);
-                }}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {departamentos.map((depto) => (
-                  <MenuItem key={depto} value={depto}>{depto}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <Autocomplete
-              options={usuarios}
-              getOptionLabel={(option) => `${option.nombre} ${option.apellidos}`}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="Buscar colaborador"
-                  size={isMobile ? 'small' : 'medium'}
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {params.InputProps.endAdornment}
-                        <SearchIcon color="action" />
-                      </>
-                    ),
-                  }}
-                />
-              )}
-              value={colaboradorSeleccionado}
-              onChange={(event, newValue) => {
-                setColaboradorSeleccionado(newValue);
-                if (newValue) {
-                  setDepartamentoSeleccionado(newValue.departamento);
-                }
-              }}
-              isOptionEqualToValue={(option, value) => option.id === value?.id}
-            />
-          </Grid>
-        </Grid>
-        
-                        <Typography 
-                          variant="h6" 
-                          gutterBottom
-                          sx={{ 
-                            fontSize: { xs: '1rem', md: '1.25rem' },
-                            mb: { xs: 2, md: 3 }
-                          }}
-                        >
-                          Semana del {format(semanaSeleccionada, "d 'de' MMMM", { locale: es })} al {format(addDays(semanaSeleccionada, 6), "d 'de' MMMM", { locale: es })}
-                        </Typography>
-        
-        {/* Lista de horarios */}
-        {!horariosRegistros[semanaKey] ? (
-          <Box sx={{ my: 4, textAlign: 'center' }}>
-            <Typography variant="subtitle1" color="text.secondary">
-              No hay registros de horarios para esta semana
-            </Typography>
-          </Box>
-        ) : usuariosFiltrados.length === 0 ? (
-          <Box sx={{ my: 4, textAlign: 'center' }}>
-            <Typography variant="subtitle1" color="text.secondary">
-              No se encontraron colaboradores con los filtros aplicados
-            </Typography>
-          </Box>
-        ) : (
+    <PageContainer>
+      <ContentContainer maxWidth="lg">
+        <Fade in timeout={400}>
           <Box>
-            {usuariosFiltrados.map(usuario => {
-              const horariosUsuario = horariosRegistros[semanaKey]?.[usuario.id];
-              const horasTotales = calcularHorasTotales(usuario.id);
-              const expandido = expandidosPorUsuario[usuario.id] || false;
-              
-              return (
-                <Card key={usuario.id} sx={{ 
-                  mb: 2, 
-                  borderRadius: { xs: '8px', md: '12px' }, 
-                  overflow: 'visible' 
+            <PageTitle>
+              <span className="icon">🔍</span>
+              Consulta de Horarios
+            </PageTitle>
+
+            {/* Botones de exportación visibles solo para administradores */}
+            {esAdministrador && (
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1.5, 
+                mb: 3, 
+                justifyContent: { xs: 'center', md: 'flex-end' },
+                flexWrap: 'wrap'
+              }}>
+                <ExportButton
+                  variant="outlined"
+                  startIcon={<GetAppIcon />}
+                  onClick={() => exportToXLSX()}
+                  size={isMobile ? 'small' : 'medium'}
+                >
+                  Exportar Excel
+                </ExportButton>
+                <ExportButton
+                  variant="contained"
+                  color="primary"
+                  startIcon={<PictureAsPdfIcon />}
+                  onClick={() => exportToPDF()}
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    background: 'linear-gradient(135deg, #00830e, #4caf50)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #006b0b, #388e3c)',
+                    },
+                  }}
+                >
+                  Exportar PDF
+                </ExportButton>
+              </Box>
+            )}
+            
+            <StyledPaper elevation={0}>
+              {/* Filtros de búsqueda */}
+              <FilterCard>
+                <Grid container spacing={{ xs: 2, md: 3 }} alignItems="center">
+                  <Grid item xs={12} md={4}>
+                    <Stack 
+                      direction="row" 
+                      spacing={1} 
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <IconButton 
+                        onClick={retrocederSemana} 
+                        size="small"
+                        sx={{
+                          bgcolor: 'rgba(0, 131, 14, 0.1)',
+                          '&:hover': { bgcolor: 'rgba(0, 131, 14, 0.2)' },
+                        }}
+                      >
+                        <ArrowBackIosNewIcon fontSize="small" />
+                      </IconButton>
+                      
+                      <CustomDateSelector />
+                      
+                      <IconButton 
+                        onClick={avanzarSemana} 
+                        size="small"
+                        sx={{
+                          bgcolor: 'rgba(0, 131, 14, 0.1)',
+                          '&:hover': { bgcolor: 'rgba(0, 131, 14, 0.2)' },
+                        }}
+                      >
+                        <ArrowForwardIosIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={4}>
+                    <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+                      <InputLabel id="departamento-select-label">Departamento</InputLabel>
+                      <Select
+                        labelId="departamento-select-label"
+                        value={departamentoSeleccionado}
+                        label="Departamento"
+                        onChange={(e) => {
+                          setDepartamentoSeleccionado(e.target.value);
+                          setColaboradorSeleccionado(null);
+                        }}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        <MenuItem value="">Todos</MenuItem>
+                        {departamentos.map((depto) => (
+                          <MenuItem key={depto} value={depto}>{depto}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={4}>
+                    <Autocomplete
+                      options={usuarios}
+                      getOptionLabel={(option) => `${option.nombre} ${option.apellidos}`}
+                      renderInput={(params) => (
+                        <TextField 
+                          {...params} 
+                          label="Buscar colaborador"
+                          size={isMobile ? 'small' : 'medium'}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {params.InputProps.endAdornment}
+                                <SearchIcon color="action" />
+                              </>
+                            ),
+                            sx: { borderRadius: 2 }
+                          }}
+                        />
+                      )}
+                      value={colaboradorSeleccionado}
+                      onChange={(event, newValue) => {
+                        setColaboradorSeleccionado(newValue);
+                        if (newValue) {
+                          setDepartamentoSeleccionado(newValue.departamento);
+                        }
+                      }}
+                      isOptionEqualToValue={(option, value) => option.id === value?.id}
+                    />
+                  </Grid>
+                </Grid>
+              </FilterCard>
+
+              {/* Header de la semana */}
+              <WeekHeader>
+                <AccessTimeIcon />
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', md: '1.15rem' } }}>
+                  Semana del {format(semanaSeleccionada, "d 'de' MMMM", { locale: es })} al {format(addDays(semanaSeleccionada, 6), "d 'de' MMMM yyyy", { locale: es })}
+                </Typography>
+              </WeekHeader>
+        
+              {/* Lista de horarios */}
+              {!horariosRegistros[semanaKey] ? (
+                <Box sx={{ 
+                  my: 6, 
+                  textAlign: 'center',
+                  py: 4,
+                  px: 2,
+                  bgcolor: 'rgba(0, 0, 0, 0.02)',
+                  borderRadius: 3,
                 }}>
-                  <CardHeader
-                    avatar={<PersonIcon />}
-                    title={
-                      <Typography variant={isMobile ? 'subtitle2' : 'h6'}>
-                        {usuario.nombre} {usuario.apellidos}
-                      </Typography>
-                    }
-                    subheader={
-                      <Typography variant={isMobile ? 'caption' : 'body2'}>
-                        {usuario.cargo} - {usuario.departamento}
-                      </Typography>
-                    }
-                    action={
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        flexDirection: { xs: 'column', sm: 'row' },
-                        gap: { xs: 0.5, sm: 1 }
-                      }}>
-                        <Chip 
-                          label={`${horasTotales.toFixed(1)} horas`} 
-                          color={horasTotales > 48 ? "error" : "default"}
-                          size="small"
-                          sx={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            const infraccion = verificarInfracciones(usuario.id);
-                            if (infraccion.tieneInfraccion) {
-                              abrirModalSugerencias(usuario);
+                  <AccessTimeIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary">
+                    No hay registros de horarios para esta semana
+                  </Typography>
+                  <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
+                    Selecciona otra semana o espera a que se asignen horarios
+                  </Typography>
+                </Box>
+              ) : usuariosFiltrados.length === 0 ? (
+                <Box sx={{ 
+                  my: 6, 
+                  textAlign: 'center',
+                  py: 4,
+                  px: 2,
+                  bgcolor: 'rgba(0, 0, 0, 0.02)',
+                  borderRadius: 3,
+                }}>
+                  <SearchIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary">
+                    No se encontraron colaboradores
+                  </Typography>
+                  <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
+                    Ajusta los filtros de búsqueda para ver resultados
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>
+                  {usuariosFiltrados.map(usuario => {
+                    const horariosUsuario = horariosRegistros[semanaKey]?.[usuario.id];
+                    const horasTotales = calcularHorasTotales(usuario.id);
+                    const expandido = expandidosPorUsuario[usuario.id] || false;
+                    const horasExcedidas = horasTotales > 48;
+                    const descansoInsuficiente = verificarDescansoEntreTurnos(usuario.id).tieneInfraccion;
+                    
+                    return (
+                      <UserCard key={usuario.id}>
+                        <CardHeader
+                          avatar={
+                            <Avatar 
+                              sx={{ 
+                                bgcolor: horasExcedidas ? 'error.main' : 'primary.main',
+                                width: { xs: 40, md: 48 },
+                                height: { xs: 40, md: 48 },
+                              }}
+                            >
+                              {usuario.nombre.charAt(0)}{usuario.apellidos.charAt(0)}
+                            </Avatar>
+                          }
+                          title={
+                            <Typography variant={isMobile ? 'subtitle1' : 'h6'} sx={{ fontWeight: 600 }}>
+                              {usuario.nombre} {usuario.apellidos}
+                            </Typography>
+                          }
+                          subheader={
+                            <Typography variant="body2" color="text.secondary">
+                              {usuario.cargo} • {usuario.departamento}
+                            </Typography>
+                          }
+                          action={
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center',
+                              flexDirection: { xs: 'column', sm: 'row' },
+                              gap: 1
+                            }}>
+                              <HoursChip 
+                                label={`${horasTotales.toFixed(1)}h`}
+                                exceeded={horasExcedidas}
+                                color={horasExcedidas ? "error" : "default"}
+                                size="small"
+                                icon={<AccessTimeIcon />}
+                                onClick={() => {
+                                  const infraccion = verificarInfracciones(usuario.id);
+                                  if (infraccion.tieneInfraccion) {
+                                    abrirModalSugerencias(usuario);
+                                  }
+                                }}
+                                sx={{ cursor: 'pointer' }}
+                              />
+                              {descansoInsuficiente && (
+                                <Chip 
+                                  label={isMobile ? '⚠️' : 'Descanso ↓'}
+                                  color="warning"
+                                  size="small"
+                                  icon={!isMobile && <WarningAmberIcon />}
+                                  onClick={() => abrirModalSugerencias(usuario)}
+                                  sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                />
+                              )}
+                              <IconButton 
+                                onClick={() => toggleExpandirUsuario(usuario.id)}
+                                aria-expanded={expandido}
+                                aria-label="mostrar más"
+                                size={isMobile ? 'small' : 'medium'}
+                                sx={{
+                                  bgcolor: expandido ? 'rgba(0, 131, 14, 0.1)' : 'transparent',
+                                  transition: 'all 0.2s ease',
+                                }}
+                              >
+                                {expandido ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                              </IconButton>
+                            </Box>
+                          }
+                          sx={{
+                            '& .MuiCardHeader-content': {
+                              overflow: 'hidden'
                             }
                           }}
                         />
-                        {verificarDescansoEntreTurnos(usuario.id).tieneInfraccion && (
-                          <Chip 
-                            label={isMobile ? 'Descanso ↓' : 'Descanso insuficiente'}
-                            color="warning"
-                            size="small"
-                            sx={{ cursor: 'pointer' }}
-                            onClick={() => abrirModalSugerencias(usuario)}
-                          />
-                        )}
-                        <IconButton 
-                          onClick={() => toggleExpandirUsuario(usuario.id)}
-                          aria-expanded={expandido}
-                          aria-label="mostrar más"
-                          size={isMobile ? 'small' : 'medium'}
-                        >
-                          {expandido ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                        </IconButton>
-                      </Box>
-                    }
-                    sx={{
-                      '& .MuiCardHeader-content': {
-                        overflow: 'hidden'
-                      }
-                    }}
-                  />
-                  <Collapse in={expandido} timeout="auto" unmountOnExit>
-                    <CardContent sx={{ p: { xs: 1, md: 2 } }}>
-                      <Box sx={{ 
-                        display: { xs: 'none', md: 'block' } 
-                      }}>
-                        <TableContainer>
-                          <Table size="small">
-                            <TableHead>
-                              <TableRow>
-                                <TableCell>Día</TableCell>
-                                <TableCell>Fecha</TableCell>
-                                <TableCell>Horario</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {diasSemana.map((dia, index) => {
-                                const diaKey = `dia${index + 1}`;
-                                const fecha = format(addDays(semanaSeleccionada, index), "d MMM", { locale: es });
-                                const horario = formatearHorario(horariosUsuario, diaKey);
-                                
-                                return (
-                                  <StyledTableRow key={diaKey}>
-                                    <TableCell>{dia}</TableCell>
-                                    <TableCell>{fecha}</TableCell>
-                                    <TimeCell tipo={horario.tipo}>
-                                      {horario.texto}
-                                    </TimeCell>
-                                  </StyledTableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      </Box>
+                        <Collapse in={expandido} timeout="auto" unmountOnExit>
+                          <CardContent sx={{ p: { xs: 1.5, md: 2.5 }, pt: { xs: 0, md: 0 } }}>
+                            <Box sx={{ 
+                              display: { xs: 'none', md: 'block' } 
+                            }}>
+                              <TableContainer sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow sx={{ bgcolor: 'rgba(0, 131, 14, 0.05)' }}>
+                                      <TableCell sx={{ fontWeight: 600 }}>Día</TableCell>
+                                      <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
+                                      <TableCell sx={{ fontWeight: 600 }}>Horario</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {diasSemana.map((dia, index) => {
+                                      const diaKey = `dia${index + 1}`;
+                                      const fecha = format(addDays(semanaSeleccionada, index), "d MMM", { locale: es });
+                                      const horario = formatearHorario(horariosUsuario, diaKey);
+                                      
+                                      return (
+                                        <StyledTableRow key={diaKey}>
+                                          <TableCell sx={{ fontWeight: 500 }}>{dia}</TableCell>
+                                          <TableCell>{fecha}</TableCell>
+                                          <TimeCell tipo={horario.tipo}>
+                                            {horario.texto}
+                                          </TimeCell>
+                                        </StyledTableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            </Box>
 
-                      {/* Vista móvil con lista */}
-                      <Box sx={{ 
-                        display: { xs: 'block', md: 'none' } 
-                      }}>
-                        <List dense>
-                          {diasSemana.map((dia, index) => {
-                            const diaKey = `dia${index + 1}`;
-                            const fecha = format(addDays(semanaSeleccionada, index), "d MMM", { locale: es });
-                            const horario = formatearHorario(horariosUsuario, diaKey);
-                            
-                            return (
-                              <ListItem key={diaKey} divider>
-                                <ListItemAvatar>
-                                  <Avatar 
-                                    sx={{ 
-                                      width: 32, 
-                                      height: 32, 
-                                      fontSize: '0.75rem',
-                                      bgcolor: horario.tipo === 'teletrabajo' 
-                                        ? '#2e7d32' 
-                                        : horario.tipo === 'personalizado' 
-                                        ? 'primary.main' 
-                                        : 'grey.500'
-                                    }}
-                                  >
-                                    {dia.slice(0, 1)}
-                                  </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                  primary={
-                                    <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                                      {dia} - {fecha}
-                                    </Typography>
-                                  }
-                                  secondary={
-                                    <Typography 
-                                      variant="caption" 
+                            {/* Vista móvil con lista */}
+                            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                              <List dense sx={{ py: 0 }}>
+                                {diasSemana.map((dia, index) => {
+                                  const diaKey = `dia${index + 1}`;
+                                  const fecha = format(addDays(semanaSeleccionada, index), "d MMM", { locale: es });
+                                  const horario = formatearHorario(horariosUsuario, diaKey);
+                                  
+                                  return (
+                                    <ListItem 
+                                      key={diaKey} 
+                                      divider
                                       sx={{ 
-                                        color: horario.tipo === 'descanso' 
-                                          ? 'text.secondary' 
-                                          : 'text.primary',
-                                        fontWeight: horario.tipo === 'descanso' ? 'normal' : 'medium'
+                                        py: 1.5,
+                                        borderRadius: 2,
+                                        mb: 0.5,
+                                        bgcolor: horario.tipo === 'descanso' ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
                                       }}
                                     >
-                                      {horario.texto}
-                                    </Typography>
-                                  }
-                                />
-                              </ListItem>
-                            );
-                          })}
-                        </List>
-                      </Box>
-                    </CardContent>
-                  </Collapse>
-                </Card>
-              );
-            })}
+                                      <ListItemAvatar>
+                                        <Avatar 
+                                          sx={{ 
+                                            width: 36, 
+                                            height: 36, 
+                                            fontSize: '0.8rem',
+                                            fontWeight: 600,
+                                            bgcolor: horario.tipo === 'teletrabajo' 
+                                              ? '#2e7d32' 
+                                              : horario.tipo === 'personalizado' 
+                                              ? 'primary.main' 
+                                              : horario.tipo === 'descanso'
+                                              ? 'grey.400'
+                                              : 'grey.500'
+                                          }}
+                                        >
+                                          {dia.slice(0, 2)}
+                                        </Avatar>
+                                      </ListItemAvatar>
+                                      <ListItemText
+                                        primary={
+                                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {dia} • {fecha}
+                                          </Typography>
+                                        }
+                                        secondary={
+                                          <Typography 
+                                            variant="body2" 
+                                            sx={{ 
+                                              color: horario.tipo === 'descanso' 
+                                                ? 'text.secondary' 
+                                                : 'text.primary',
+                                              fontWeight: horario.tipo === 'descanso' ? 400 : 500,
+                                              mt: 0.5
+                                            }}
+                                          >
+                                            {horario.texto}
+                                          </Typography>
+                                        }
+                                      />
+                                    </ListItem>
+                                  );
+                                })}
+                              </List>
+                            </Box>
+                          </CardContent>
+                        </Collapse>
+                      </UserCard>
+                    );
+                  })}
+                </Box>
+              )}
+            </StyledPaper>
           </Box>
-        )}
-      </StyledPaper>
-      
-      {/* Modal de sugerencias */}
-      <ModalSugerencias 
-        open={sugerenciasModalOpen}
-        onClose={cerrarModalSugerencias}
-        usuarioInfractor={usuarioInfractor}
-        usuariosSugeridos={usuariosSugeridos}
-        tipoInfraccion={tipoInfraccion}
-        detalleInfraccion={detalleInfraccion}
-        calcularHorasTotales={calcularHorasTotales}
-      />
-    </Container>
+        </Fade>
+        
+        {/* Modal de sugerencias */}
+        <ModalSugerencias 
+          open={sugerenciasModalOpen}
+          onClose={cerrarModalSugerencias}
+          usuarioInfractor={usuarioInfractor}
+          usuariosSugeridos={usuariosSugeridos}
+          tipoInfraccion={tipoInfraccion}
+          detalleInfraccion={detalleInfraccion}
+          calcularHorasTotales={calcularHorasTotales}
+        />
+      </ContentContainer>
+    </PageContainer>
   );
 };
 
