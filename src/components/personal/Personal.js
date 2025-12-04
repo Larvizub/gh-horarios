@@ -631,8 +631,10 @@ const Personal = () => {
                   color: 'white',
                   borderRadius: 3,
                   px: 3,
+                  transition: 'background-color 0.2s ease',
                   '&:hover': {
                     bgcolor: 'rgba(255,255,255,0.3)',
+                    transform: 'translateY(-50%)',
                   },
                 }}
               >
