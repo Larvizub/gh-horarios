@@ -397,6 +397,7 @@ const HorariosTable = ({
                             currentUser={currentUser}
                             handleCambiarTurno={handleCambiarTurno}
                             handleCopiarHorario={handleCopiarHorario}
+                            suppressOpen={!!clipboard && editando}
                             NO_SUMAN_HORAS={NO_SUMAN_HORAS}
                           />
                         </Box>

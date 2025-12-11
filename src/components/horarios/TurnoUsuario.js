@@ -13,7 +13,8 @@ const TurnoUsuario = ({
   currentUser, 
   handleCambiarTurno, 
   handleCopiarHorario, 
-  NO_SUMAN_HORAS
+  NO_SUMAN_HORAS,
+  suppressOpen // when true, clicking the slot should not open the edit dialog (used during multi-target selection)
 }) => {
   const horariosUsuario = editando ? horariosEditados[usuario.id] : horarios[usuario.id];
   const horario = horariosUsuario?.[diaKey];
@@ -29,7 +30,7 @@ const TurnoUsuario = ({
     <Grid item xs={true} key={diaKey}>
       <Box
         onClick={() => {
-          if (editando) {
+          if (editando && !suppressOpen) {
             handleCambiarTurno(usuario.id, diaKey);
           }
         }}
