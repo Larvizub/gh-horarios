@@ -220,6 +220,8 @@ const Horarios = () => {
   // Estados para copiar horario
   const [dialogoCopiar, setDialogoCopiar] = useState(false);
   const [horarioACopiar, setHorarioACopiar] = useState(null);
+  // Portapapeles local para copiar/pegar horarios
+  const [clipboard, setClipboard] = useState(null);
 
   // Estados para modales de confirmación modernos
   const { modalConfirmacion, mostrarModal, cerrarModal } = useModalConfirm();
@@ -242,6 +244,36 @@ const Horarios = () => {
   };
 
   const usuariosFiltrados = useUsuariosFiltrados(usuarios, departamentoSeleccionado);
+
+  // Copiar un horario al portapapeles (invocado por HorariosTable)
+  const handleCopiarHorario = useCallback((usuarioId, diaKey, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const source = editando ? (horariosEditados[usuarioId] || {}) : (horarios[usuarioId] || {});
+    const horario = source?.[diaKey];
+    if (!horario) {
+      mostrarModal({ tipo: 'warning', titulo: 'Sin horario', mensaje: 'El día seleccionado no tiene un horario válido para copiar.', soloInfo: true });
+      return;
+    }
+    // Guardar copia profunda para evitar referencias compartidas
+    setClipboard({ origen: { usuarioId, diaKey }, horario: JSON.parse(JSON.stringify(horario)) });
+    mostrarModal({ tipo: 'success', titulo: 'Horario copiado', mensaje: 'Selecciona los días destino y presiona "Pegar".', soloInfo: true });
+  }, [editando, horarios, horariosEditados, mostrarModal]);
+
+  // Aplicar el horario copiado a múltiples destinos
+  const applyCopiedHorario = useCallback((targets = []) => {
+    if (!clipboard || !clipboard.horario) return;
+    setHorariosEditados(prev => {
+      const next = { ...prev };
+      targets.forEach(({ usuarioId, diaKey }) => {
+        if (!next[usuarioId]) next[usuarioId] = {};
+        next[usuarioId] = { ...next[usuarioId], [diaKey]: JSON.parse(JSON.stringify(clipboard.horario)) };
+      });
+      return next;
+    });
+    // limpiar el portapapeles
+    setClipboard(null);
+    mostrarModal({ tipo: 'success', titulo: 'Pegado completo', mensaje: `Se pegaron ${targets.length} destinos.`, soloInfo: true });
+  }, [clipboard, mostrarModal]);
 
   // Iniciar edición según permisos (evita cargar datos de otros usuarios para no admins)
   const iniciarEdicion = useCallback(() => {
@@ -693,32 +725,7 @@ const Horarios = () => {
     setDialogoHorario(true);
   }, []);
 
-  // Función para manejar copiar horario
-  const handleCopiarHorario = useCallback((usuarioId, diaKey, event) => {
-    if (event) {
-      event.stopPropagation(); // Evitar que se active el click del TimeSlot
-    }
-    
-    const horariosUsuario = editando ? horariosEditados[usuarioId] : horarios[usuarioId];
-    const horarioACopiar = horariosUsuario?.[diaKey];
-    
-    if (!horarioACopiar || !horarioACopiar.tipo || horarioACopiar.tipo === 'libre') {
-      mostrarModal({
-        tipo: 'warning',
-        titulo: '⚠️ Sin Horario',
-        mensaje: 'No hay un horario establecido para copiar en este día.',
-        soloInfo: true
-      });
-      return;
-    }
-
-    setHorarioACopiar({
-      ...horarioACopiar,
-      usuarioId,
-      diaOriginal: diaKey
-    });
-    setDialogoCopiar(true);
-  }, [editando, horariosEditados, horarios, mostrarModal]);
+  // (El diálogo de copia utiliza `horarioACopiar` y `ejecutarCopiarHorario` directamente)
 
   // Función para ejecutar la copia del horario
   const ejecutarCopiarHorario = useCallback(async (diaDestino) => {
@@ -1265,6 +1272,8 @@ const Horarios = () => {
               handleCambiarTurno={handleCambiarTurno}
               abrirInfoTurno={abrirInfoTurno}
               handleCopiarHorario={handleCopiarHorario}
+              clipboard={clipboard}
+              onApplyCopiedHorario={applyCopiedHorario}
               NO_SUMAN_HORAS={NO_SUMAN_HORAS}
               calcularExceso={calcularExceso}
               calcularHorasTotales={calcularHorasTotales}

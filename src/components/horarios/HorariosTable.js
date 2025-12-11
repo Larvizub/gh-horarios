@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Paper, Grid, Typography, IconButton, Chip, alpha } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Paper, Grid, Typography, IconButton, Chip, alpha, Button, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { format, addDays } from 'date-fns';
@@ -136,6 +136,8 @@ const HorariosTable = ({
   handleCambiarTurno,
   abrirInfoTurno,
   handleCopiarHorario,
+  clipboard,
+  onApplyCopiedHorario,
   NO_SUMAN_HORAS,
   calcularExceso,
   calcularHorasTotales,
@@ -145,8 +147,45 @@ const HorariosTable = ({
   obtenerHorasMaximas,
   diasSemana
 }) => {
+  const [selectedTargets, setSelectedTargets] = useState(new Set());
+  const toggleTarget = (usuarioId, diaKey) => {
+    const key = `${usuarioId}|${diaKey}`;
+    setSelectedTargets(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedTargets(new Set());
+
+  const handlePaste = () => {
+    if (!onApplyCopiedHorario || !clipboard) return;
+    const targets = Array.from(selectedTargets).map(k => {
+      const [usuarioId, diaKey] = k.split('|');
+      return { usuarioId, diaKey };
+    });
+    if (targets.length === 0) return; // nothing to do
+    onApplyCopiedHorario(targets);
+    clearSelection();
+  };
+
   return (
     <TableContainer>
+      {clipboard && (
+        <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip label="Horario copiado" color="success" size="small" />
+            <Button variant="contained" color="primary" size="small" onClick={handlePaste}>
+              Pegar ({selectedTargets.size})
+            </Button>
+            <Button variant="outlined" color="inherit" size="small" onClick={clearSelection}>
+              Cancelar
+            </Button>
+          </Stack>
+        </Box>
+      )}
       {isMobile ? (
         <Box>
           {/* Encabezados móvil */}
@@ -209,13 +248,16 @@ const HorariosTable = ({
                         const horario = horariosUsuario?.[diaKey];
                         const tieneHorario = horario && horario.tipo !== 'libre';
 
+                        const isSelected = selectedTargets.has(`${usuario.id}|${diaKey}`);
                         return (
                           <Grid item xs={12/7} key={diaKey}>
                             <DaySlot
                               hasSchedule={tieneHorario}
                               scheduleType={horario?.tipo}
                               isCurrentUser={isCurrentUser}
+                              sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : undefined}
                               onClick={() => {
+                                if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
                                 if (editando) handleCambiarTurno(usuario.id, diaKey);
                                 else if (tieneHorario) abrirInfoTurno(usuario, horario, diaKey);
                               }}
@@ -223,7 +265,7 @@ const HorariosTable = ({
                               {tieneHorario && editando && (
                                 <CopyButton 
                                   size="small" 
-                                  onClick={e => handleCopiarHorario(usuario.id, diaKey, e)}
+                                  onClick={e => handleCopiarHorario ? handleCopiarHorario(usuario.id, diaKey, e) : null}
                                 >
                                   <ContentCopyIcon />
                                 </CopyButton>
@@ -335,21 +377,32 @@ const HorariosTable = ({
                       />
                     </Box>
                   </Grid>
-                  {diasSemana.map((_, index) => (
-                    <Grid item key={`${usuario.id}-${index}`} xs>
-                      <TurnoUsuario
-                        usuario={usuario}
-                        diaKey={`dia${index + 1}`}
-                        editando={editando}
-                        horariosEditados={horariosEditados}
-                        horarios={horarios}
-                        currentUser={currentUser}
-                        handleCambiarTurno={handleCambiarTurno}
-                        handleCopiarHorario={handleCopiarHorario}
-                        NO_SUMAN_HORAS={NO_SUMAN_HORAS}
-                      />
-                    </Grid>
-                  ))}
+                  {diasSemana.map((_, index) => {
+                    const diaKey = `dia${index + 1}`;
+                    const isSelected = selectedTargets.has(`${usuario.id}|${diaKey}`);
+                    return (
+                      <Grid item key={`${usuario.id}-${index}`} xs>
+                        <Box
+                          onClick={() => {
+                            if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
+                          }}
+                          sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)', borderRadius: 1 } : undefined}
+                        >
+                          <TurnoUsuario
+                            usuario={usuario}
+                            diaKey={diaKey}
+                            editando={editando}
+                            horariosEditados={horariosEditados}
+                            horarios={horarios}
+                            currentUser={currentUser}
+                            handleCambiarTurno={handleCambiarTurno}
+                            handleCopiarHorario={handleCopiarHorario}
+                            NO_SUMAN_HORAS={NO_SUMAN_HORAS}
+                          />
+                        </Box>
+                      </Grid>
+                    );
+                  })}
                   <Grid item xs={1}>
                     <TotalBadge elevation={0} exceeded={exceso > 0}>
                       <Typography 
