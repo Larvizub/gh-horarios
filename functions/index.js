@@ -540,3 +540,44 @@ function formatSchedule(val) {
   // Si es un rango de tiempo (ej. "08:00-17:00"), mantenerlo, de lo contrario mapearlo
   return map[val] || val;
 }
+
+// 5. Notificación de Nuevo Usuario: Notificar a administradores cuando se crea un nuevo usuario.
+exports.notifyNewUser = functions.database.ref("/usuarios/{uid}")
+  .onCreate(async (snapshot, context) => {
+    const newUser = snapshot.val();
+    const uid = context.params.uid;
+
+    if (!newUser) return null;
+
+    console.log(`New user created: ${newUser.nombre} ${newUser.apellidos} (${uid})`);
+
+    // Obtener todos los usuarios para encontrar administradores
+    const allUsers = await getAllUsers();
+    
+    // Filtrar administradores con correo
+    const adminEmails = Object.values(allUsers)
+      .filter(u => u.rol === "Administrador" && u.email)
+      .map(u => u.email);
+
+    if (adminEmails.length === 0) {
+      console.log("No administrators found to notify.");
+      return null;
+    }
+
+    const htmlContent = `
+      <p>Se ha registrado un nuevo usuario en la plataforma:</p>
+      <div class="card">
+        <p><strong>Nombre:</strong> ${newUser.nombre} ${newUser.apellidos}</p>
+        <p><strong>Email:</strong> ${newUser.email}</p>
+        <p><strong>Departamento:</strong> ${newUser.departamento || "No asignado"}</p>
+        <p><strong>Rol:</strong> ${newUser.rol || "No asignado"}</p>
+        <p><strong>Tipo de Contrato:</strong> ${newUser.tipoContrato || "No asignado"}</p>
+      </div>
+      <p>Por favor, verifica sus permisos y configuración en el panel de administración.</p>
+    `;
+
+    const finalHtml = createEmailTemplate("Nuevo Usuario Registrado", htmlContent);
+
+    await sendEmail(adminEmails, "Nuevo Usuario en Plataforma de Horarios", finalHtml);
+    return null;
+  });
