@@ -195,7 +195,8 @@ exports.dailyStatusReminder = functions.pubsub.schedule("0 8 * * 1-5")
     const fueraOficina = [];
 
     Object.entries(schedules).forEach(([userId, userSchedule]) => {
-      const scheduleType = userSchedule[dayKey];
+      const scheduleEntry = userSchedule[dayKey];
+      const scheduleType = scheduleEntry?.tipo;
       const user = users[userId];
 
       if (user && scheduleType) {
@@ -267,7 +268,8 @@ exports.vacationReminder = functions.pubsub.schedule("0 9 * * *")
     const vacationsByDept = {};
 
     Object.entries(schedules).forEach(([userId, userSchedule]) => {
-      const scheduleType = userSchedule[dayKey];
+      const scheduleEntry = userSchedule[dayKey];
+      const scheduleType = scheduleEntry?.tipo;
       const user = users[userId];
 
       if (user && scheduleType === "vacaciones") {
