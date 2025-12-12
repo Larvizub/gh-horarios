@@ -160,6 +160,21 @@ const baseStyles = `
   h1, h2, h3 { color: #1a1a1a; margin-top: 0; }
   p { margin-bottom: 16px; }
   strong { color: #00830e; }
+
+  /* Schedule Card Styles */
+  .user-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  .user-header { font-size: 15px; font-weight: 700; color: #00830e; margin-bottom: 12px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; }
+  .schedule-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .day-item { display: flex; flex-direction: column; align-items: center; text-align: center; background: #f8f9fa; padding: 8px 4px; border-radius: 6px; border: 1px solid #eee; }
+  .day-label { font-size: 10px; font-weight: 700; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .day-value { font-size: 11px; color: #333; font-weight: 600; line-height: 1.3; }
+  
+  @media (max-width: 480px) { 
+    .schedule-grid { grid-template-columns: 1fr; gap: 4px; } 
+    .day-item { flex-direction: row; justify-content: space-between; padding: 8px 12px; text-align: left; } 
+    .day-label { margin-bottom: 0; font-size: 11px; }
+    .day-value { font-size: 12px; }
+  }
 `;
 
 // Remote logo URL (preferred). Falls back to embedded base64 if needed.
@@ -381,32 +396,27 @@ exports.weeklyScheduleSummary = functions.pubsub.schedule("0 16 * * 5")
       const deptSchedules = schedulesByDept[dept];
       if (deptSchedules.length === 0) return;
 
-      htmlContent += `<h3>${dept}</h3>`;
-      htmlContent += `<table>
-        <thead>
-          <tr>
-            <th>Colaborador</th>
-            <th>Lun</th>
-            <th>Mar</th>
-            <th>Mié</th>
-            <th>Jue</th>
-            <th>Vie</th>
-          </tr>
-        </thead>
-        <tbody>`;
+      htmlContent += `<h3 style="margin-top:24px;margin-bottom:12px;color:#444;border-left:4px solid #00830e;padding-left:10px;">${dept}</h3>`;
 
       deptSchedules.forEach(({ user, schedule }) => {
-        htmlContent += `<tr>
-          <td><strong>${user.nombre} ${user.apellidos.split(" ")[0]}</strong></td>
-          <td>${formatSchedule(schedule.dia1)}</td>
-          <td>${formatSchedule(schedule.dia2)}</td>
-          <td>${formatSchedule(schedule.dia3)}</td>
-          <td>${formatSchedule(schedule.dia4)}</td>
-          <td>${formatSchedule(schedule.dia5)}</td>
-        </tr>`;
+        htmlContent += `<div class="user-card">
+          <div class="user-header">${user.nombre} ${user.apellidos}</div>
+          <div class="schedule-grid">`;
+          
+        // Days 1 to 5 (Mon-Fri)
+        for (let i = 1; i <= 5; i++) {
+           const dayKey = `dia${i}`;
+           const dayLabel = DIAS_LABELS[dayKey].substring(0, 3);
+           const val = formatSchedule(schedule[dayKey]);
+           htmlContent += `
+             <div class="day-item">
+               <span class="day-label">${dayLabel}</span>
+               <span class="day-value">${val}</span>
+             </div>`;
+        }
+        
+        htmlContent += `</div></div>`;
       });
-
-      htmlContent += `</tbody></table>`;
     });
 
     const finalHtml = createEmailTemplate(`Resumen de Horarios - ${weekLabel}`, htmlContent);
@@ -554,20 +564,29 @@ const DIAS_LABELS = {
 
 function formatSchedule(val) {
   if (!val) return "-";
+  
+  const entry = typeof val === 'object' ? val : { tipo: val };
+  const { tipo, horaInicio, horaFin } = entry;
+
   // Mapear códigos a etiquetas cortas
   const map = {
-    "teletrabajo": "🏠 TT",
-    "tele-presencial": "🏢/🏠 TP",
-    "vacaciones": "🏖️ VAC",
-    "descanso": "💤 DES",
-    "feriado": "📅 FER",
-    "permiso": "✋ PER",
-    "incapacidad-enfermedad": "🏥 INC",
-    "fuera-oficina": "🚫 OFF",
-    "dia-brigada": "⛑️ BRI"
+    "teletrabajo": "🏠 Teletrabajo",
+    "tele-presencial": "🏢/🏠 Híbrido",
+    "vacaciones": "🏖️ Vacaciones",
+    "descanso": "💤 Descanso",
+    "feriado": "📅 Feriado",
+    "permiso": "✋ Permiso",
+    "incapacidad-enfermedad": "🏥 Incapacidad",
+    "fuera-oficina": "🚫 Fuera Oficina",
+    "dia-brigada": "⛑️ Brigada"
   };
-  // Si es un rango de tiempo (ej. "08:00-17:00"), mantenerlo, de lo contrario mapearlo
-  return map[val] || val;
+
+  // Si es un rango de tiempo (ej. "08:00-17:00"), mostrarlo
+  if (horaInicio && horaFin && !["descanso", "vacaciones", "feriado", "incapacidad-enfermedad", "incapacidad-accidente"].includes(tipo)) {
+     return `${horaInicio} - ${horaFin}`;
+  }
+
+  return map[tipo] || tipo || "-";
 }
 
 // 5. Notificación de Nuevo Usuario: Notificar a administradores cuando se crea un nuevo usuario.
