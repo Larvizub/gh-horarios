@@ -130,39 +130,68 @@ async function getSchedulesForWeek(weekKey) {
 
 // --- PLANTILLAS ---
 
+// Plantillas de email y estilos
+// Usamos logo remoto via LOGO_URL. No se incluye base64 embebido.
 const baseStyles = `
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
-  .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff; }
-  .header { background-color: #00830e; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }
-  .content { padding: 20px; }
-  .footer { text-align: center; font-size: 12px; color: #888; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
-  .card { background: #f9f9f9; padding: 10px; margin-bottom: 10px; border-left: 4px solid #00830e; border-radius: 4px; }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; }
-  .tag-teletrabajo { background-color: #2e7d32; }
-  .tag-fuera { background-color: #757575; }
-  .tag-vacaciones { background-color: #0288d1; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-  th { background-color: #f2f2f2; }
+  body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; color: #333; }
+  .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .header { background: #00830e; padding: 32px 20px; text-align: center; position: relative; }
+  .logo-container { background: #ffffff; width: 80px; height: 80px; border-radius: 16px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .logo { width: 64px; height: 64px; object-fit: contain; }
+  .app-title { color: #ffffff; font-size: 22px; font-weight: 600; margin: 0; letter-spacing: 0.5px; }
+  .sub-title { color: rgba(255,255,255,0.9); font-size: 13px; margin-top: 4px; }
+  .content { padding: 32px; font-size: 15px; line-height: 1.6; color: #444; }
+  .footer { background: #f8f9fa; padding: 24px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #eee; }
+  
+  /* Card Styles */
+  .card { background: #f8f9fa; border-left: 4px solid #00830e; padding: 16px; margin: 16px 0; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .tag { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tag-teletrabajo { background: #2e7d32; }
+  .tag-fuera { background: #757575; }
+  .tag-vacaciones { background: #0288d1; }
+  
+  /* Table Styles */
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  th { background: #f1f3f5; color: #555; font-weight: 600; text-align: left; padding: 10px; border-bottom: 2px solid #e9ecef; }
+  td { padding: 10px; border-bottom: 1px solid #eee; color: #333; }
+  tr:last-child td { border-bottom: none; }
+  
+  /* Typography */
+  h1, h2, h3 { color: #1a1a1a; margin-top: 0; }
+  p { margin-bottom: 16px; }
+  strong { color: #00830e; }
 `;
 
+// Remote logo URL (preferred). Falls back to embedded base64 if needed.
+const LOGO_URL = 'https://costaricacc.com/cccr/Logocccr.png';
+
 function createEmailTemplate(title, content) {
+  // Use remote logo (LOGO_URL) — no embedded base64 fallback
+  const logoSrc = LOGO_URL;
+
   return `
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
       <style>${baseStyles}</style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h2>${title}</h2>
+          <div class="logo-container">
+            <img src="${logoSrc}" alt="Logo" class="logo" />
+          </div>
+          <h1 class="app-title">${title}</h1>
+          <p class="sub-title">Sistema de Horarios — Notificación Automática</p>
         </div>
         <div class="content">
           ${content}
         </div>
         <div class="footer">
-          <p>Este es un mensaje automático del Sistema de Horarios.</p>
+          <p style="margin:0 0 8px 0;">Este es un mensaje automático del Sistema de Horarios.</p>
+          <p style="margin:0;color:#aaa;">© ${new Date().getFullYear()} Costa Rica Contact Center</p>
         </div>
       </div>
     </body>
