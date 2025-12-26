@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ref, get, remove } from 'firebase/database';
-import { database, auth } from '../../firebase/config';
+import { database, auth, functions } from '../../firebase/config';
+import { httpsCallable } from 'firebase/functions';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -206,6 +207,8 @@ const Personal = () => {
   const [filteredUsuarios, setFilteredUsuarios] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogoEliminar, setDialogoEliminar] = useState(false);
+  const [dialogoContrasenas, setDialogoContrasenas] = useState(false);
+  const [enviandoContrasenas, setEnviandoContrasenas] = useState(false);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -297,6 +300,29 @@ const Personal = () => {
     } catch (error) {
       console.error('Error al eliminar usuario:', error);
       toast.error('Error al eliminar usuario: ' + error.message);
+    }
+  };
+
+  const handleEnviarContrasenas = async () => {
+    setEnviandoContrasenas(true);
+    try {
+      const sendPasswords = httpsCallable(functions, 'sendPasswordsToAllUsers');
+      const result = await sendPasswords();
+      
+      if (result.data.success) {
+        toast.success(`Se enviaron ${result.data.sentCount} correos exitosamente.`);
+        if (result.data.errorCount > 0) {
+          toast.warning(`Hubo errores en ${result.data.errorCount} envíos.`);
+        }
+      } else {
+        toast.error('Error al enviar las contraseñas.');
+      }
+    } catch (error) {
+      console.error('Error al invocar la función:', error);
+      toast.error('Error: ' + (error.message || 'No se pudo completar el envío.'));
+    } finally {
+      setEnviandoContrasenas(false);
+      setDialogoContrasenas(false);
     }
   };
 
@@ -618,28 +644,51 @@ const Personal = () => {
             </Box>
             
             {!isMobile && puedeAgregarUsuarios(currentUser) && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={irARegistro}
-                sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: 0,
-                  transform: 'translateY(-50%)',
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  borderRadius: 3,
-                  px: 3,
-                  transition: 'background-color 0.2s ease',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.3)',
-                    transform: 'translateY(-50%)',
-                  },
-                }}
-              >
-                Agregar Usuario
-              </Button>
+              <Box sx={{ 
+                position: 'absolute',
+                top: '50%',
+                right: 0,
+                transform: 'translateY(-50%)',
+                display: 'flex',
+                gap: 2
+              }}>
+                {currentUser?.rol === ROLES.ADMINISTRADOR && (
+                  <Button
+                    variant="contained"
+                    startIcon={<EmailIcon />}
+                    onClick={() => setDialogoContrasenas(true)}
+                    sx={{
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      borderRadius: 3,
+                      px: 3,
+                      transition: 'background-color 0.2s ease',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.3)',
+                      },
+                    }}
+                  >
+                    Enviar Contraseñas
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={irARegistro}
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    borderRadius: 3,
+                    px: 3,
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.3)',
+                    },
+                  }}
+                >
+                  Agregar Usuario
+                </Button>
+              </Box>
             )}
           </Box>
         </HeaderCard>
@@ -713,6 +762,42 @@ const Personal = () => {
             sx={{ borderRadius: 2 }}
           >
             Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de envío de contraseñas */}
+      <Dialog
+        open={dialogoContrasenas}
+        onClose={() => !enviandoContrasenas && setDialogoContrasenas(false)}
+        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600, color: '#00830e' }}>
+          📧 Enviar contraseñas masivas
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Se enviará un correo electrónico a <strong>todos los usuarios registrados</strong> con su contraseña correspondiente según su departamento.
+            <br /><br />
+            ¿Deseas continuar con el envío masivo?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setDialogoContrasenas(false)} 
+            sx={{ color: '#64748b', borderRadius: 2 }}
+            disabled={enviandoContrasenas}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleEnviarContrasenas} 
+            variant="contained"
+            color="success"
+            sx={{ borderRadius: 2, minWidth: 120 }}
+            disabled={enviandoContrasenas}
+          >
+            {enviandoContrasenas ? 'Enviando...' : 'Enviar'}
           </Button>
         </DialogActions>
       </Dialog>

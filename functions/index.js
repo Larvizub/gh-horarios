@@ -629,3 +629,86 @@ exports.notifyNewUser = functions.database.ref("/usuarios/{uid}")
     await sendEmail(adminEmails, "Nuevo Usuario en Plataforma de Horarios", finalHtml);
     return null;
   });
+
+/**
+ * 5. Enviar contraseñas por departamento a todos los usuarios.
+ * Función HTTPS Callable para ser invocada desde el frontend.
+ */
+exports.sendPasswordsToAllUsers = functions.https.onCall(async (data, context) => {
+  // Verificar que el usuario esté autenticado
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Debes estar autenticado para realizar esta acción.");
+  }
+
+  // Verificar que el usuario sea administrador
+  const userSnapshot = await db.ref(`usuarios/${context.auth.uid}`).once("value");
+  const userData = userSnapshot.val();
+  if (!userData || userData.rol !== "Administrador") {
+    throw new functions.https.HttpsError("permission-denied", "Solo los administradores pueden enviar contraseñas.");
+  }
+
+  const users = await getAllUsers();
+  const passwordMap = {
+    "Planeación de Eventos": "Planeacion2026",
+    "Gestión de la Protección": "Seguridad2026",
+    "Áreas & Sostenibilidad": "Areas2026",
+    "Gastronomía": "Gastro2026",
+    "Infraestructura": "Infra2026",
+    "Financiero": "Financiero2026",
+    "Oficina de Atención al Expositor": "Expositores2026",
+    "Practicantes/Crosstraining": "Practicantes2026",
+    "Talento Humano": "Talento2026",
+    "Calidad": "Calidad2026",
+    "Sistemas": "Sistemas2026",
+    "Mercadeo y Ventas": "Ventas2026",
+    "Compras": "Compras2026",
+    "Gerencia de Operaciones": "Operaciones2026",
+    "Gerencia General": "General2026",
+    "UDEI": "Internacional2026"
+  };
+
+  const PLATFORM_URL = "https://costaricacc-horarios.web.app";
+  let sentCount = 0;
+  let errorCount = 0;
+
+  // Iterar sobre los usuarios y enviar correos
+  for (const user of Object.values(users)) {
+    if (!user.email || !user.departamento) continue;
+
+    const password = passwordMap[user.departamento] || "Cccr2026*";
+    
+    const htmlContent = `
+      <p>Hola <strong>${user.nombre}</strong>,</p>
+      <p>Se han generado las credenciales de acceso para la plataforma de horarios del Costa Rica Convention Center.</p>
+      
+      <div class="card" style="background: #f0f7f0; border-left: 4px solid #00830e; padding: 20px; margin: 20px 0;">
+        <p style="margin: 0 0 10px 0;"><strong>Tus credenciales de acceso:</strong></p>
+        <p style="margin: 5px 0;"><strong>Usuario:</strong> ${user.email}</p>
+        <p style="margin: 5px 0;"><strong>Contraseña:</strong> <code style="background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; font-size: 1.1em;">${password}</code></p>
+      </div>
+
+      <p>Puedes ingresar a la plataforma en el siguiente enlace:</p>
+      <p style="text-align: center; margin: 25px 0;">
+        <a href="${PLATFORM_URL}" style="background-color: #00830e; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Ingresar a la Plataforma</a>
+      </p>
+
+      <div class="card" style="border-left-color: #0288d1; background: #e1f5fe;">
+        <p style="margin: 0;">💡 <strong>Recomendación:</strong> Una vez que ingreses, puedes cambiar tu contraseña en el módulo de configuración para mayor seguridad.</p>
+      </div>
+
+      <p>Si tienes problemas para ingresar, por favor contacta al departamento de Sistemas.</p>
+    `;
+
+    const finalHtml = createEmailTemplate("Credenciales de Acceso", htmlContent);
+
+    try {
+      await sendEmail([user.email], "Tus credenciales de acceso - Sistema de Horarios", finalHtml);
+      sentCount++;
+    } catch (error) {
+      console.error(`Error sending password to ${user.email}:`, error);
+      errorCount++;
+    }
+  }
+
+  return { success: true, sentCount, errorCount };
+});
