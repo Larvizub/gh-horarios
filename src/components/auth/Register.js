@@ -69,6 +69,8 @@ const RegisterCard = styled(Paper)(({ theme }) => ({
     background: 'linear-gradient(90deg, #00830e, #4caf50, #81c784)',
   },
   [theme.breakpoints.down('sm')]: {
+    backdropFilter: 'none',
+    background: '#ffffff',
     padding: theme.spacing(3),
     borderRadius: 20,
   },

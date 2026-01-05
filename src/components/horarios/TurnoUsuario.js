@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Grid, Box, Typography, IconButton } from '@mui/material';
 import { TIPO_LABEL } from '../../utils/horariosConstants';
 
 const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso'];
 
-const TurnoUsuario = ({ 
+const TurnoUsuario = memo(({ 
   usuario, 
   diaKey, 
   editando, 
@@ -292,6 +292,6 @@ const TurnoUsuario = ({
       </Box>
     </Grid>
   );
-};
+});
 
 export default TurnoUsuario;

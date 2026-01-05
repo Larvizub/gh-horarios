@@ -417,10 +417,10 @@ const Dashboard = () => {
             <Grid container spacing={2}>
               <Grid item xs={6} sm={3}>
                 <Box sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.15)', 
+                  bgcolor: { xs: 'rgba(255,255,255,0.25)', sm: 'rgba(255,255,255,0.15)' }, 
                   borderRadius: 3, 
                   p: 1.5,
-                  backdropFilter: 'blur(10px)',
+                  backdropFilter: { xs: 'none', sm: 'blur(10px)' },
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <AccessTimeIcon sx={{ fontSize: 18 }} />
@@ -433,10 +433,10 @@ const Dashboard = () => {
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Box sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.15)', 
+                  bgcolor: { xs: 'rgba(255,255,255,0.25)', sm: 'rgba(255,255,255,0.15)' }, 
                   borderRadius: 3, 
                   p: 1.5,
-                  backdropFilter: 'blur(10px)',
+                  backdropFilter: { xs: 'none', sm: 'blur(10px)' },
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <TrendingUpIcon sx={{ fontSize: 18 }} />
@@ -449,10 +449,10 @@ const Dashboard = () => {
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Box sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.15)', 
+                  bgcolor: { xs: 'rgba(255,255,255,0.25)', sm: 'rgba(255,255,255,0.15)' }, 
                   borderRadius: 3, 
                   p: 1.5,
-                  backdropFilter: 'blur(10px)',
+                  backdropFilter: { xs: 'none', sm: 'blur(10px)' },
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <BusinessIcon sx={{ fontSize: 18 }} />
@@ -469,10 +469,10 @@ const Dashboard = () => {
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Box sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.15)', 
+                  bgcolor: { xs: 'rgba(255,255,255,0.25)', sm: 'rgba(255,255,255,0.15)' }, 
                   borderRadius: 3, 
                   p: 1.5,
-                  backdropFilter: 'blur(10px)',
+                  backdropFilter: { xs: 'none', sm: 'blur(10px)' },
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <BadgeIcon sx={{ fontSize: 18 }} />

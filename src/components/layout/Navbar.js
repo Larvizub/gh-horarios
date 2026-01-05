@@ -42,6 +42,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 const GlassAppBar = styled(AppBar)(({ theme }) => ({
   background: 'linear-gradient(135deg, #00830e 0%, #006c0b 100%)',
   backdropFilter: 'blur(10px)',
+  [theme.breakpoints.down('md')]: {
+    backdropFilter: 'none',
+  },
   boxShadow: '0 4px 30px rgba(0, 131, 14, 0.15)',
   borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
 }));

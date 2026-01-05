@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ref, get, set } from 'firebase/database';
 import { database } from '../../firebase/config';
 import { Container, Paper, Typography, Box, Button, useMediaQuery, useTheme, Alert, Fade, Skeleton } from '@mui/material';
@@ -70,6 +70,10 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   border: '1px solid rgba(0, 131, 14, 0.08)',
   background: 'rgba(255, 255, 255, 0.95)',
   backdropFilter: 'blur(10px)',
+  [theme.breakpoints.down('md')]: {
+    backdropFilter: 'none',
+    background: '#ffffff',
+  },
   overflow: 'hidden',
   position: 'relative',
   '&::before': {
@@ -244,6 +248,12 @@ const Horarios = () => {
   };
 
   const usuariosFiltrados = useUsuariosFiltrados(usuarios, departamentoSeleccionado);
+
+  // Memoizar el usuario actual para evitar búsquedas repetidas
+  const currentUserData = useMemo(() => 
+    usuarios.find(u => u.id === currentUser?.uid), 
+    [usuarios, currentUser]
+  );
 
   // Copiar un horario al portapapeles (invocado por HorariosTable)
   const handleCopiarHorario = useCallback((usuarioId, diaKey, e) => {
@@ -1113,8 +1123,29 @@ const Horarios = () => {
     );
   }, [editando, horariosEditados, horarios, usuarios]);
 
+  // Memoizar callback de practicantes para evitar re-renders innecesarios
+  const handleEncontrarPracticantes = useCallback((horasExceso) => 
+    encontrarPracticantesDisponibles(
+      horasExceso,
+      usuarios,
+      (id, edit) => calcularHorasTotales(
+        id,
+        edit,
+        horariosEditados,
+        horarios,
+        semanaSeleccionada,
+        semanaActual,
+        {},
+        (uid) => obtenerUsuario(usuarios, uid),
+        obtenerHorasMaximas
+      ),
+      obtenerHorasMaximas,
+      departamentoSeleccionado,
+      null
+    ), [usuarios, horariosEditados, horarios, semanaSeleccionada, semanaActual, departamentoSeleccionado]);
+
   // Control de acceso visual: solo usuarios con permiso pueden ver el módulo
-  const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+  const usuarioActual = currentUserData;
   if (loading) {
     return (
       <PageContainer>
@@ -1169,37 +1200,8 @@ const Horarios = () => {
             {/* Recomendaciones de practicantes */}
             {editando && <RecomendacionesPracticantes 
               usuariosFiltrados={usuariosFiltrados}
-              calcularHorasExcedentes={(usuarioId) =>
-                calcularHorasExcedentes(
-                  usuarioId,
-                  editando,
-                  horariosEditados,
-                  horarios,
-                  (id) => obtenerUsuario(usuarios, id),
-                  obtenerHorasMaximas
-                )
-              }
-              // Pasamos un wrapper que suministra los argumentos que la utilidad espera
-              encontrarPracticantesDisponibles={(horasNecesarias, departamentoDestino = null, usuarioExcedidoId = null) =>
-                encontrarPracticantesDisponibles(
-                  horasNecesarias,
-                  usuarios,
-                  (id, edit) => calcularHorasTotales(
-                    id,
-                    edit,
-                    horariosEditados,
-                    horarios,
-                    semanaSeleccionada,
-                    semanaActual,
-                    {},
-                    (uid) => obtenerUsuario(usuarios, uid),
-                    obtenerHorasMaximas
-                  ),
-                  obtenerHorasMaximas,
-                  departamentoDestino,
-                  usuarioExcedidoId
-                )
-              }
+              calcularHorasExcedentes={calcularExceso}
+              encontrarPracticantesDisponibles={handleEncontrarPracticantes}
             />}
 
             {/* Mensaje informativo sobre consideraciones */}
@@ -1268,7 +1270,7 @@ const Horarios = () => {
               editando={editando}
               horarios={horarios}
               horariosEditados={horariosEditados}
-              currentUser={usuarios.find(u => u.id === currentUser?.uid)}
+              currentUser={currentUserData}
               handleCambiarTurno={handleCambiarTurno}
               abrirInfoTurno={abrirInfoTurno}
               handleCopiarHorario={handleCopiarHorario}
@@ -1290,8 +1292,7 @@ const Horarios = () => {
                 <Box sx={{
                   position: 'absolute',
                   inset: 0,
-                  bgcolor: 'rgba(255,255,255,0.7)',
-                  backdropFilter: 'blur(2px)',
+                  bgcolor: 'rgba(255,255,255,0.8)',
                   borderRadius: 1,
                   zIndex: 1,
                   display: 'flex',

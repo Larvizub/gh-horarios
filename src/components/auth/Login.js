@@ -79,6 +79,8 @@ const LoginCard = styled(Paper)(({ theme }) => ({
   maxWidth: 440,
   width: '100%',
   [theme.breakpoints.down('sm')]: {
+    backdropFilter: 'none',
+    background: '#ffffff',
     padding: theme.spacing(3.5),
     borderRadius: 24,
     margin: theme.spacing(1),
