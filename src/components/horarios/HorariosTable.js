@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Box, Paper, Grid, Typography, IconButton, Chip, alpha, Button, Stack } from '@mui/material';
+import { Box, Paper, Grid, Typography, IconButton, Chip, alpha, Button, Stack, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { format, addDays } from 'date-fns';
@@ -132,6 +132,7 @@ const MobileUserRow = memo(({
   exceso, 
   horasTotales, 
   diasSemana, 
+  semanaSeleccionada,
   editando, 
   horariosUsuario, 
   selectedTargets, 
@@ -173,42 +174,46 @@ const MobileUserRow = memo(({
               const horario = horariosUsuario?.[diaKey];
               const tieneHorario = horario && horario.tipo !== 'libre';
               const isSelected = selectedTargets.has(`${usuario.id}|${diaKey}`);
+              const fecha = addDays(semanaSeleccionada, index);
+              const tooltipTitle = `${dia} ${format(fecha, 'dd/MM')}`;
               
               return (
                 <Grid item xs={12/7} key={diaKey}>
-                  <DaySlot
-                    hasSchedule={tieneHorario}
-                    scheduleType={horario?.tipo}
-                    isCurrentUser={isCurrentUser}
-                    sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : undefined}
-                    onClick={() => {
-                      if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
-                      if (editando) handleCambiarTurno(usuario.id, diaKey);
-                      else if (tieneHorario) abrirInfoTurno(usuario, horario, diaKey);
-                    }}
-                  >
-                    {tieneHorario && editando && (
-                      <CopyButton 
-                        size="small" 
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (handleCopiarHorario) handleCopiarHorario(usuario.id, diaKey, e);
-                        }}
-                      >
-                        <ContentCopyIcon />
-                      </CopyButton>
-                    )}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600, lineHeight: 1 }}>
-                        {dia.slice(0, 1)}
-                      </Typography>
-                      {horario && horario.tipo === 'descanso' && (
-                        <Typography variant="caption" sx={{ fontSize: '0.5rem', lineHeight: 1, mt: 0.2 }}>
-                          D
-                        </Typography>
+                  <Tooltip title={tooltipTitle} arrow placement="top">
+                    <DaySlot
+                      hasSchedule={tieneHorario}
+                      scheduleType={horario?.tipo}
+                      isCurrentUser={isCurrentUser}
+                      sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : undefined}
+                      onClick={() => {
+                        if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
+                        if (editando) handleCambiarTurno(usuario.id, diaKey);
+                        else if (tieneHorario) abrirInfoTurno(usuario, horario, diaKey);
+                      }}
+                    >
+                      {tieneHorario && editando && (
+                        <CopyButton 
+                          size="small" 
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (handleCopiarHorario) handleCopiarHorario(usuario.id, diaKey, e);
+                          }}
+                        >
+                          <ContentCopyIcon />
+                        </CopyButton>
                       )}
-                    </Box>
-                  </DaySlot>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600, lineHeight: 1 }}>
+                          {dia.slice(0, 1)}
+                        </Typography>
+                        {horario && horario.tipo === 'descanso' && (
+                          <Typography variant="caption" sx={{ fontSize: '0.5rem', lineHeight: 1, mt: 0.2 }}>
+                            D
+                          </Typography>
+                        )}
+                      </Box>
+                    </DaySlot>
+                  </Tooltip>
                 </Grid>
               );
             })}
@@ -240,6 +245,7 @@ const DesktopUserRow = memo(({
   exceso,
   horasTotales,
   diasSemana,
+  semanaSeleccionada,
   editando,
   horariosUsuario,
   horariosOriginalesUsuario,
@@ -273,30 +279,34 @@ const DesktopUserRow = memo(({
             />
           </Box>
         </Grid>
-        {diasSemana.map((_, index) => {
+        {diasSemana.map((dia, index) => {
           const diaKey = `dia${index + 1}`;
           const isSelected = selectedTargets.has(`${usuario.id}|${diaKey}`);
+          const fecha = addDays(semanaSeleccionada, index);
+          const tooltipTitle = `${dia} ${format(fecha, 'dd/MM')}`;
           return (
             <Grid item key={`${usuario.id}-${index}`} xs>
-              <Box
-                onClick={() => {
-                  if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
-                }}
-                sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)', borderRadius: 1 } : undefined}
-              >
-                <TurnoUsuario
-                  usuario={usuario}
-                  diaKey={diaKey}
-                  editando={editando}
-                  horariosEditados={{ [usuario.id]: horariosUsuario }}
-                  horarios={{ [usuario.id]: horariosOriginalesUsuario }}
-                  currentUser={currentUser}
-                  handleCambiarTurno={handleCambiarTurno}
-                  handleCopiarHorario={handleCopiarHorario}
-                  suppressOpen={!!clipboard && editando}
-                  NO_SUMAN_HORAS={NO_SUMAN_HORAS}
-                />
-              </Box>
+              <Tooltip title={tooltipTitle} arrow placement="top">
+                <Box
+                  onClick={() => {
+                    if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
+                  }}
+                  sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)', borderRadius: 1 } : undefined}
+                >
+                  <TurnoUsuario
+                    usuario={usuario}
+                    diaKey={diaKey}
+                    editando={editando}
+                    horariosEditados={{ [usuario.id]: horariosUsuario }}
+                    horarios={{ [usuario.id]: horariosOriginalesUsuario }}
+                    currentUser={currentUser}
+                    handleCambiarTurno={handleCambiarTurno}
+                    handleCopiarHorario={handleCopiarHorario}
+                    suppressOpen={!!clipboard && editando}
+                    NO_SUMAN_HORAS={NO_SUMAN_HORAS}
+                  />
+                </Box>
+              </Tooltip>
             </Grid>
           );
         })}
@@ -429,6 +439,7 @@ const HorariosTable = memo(({
                 exceso={exceso}
                 horasTotales={horasTotales}
                 diasSemana={diasSemana}
+                semanaSeleccionada={semanaSeleccionada}
                 editando={editando}
                 horariosUsuario={editando ? horariosEditados[usuario.id] : horarios[usuario.id]}
                 selectedTargets={selectedTargets}
@@ -511,6 +522,7 @@ const HorariosTable = memo(({
                 exceso={exceso}
                 horasTotales={horasTotales}
                 diasSemana={diasSemana}
+                semanaSeleccionada={semanaSeleccionada}
                 editando={editando}
                 horariosUsuario={horariosEditados[usuario.id]}
                 horariosOriginalesUsuario={horarios[usuario.id]}
