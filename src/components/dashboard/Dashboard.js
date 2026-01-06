@@ -238,18 +238,34 @@ const Dashboard = () => {
       const semanaActualData = resultados[0];
       if (semanaActualData.horarios) {
         const tipos = {};
-        let horasTotales = 0;
+        let horasTotalesSemana = 0;
+        let horasTranscurridas = 0;
+        
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+        const currentDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
 
-        Object.values(semanaActualData.horarios).forEach(horario => {
+        Object.entries(semanaActualData.horarios).forEach(([diaKey, horario]) => {
           if (horario && horario.tipo) {
             tipos[horario.tipo] = (tipos[horario.tipo] || 0) + (horario.horas || 0);
             if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
-              horasTotales += horario.horas || 0;
+              const horas = horario.horas || 0;
+              horasTotalesSemana += horas;
+              
+              // El diaKey suele ser 'dia1', 'dia2', etc.
+              const diaNum = parseInt(diaKey.replace('dia', ''));
+              if (!isNaN(diaNum) && diaNum <= currentDayIndex) {
+                horasTranscurridas += horas;
+              }
             }
           }
         });
 
-        estadisticasData.semanaActual = { tipos, horasTotales };
+        estadisticasData.semanaActual = { 
+          tipos, 
+          horasTotales: horasTranscurridas,
+          horasPlanificadas: horasTotalesSemana 
+        };
       }
 
       // Procesar distribución de tipos de asignación
@@ -392,7 +408,10 @@ const Dashboard = () => {
   }
 
   const horasMaximas = obtenerHorasMaximas(userData?.tipoContrato || 'Operativo');
-  const progresoHoras = ((estadisticas.semanaActual.horasTotales || 0) / horasMaximas * 100);
+  const horasPlanificadas = estadisticas.semanaActual.horasPlanificadas || 0;
+  const progresoHoras = horasPlanificadas > 0 
+    ? ((estadisticas.semanaActual.horasTotales || 0) / horasPlanificadas * 100)
+    : 0;
 
   return (
     <PageContainer>
