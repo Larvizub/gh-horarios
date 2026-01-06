@@ -247,7 +247,13 @@ const Dashboard = () => {
 
         Object.entries(semanaActualData.horarios).forEach(([diaKey, horario]) => {
           if (horario && horario.tipo) {
-            tipos[horario.tipo] = (tipos[horario.tipo] || 0) + (horario.horas || 0);
+            // Si es descanso, contamos 24 horas por día
+            if (horario.tipo === 'descanso') {
+              tipos['descanso'] = (tipos['descanso'] || 0) + 24;
+            } else {
+              tipos[horario.tipo] = (tipos[horario.tipo] || 0) + (horario.horas || 0);
+            }
+
             if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
               const horas = horario.horas || 0;
               horasTotalesSemana += horas;
@@ -279,7 +285,13 @@ const Dashboard = () => {
         Object.values(horarios).forEach(horario => {
           if (horario && horario.tipo) {
             contadorTipos[horario.tipo] = (contadorTipos[horario.tipo] || 0) + 1;
-            tiposSemana[horario.tipo] = (tiposSemana[horario.tipo] || 0) + (horario.horas || 0);
+            
+            // Contar 24h para días de descanso, de lo contrario usar horas del registro
+            if (horario.tipo === 'descanso') {
+              tiposSemana['descanso'] = (tiposSemana['descanso'] || 0) + 24;
+            } else {
+              tiposSemana[horario.tipo] = (tiposSemana[horario.tipo] || 0) + (horario.horas || 0);
+            }
             
             if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
               horasSemanales += horario.horas || 0;
