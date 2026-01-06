@@ -446,7 +446,7 @@ const Dashboard = () => {
                     <Typography variant="caption" sx={{ opacity: 0.9 }}>Horas Semana</Typography>
                   </Box>
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {estadisticas.semanaActual.horasTotales?.toFixed(0) || '0'}h
+                    {estadisticas.semanaActual.horasPlanificadas?.toFixed(0) || '0'}h
                   </Typography>
                 </Box>
               </Grid>
