@@ -471,6 +471,10 @@ const Dashboard = () => {
                   borderRadius: 3, 
                   p: 1.5,
                   backdropFilter: { xs: 'none', sm: 'blur(10px)' },
+                  minHeight: { xs: 'auto', sm: 80 },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <AccessTimeIcon sx={{ fontSize: 18 }} />
@@ -487,6 +491,10 @@ const Dashboard = () => {
                   borderRadius: 3, 
                   p: 1.5,
                   backdropFilter: { xs: 'none', sm: 'blur(10px)' },
+                  minHeight: { xs: 'auto', sm: 80 },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <TrendingUpIcon sx={{ fontSize: 18 }} />
@@ -503,15 +511,20 @@ const Dashboard = () => {
                   borderRadius: 3, 
                   p: 1.5,
                   backdropFilter: { xs: 'none', sm: 'blur(10px)' },
+                  minHeight: { xs: 'auto', sm: 80 },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <BusinessIcon sx={{ fontSize: 18 }} />
                     <Typography variant="caption" sx={{ opacity: 0.9 }}>Departamento</Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, 
+                  <Typography variant="h6" sx={{ fontWeight: 700, 
                     whiteSpace: 'nowrap', 
                     overflow: 'hidden', 
-                    textOverflow: 'ellipsis' 
+                    textOverflow: 'ellipsis',
+                    fontSize: '1.1rem'
                   }}>
                     {userData?.departamento || 'N/A'}
                   </Typography>
@@ -523,15 +536,20 @@ const Dashboard = () => {
                   borderRadius: 3, 
                   p: 1.5,
                   backdropFilter: { xs: 'none', sm: 'blur(10px)' },
+                  minHeight: { xs: 'auto', sm: 80 },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <BadgeIcon sx={{ fontSize: 18 }} />
                     <Typography variant="caption" sx={{ opacity: 0.9 }}>Cargo</Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600,
+                  <Typography variant="h6" sx={{ fontWeight: 700,
                     whiteSpace: 'nowrap', 
                     overflow: 'hidden', 
-                    textOverflow: 'ellipsis' 
+                    textOverflow: 'ellipsis',
+                    fontSize: '1.1rem'
                   }}>
                     {userData?.cargo || 'N/A'}
                   </Typography>

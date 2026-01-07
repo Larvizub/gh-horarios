@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { database, auth } from '../firebase/config';
+import { database } from '../firebase/config';
+import { useAuth } from '../contexts/AuthContext';
 import { ref, get } from 'firebase/database';
 import { toast } from 'react-toastify';
 import { departamentos } from '../utils/horariosConstants';
@@ -12,12 +13,14 @@ export function useUsuariosYHorarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser: authUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
     async function cargarUsuarios() {
       try {
         setLoading(true);
-        const user = auth.currentUser;
+        if (authLoading) return;
+        const user = authUser;
         if (!user) return;
         setCurrentUser(user);
 
@@ -47,7 +50,7 @@ export function useUsuariosYHorarios() {
       }
     }
     cargarUsuarios();
-  }, []);
+  }, [authLoading, authUser]);
 
   return {
     loading,
