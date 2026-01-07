@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ref, get } from 'firebase/database';
 import { database, auth } from '../../firebase/config';
 import { toast } from 'react-toastify';
@@ -66,7 +66,7 @@ import * as XLSX from 'xlsx';
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-  background: 'linear-gradient(135deg, #f8fafc 0%, #e8f5e9 50%, #f0f9ff 100%)',
+  background: '#f8fafc',
   [theme.breakpoints.down('md')]: {
     paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)',
   },
@@ -85,17 +85,15 @@ const ContentContainer = styled(Container)(({ theme }) => ({
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: 20,
-  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
   border: '1px solid rgba(0, 131, 14, 0.08)',
-  background: 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(10px)',
+  background: '#ffffff',
+  overflow: 'hidden',
   [theme.breakpoints.down('md')]: {
-    backdropFilter: 'none',
-    background: '#ffffff',
     padding: theme.spacing(2),
     borderRadius: 16,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
   },
-  overflow: 'hidden',
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(1.5),
     borderRadius: 12,
@@ -257,6 +255,9 @@ const ConsultaHorarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
+  // Flag para prevenir actualizaciones después de desmontar
+  const mountedRef = useRef(true);
+  
   const [loading, setLoading] = useState(true);
   const [usuarios, setUsuarios] = useState([]);
   const [horariosRegistros, setHorariosRegistros] = useState({});
@@ -322,7 +323,7 @@ const ConsultaHorarios = () => {
         // Cargar usuarios
         const usuariosRef = ref(database, 'usuarios');
         const usuariosSnapshot = await get(usuariosRef);
-        if (usuariosSnapshot.exists()) {
+        if (usuariosSnapshot.exists() && mountedRef.current) {
           const usuariosData = usuariosSnapshot.val();
           const usuariosArray = Object.entries(usuariosData).map(([id, data]) => ({
             id,
@@ -343,11 +344,17 @@ const ConsultaHorarios = () => {
         console.error('Error al cargar datos:', error);
         toast.error('Error al cargar datos: ' + error.message);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
     
     cargarDatos();
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   // Componente personalizado para seleccionar fecha

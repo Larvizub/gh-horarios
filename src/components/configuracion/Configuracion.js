@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ref, get, update } from 'firebase/database';
 import { updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { database, auth } from '../../firebase/config';
@@ -51,7 +51,7 @@ import { departamentos } from '../../utils/horariosConstants';
 // Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
-  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+  background: '#f8fafc',
   paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)',
   [theme.breakpoints.up('md')]: {
     paddingBottom: theme.spacing(4),
@@ -205,6 +205,9 @@ const Configuracion = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
+  // Flag para prevenir actualizaciones después de desmontar
+  const mountedRef = useRef(true);
+  
   const [loading, setLoading] = useState(true);
   const [tabIndex, setTabIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
@@ -251,12 +254,15 @@ const Configuracion = () => {
           return;
         }
 
+        if (!mountedRef.current) return;
         setCurrentUser(user);
 
         // Cargar datos del usuario actual
         const userRef = ref(database, `usuarios/${user.uid}`);
         const userSnapshot = await get(userRef);
         const userDataFromDB = userSnapshot.val();
+        
+        if (!mountedRef.current) return;
         setUserData(userDataFromDB);
         setIsAdmin(userDataFromDB?.rol === ROLES.ADMINISTRADOR || 
                    userDataFromDB?.departamento === 'Talento Humano' ||
@@ -269,7 +275,7 @@ const Configuracion = () => {
           const usuariosRef = ref(database, 'usuarios');
           const usuariosSnapshot = await get(usuariosRef);
           
-          if (usuariosSnapshot.exists()) {
+          if (usuariosSnapshot.exists() && mountedRef.current) {
             const usuariosData = usuariosSnapshot.val();
             const usuariosArray = Object.entries(usuariosData).map(([id, data]) => ({
               id,
@@ -314,12 +320,18 @@ const Configuracion = () => {
         console.error('Error al cargar datos:', error);
         toast.error('Error al cargar datos: ' + error.message);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     cargarDatos();
-  }, [navigate, userId, currentUser?.uid]);
+    
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [navigate, userId]);
 
   const handleChangeTab = (event, newValue) => {
     setTabIndex(newValue);

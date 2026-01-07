@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ref, get, set } from 'firebase/database';
 import { database } from '../../firebase/config';
 import { Container, Paper, Typography, Box, Button, useMediaQuery, useTheme, Alert, Fade, Skeleton } from '@mui/material';
@@ -47,7 +47,7 @@ import { useModalConfirm } from '../../hooks/useModalConfirm';
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-  background: 'linear-gradient(135deg, #f8fafc 0%, #e8f5e9 50%, #f0f9ff 100%)',
+  background: '#f8fafc',
   [theme.breakpoints.down('md')]: {
     paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)',
   },
@@ -66,14 +66,9 @@ const ContentContainer = styled(Container)(({ theme }) => ({
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: 20,
-  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
   border: '1px solid rgba(0, 131, 14, 0.08)',
-  background: 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(10px)',
-  [theme.breakpoints.down('md')]: {
-    backdropFilter: 'none',
-    background: '#ffffff',
-  },
+  background: '#ffffff',
   overflow: 'hidden',
   position: 'relative',
   '&::before': {
@@ -88,6 +83,7 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   [theme.breakpoints.down('md')]: {
     padding: theme.spacing(2),
     borderRadius: 16,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
   },
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(1.5),
@@ -189,6 +185,9 @@ const Horarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  // Flag para prevenir actualizaciones después de desmontar
+  const mountedRef = useRef(true);
 
   // Reemplazar estados de usuarios por el hook
   const { usuarios, departamentoSeleccionado, setDepartamentoSeleccionado, currentUser } = useUsuariosYHorarios();
@@ -248,6 +247,13 @@ const Horarios = () => {
   };
 
   const usuariosFiltrados = useUsuariosFiltrados(usuarios, departamentoSeleccionado);
+  
+  // Cleanup al desmontar componente
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Memoizar el usuario actual para evitar búsquedas repetidas
   const currentUserData = useMemo(() => 
@@ -306,21 +312,28 @@ const Horarios = () => {
     const key = obtenerClaveSemana(semanaSeleccionada);
     // subscribeHorariosSemana invoca onChange con el objeto actual
     const unsubscribe = subscribeHorariosSemana(key, (data) => {
-      setHorarios(data || {});
-      setLastLoadedWeekKey(key);
-      setLoading(false);
+      if (mountedRef.current) {
+        setHorarios(data || {});
+        setLastLoadedWeekKey(key);
+        setLoading(false);
+      }
     });
 
     // En caso de error o timeout, intentamos una carga puntual como fallback
     const fallback = setTimeout(async () => {
+      if (!mountedRef.current) return;
       try {
         const data = await cargarHorariosPorSemana(semanaSeleccionada, obtenerClaveSemana);
-        setHorarios(data || {});
-        setLastLoadedWeekKey(key);
+        if (mountedRef.current) {
+          setHorarios(data || {});
+          setLastLoadedWeekKey(key);
+        }
       } catch (e) {
         console.error('Fallback cargarHorariosPorSemana falló:', e);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     }, 3000);
 

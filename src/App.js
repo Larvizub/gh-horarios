@@ -1,5 +1,5 @@
-import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { Box, CircularProgress, ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import './App.css';
@@ -158,18 +158,22 @@ const theme = createTheme({
           padding: '10px 20px',
           fontSize: '0.9375rem',
           boxShadow: 'none',
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            boxShadow: '0 4px 12px rgba(0, 131, 14, 0.25)',
-            transform: 'translateY(-1px)',
+          transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
+          '@media (hover: hover)': {
+            '&:hover': {
+              boxShadow: '0 4px 12px rgba(0, 131, 14, 0.25)',
+              transform: 'translateY(-1px)',
+            },
           },
           '&:active': {
             transform: 'translateY(0)',
           },
         },
         contained: {
-          '&:hover': {
-            boxShadow: '0 6px 16px rgba(0, 131, 14, 0.3)',
+          '@media (hover: hover)': {
+            '&:hover': {
+              boxShadow: '0 6px 16px rgba(0, 131, 14, 0.3)',
+            },
           },
         },
         outlined: {
@@ -202,9 +206,11 @@ const theme = createTheme({
         root: {
           borderRadius: 16,
           border: '1px solid rgba(0, 0, 0, 0.06)',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            borderColor: 'rgba(0, 131, 14, 0.2)',
+          transition: 'border-color 0.2s ease-in-out',
+          '@media (hover: hover)': {
+            '&:hover': {
+              borderColor: 'rgba(0, 131, 14, 0.2)',
+            },
           },
         },
       },
@@ -364,7 +370,7 @@ const theme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
-          transition: 'all 0.2s ease-in-out',
+          transition: 'background-color 0.15s ease',
           '&:hover': {
             backgroundColor: 'rgba(0, 131, 14, 0.08)',
           },
@@ -373,6 +379,20 @@ const theme = createTheme({
     },
   },
 });
+
+// Componente para resetear scroll al cambiar de ruta
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    // Resetear scroll inmediatamente sin animaciones
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  }, [pathname]);
+  
+  return null;
+};
 
 // Loading component moderno
 const LoadingScreen = () => (
@@ -430,6 +450,7 @@ function AppContent() {
   return (
     <Box className="App" sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
       <Suspense fallback={<LoadingScreen />}>
+        <ScrollToTop />
         {currentUser && <Navbar user={currentUser} />}
         
         <Box 

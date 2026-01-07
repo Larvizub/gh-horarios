@@ -5,6 +5,11 @@
   flex-direction: column;
 }
 
+/* Optimizar scroll en móviles */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* === ANIMACIONES MEJORADAS === */
 
 /* Pulse suave */

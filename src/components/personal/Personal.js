@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ref, get, remove } from 'firebase/database';
 import { database, auth, functions } from '../../firebase/config';
 import { httpsCallable } from 'firebase/functions';
@@ -56,7 +56,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 // Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
-  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+  background: '#f8fafc',
   paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)',
   [theme.breakpoints.up('md')]: {
     paddingBottom: theme.spacing(4),
@@ -203,6 +203,9 @@ const Personal = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
+  // Flag para prevenir actualizaciones después de desmontar
+  const mountedRef = useRef(true);
+  
   const [usuarios, setUsuarios] = useState([]);
   const [filteredUsuarios, setFilteredUsuarios] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -213,6 +216,13 @@ const Personal = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Filtrar usuarios cuando cambia el término de búsqueda
   useEffect(() => {
@@ -243,6 +253,8 @@ const Personal = () => {
         const userData = userSnapshot.val();
         const userEmail = user.email || '';
         const userDataWithEmail = { ...userData, email: userData?.email || userEmail };
+        
+        if (!mountedRef.current) return;
         setCurrentUser(userDataWithEmail);
 
         if (
@@ -257,7 +269,7 @@ const Personal = () => {
 
         const usuariosRef = ref(database, 'usuarios');
         const usuariosSnapshot = await get(usuariosRef);
-        if (usuariosSnapshot.exists()) {
+        if (usuariosSnapshot.exists() && mountedRef.current) {
           const usuariosData = usuariosSnapshot.val();
           const usuariosArray = Object.entries(usuariosData).map(([id, data]) => ({
             id,
@@ -273,11 +285,17 @@ const Personal = () => {
         console.error('Error al cargar usuarios:', error);
         toast.error('Error al cargar usuarios: ' + error.message);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     cargarUsuarios();
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, [navigate]);
 
   const handleEliminarClick = (usuario) => {

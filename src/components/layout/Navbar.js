@@ -104,10 +104,13 @@ const MobileDrawer = styled(Drawer)(({ theme }) => ({
   '& .MuiDrawer-paper': {
     width: 300,
     maxWidth: '85vw',
-    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-    borderRadius: '0 24px 24px 0',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    background: '#ffffff',
+    borderRadius: '0 16px 16px 0',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
     border: 'none',
+    willChange: 'transform',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
   },
 }));
 
@@ -117,9 +120,10 @@ const DrawerListItem = styled(ListItem)(({ theme, active }) => ({
   padding: theme.spacing(1.5, 2),
   borderRadius: 14,
   cursor: 'pointer',
-  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  transition: 'background-color 0.15s ease',
+  willChange: 'background-color',
   ...(active && {
-    background: `linear-gradient(135deg, ${alpha('#00830e', 0.1)} 0%, ${alpha('#00830e', 0.05)} 100%)`,
+    background: alpha('#00830e', 0.1),
     '& .MuiListItemIcon-root': {
       color: '#00830e',
     },
@@ -130,10 +134,9 @@ const DrawerListItem = styled(ListItem)(({ theme, active }) => ({
   }),
   '&:hover': {
     background: alpha('#00830e', 0.08),
-    transform: 'translateX(4px)',
   },
   '&:active': {
-    transform: 'scale(0.98)',
+    background: alpha('#00830e', 0.12),
   },
   '& .MuiListItemIcon-root': {
     minWidth: 44,
@@ -191,15 +194,25 @@ const Navbar = ({ user }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
+  
+  // Flag para prevenir actualizaciones después de desmontar
+  const mountedRef = React.useRef(true);
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Cargar datos del usuario para verificar permisos
   useEffect(() => {
     const cargarDatosUsuario = async () => {
-      if (user) {
+      if (user && mountedRef.current) {
         try {
           const userRef = ref(database, `usuarios/${user.uid}`);
           const userSnapshot = await get(userRef);
-          if (userSnapshot.exists()) {
+          if (userSnapshot.exists() && mountedRef.current) {
             const userDataFromDB = userSnapshot.val();
             setUserData({ ...userDataFromDB, email: user.email });
           }
@@ -211,6 +224,14 @@ const Navbar = ({ user }) => {
 
     cargarDatosUsuario();
   }, [user]);
+  
+  // Cerrar drawer al cambiar de ruta para evitar problemas en móviles
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   // Filtrar elementos del menú basándose en permisos
   const menuItemsFiltrados = menuItems.filter(item => {

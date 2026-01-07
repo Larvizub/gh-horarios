@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ref, get } from 'firebase/database';
 import { database, auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
@@ -102,11 +102,13 @@ const StatsCard = styled(Card)(({ theme }) => ({
   borderRadius: 20,
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
   border: '1px solid rgba(0, 0, 0, 0.04)',
-  transition: 'all 0.3s ease',
+  transition: theme.breakpoints.down('sm') ? 'none' : 'transform 0.2s ease',
   height: '100%',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
+  [theme.breakpoints.up('md')]: {
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
+    },
   },
 }));
 
@@ -194,16 +196,26 @@ const Dashboard = () => {
   const [usuariosTeletrabajo, setUsuariosTeletrabajo] = useState([]);
   const [modalUsuarios, setModalUsuarios] = useState({ open: false, tipo: '', usuarios: [] });
   const navigate = useNavigate();
+  
+  // Flag para prevenir actualizaciones de estado después de desmontar
+  const mountedRef = React.useRef(true);
+  
+  // Cleanup al desmontar componente
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Función para obtener la clave de la semana
-  const obtenerClaveSemana = useCallback((fecha) => {
+  const obtenerClaveSemana = (fecha) => {
     const year = getYear(fecha);
     const week = getISOWeek(fecha);
     return `${year}-${week}`;
-  }, []);
+  };
 
   // Función para procesar estadísticas de horarios
-  const procesarEstadisticas = useCallback(async (userId) => {
+  const procesarEstadisticas = async (userId) => {
     try {
       const semanaActual = startOfWeek(new Date(), { weekStartsOn: 1 });
       const estadisticasData = {
@@ -325,7 +337,7 @@ const Dashboard = () => {
         rendimientoSemanal: []
       };
     }
-  }, [obtenerClaveSemana]);  // useCallback dependencies
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -344,7 +356,7 @@ const Dashboard = () => {
           get(horasExtrasRef)
         ]);
 
-        if (userSnapshot.exists()) {
+        if (userSnapshot.exists() && mountedRef.current) {
           const userData = userSnapshot.val();
           setUserData(userData);
 
@@ -361,7 +373,9 @@ const Dashboard = () => {
 
           // Procesar estadísticas
           const stats = await procesarEstadisticas(user.uid);
-          setEstadisticas(stats);
+          if (mountedRef.current) {
+            setEstadisticas(stats);
+          }
         } else {
           console.log('No se encontraron datos del usuario');
         }
@@ -390,17 +404,22 @@ const Dashboard = () => {
           // Usuarios en teletrabajo hoy
           return turnoHoy && turnoHoy.tipo === 'teletrabajo';
         });
-        setUsuariosNoTrabajan(usuariosFuera);
-        setUsuariosTeletrabajo(usuariosTele);
+        if (mountedRef.current) {
+          setUsuariosNoTrabajan(usuariosFuera);
+          setUsuariosTeletrabajo(usuariosTele);
+        }
 
       } catch (error) {
         console.error('Error al cargar datos:', error);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
     fetchUserData();
-  }, [navigate, procesarEstadisticas, obtenerClaveSemana]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
 
   if (loading) {
     return (
