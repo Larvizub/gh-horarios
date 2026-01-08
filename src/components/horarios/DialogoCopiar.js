@@ -17,7 +17,8 @@ const TIPO_LABEL = {
   feriado: 'Feriado',
   permiso: 'Permiso Otorgado por Jefatura',
   'tarde-libre': 'Tarde Libre',
-  'dia-brigada': 'Día por Brigada'
+  'dia-brigada': 'Día por Brigada',
+  'beneficio-operaciones': 'Día libre - beneficio operaciones'
 };
 
 // Styled Components

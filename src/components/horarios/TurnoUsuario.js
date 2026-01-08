@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Grid, Box, Typography, IconButton } from '@mui/material';
 import { TIPO_LABEL } from '../../utils/horariosConstants';
 
-const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso'];
+const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso', 'beneficio-operaciones'];
 
 const TurnoUsuario = memo(({ 
   usuario, 

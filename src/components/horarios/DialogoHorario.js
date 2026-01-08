@@ -301,6 +301,7 @@ const DialogoHorario = ({
               <MenuItem value="feriado">Feriado</MenuItem>
               <MenuItem value="permiso">Permiso Otorgado por Jefatura</MenuItem>
               <MenuItem value="dia-brigada">Día por Brigada</MenuItem>
+              <MenuItem value="beneficio-operaciones">Día libre - beneficio operaciones</MenuItem>
               <MenuItem value="tarde-libre">Tarde Libre</MenuItem>
               <MenuItem value="fuera-oficina">Fuera de Oficina</MenuItem>
               <MenuItem value="viaje-trabajo">Viaje de Trabajo</MenuItem>
