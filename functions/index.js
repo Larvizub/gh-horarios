@@ -206,7 +206,7 @@ function createEmailTemplate(title, content) {
         </div>
         <div class="footer">
           <p style="margin:0 0 8px 0;">Este es un mensaje automático del Sistema de Horarios.</p>
-          <p style="margin:0;color:#aaa;">© ${new Date().getFullYear()} Costa Rica Contact Center</p>
+          <p style="margin:0;color:#aaa;">© ${new Date().getFullYear()} Centro de Convenciones de Costa Rica & Grupo Heroica</p>
         </div>
       </div>
     </body>
