@@ -207,6 +207,9 @@ const Dashboard = () => {
     };
   }, []);
 
+  // Determinar duración de animaciones basándose en el dispositivo
+  const animationDuration = isMobile ? 0 : 500;
+
   // Función para obtener la clave de la semana
   const obtenerClaveSemana = (fecha) => {
     const year = getYear(fecha);
@@ -225,107 +228,120 @@ const Dashboard = () => {
         rendimientoSemanal: []
       };
 
-      // Obtener datos de las últimas 8 semanas
-      const semanas = [];
-      for (let i = 0; i < 8; i++) {
-        const fecha = subWeeks(semanaActual, i);
-        const claveSemana = obtenerClaveSemana(fecha);
-        semanas.push({ fecha, claveSemana });
-      }
+      // Obtener la clave de la semana actual
+      const claveSemanaActual = obtenerClaveSemana(semanaActual);
+      
+      // Primero obtener solo la semana actual para mostrar datos rápido
+      const currentWeekRef = ref(database, `horarios_registros/${claveSemanaActual}/${userId}`);
+      const currentWeekSnapshot = await get(currentWeekRef);
+      const currentWeekHorarios = currentWeekSnapshot.exists() ? currentWeekSnapshot.val() : {};
 
-      // Obtener horarios de todas las semanas
-      const promesasHorarios = semanas.map(async ({ fecha, claveSemana }) => {
-        const horariosRef = ref(database, `horarios_registros/${claveSemana}/${userId}`);
-        const snapshot = await get(horariosRef);
-        return {
-          fecha,
-          claveSemana,
-          horarios: snapshot.exists() ? snapshot.val() : {}
-        };
+      // Procesar datos de la semana actual inmediatamente
+      const tipos = {};
+      let horasTotalesSemana = 0;
+      let horasTranscurridas = 0;
+      
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const currentDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+      Object.entries(currentWeekHorarios).forEach(([diaKey, horario]) => {
+        if (horario && horario.tipo) {
+          if (horario.tipo === 'descanso') {
+            tipos['descanso'] = (tipos['descanso'] || 0) + 24;
+          } else {
+            tipos[horario.tipo] = (tipos[horario.tipo] || 0) + (horario.horas || 0);
+          }
+
+          if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
+            const horas = horario.horas || 0;
+            horasTotalesSemana += horas;
+            
+            const diaNum = parseInt(diaKey.replace('dia', ''));
+            if (!isNaN(diaNum) && diaNum <= currentDayIndex) {
+              horasTranscurridas += horas;
+            }
+          }
+        }
       });
 
-      const resultados = await Promise.all(promesasHorarios);
+      estadisticasData.semanaActual = { 
+        tipos, 
+        horasTotales: horasTranscurridas,
+        horasPlanificadas: horasTotalesSemana 
+      };
 
-      // Procesar datos de la semana actual
-      const semanaActualData = resultados[0];
-      if (semanaActualData.horarios) {
-        const tipos = {};
-        let horasTotalesSemana = 0;
-        let horasTranscurridas = 0;
+      // Lanzar la carga de las otras 7 semanas en segundo plano para no bloquear
+      const cargarSemanasAnteriores = async () => {
+        const semanas = [];
+        for (let i = 1; i < 8; i++) {
+          const fecha = subWeeks(semanaActual, i);
+          const claveSemana = obtenerClaveSemana(fecha);
+          semanas.push({ fecha, claveSemana });
+        }
+
+        const promesasHorarios = semanas.map(async ({ fecha, claveSemana }) => {
+          const horariosRef = ref(database, `horarios_registros/${claveSemana}/${userId}`);
+          const snapshot = await get(horariosRef);
+          return {
+            fecha,
+            claveSemana,
+            horarios: snapshot.exists() ? snapshot.val() : {}
+          };
+        });
+
+        const resultados = await Promise.all(promesasHorarios);
         
-        const now = new Date();
-        const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-        const currentDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
+        // Combinar con la semana actual
+        const todosLosResultados = [
+          { fecha: semanaActual, claveSemana: claveSemanaActual, horarios: currentWeekHorarios },
+          ...resultados
+        ];
 
-        Object.entries(semanaActualData.horarios).forEach(([diaKey, horario]) => {
-          if (horario && horario.tipo) {
-            // Si es descanso, contamos 24 horas por día
-            if (horario.tipo === 'descanso') {
-              tipos['descanso'] = (tipos['descanso'] || 0) + 24;
-            } else {
-              tipos[horario.tipo] = (tipos[horario.tipo] || 0) + (horario.horas || 0);
-            }
+        const contadorTipos = {};
+        const rendimientoPorSemana = [];
 
-            if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
-              const horas = horario.horas || 0;
-              horasTotalesSemana += horas;
+        todosLosResultados.forEach(({ fecha, horarios }) => {
+          let horasSemanales = 0;
+          const tiposSemana = {};
+
+          Object.values(horarios).forEach(horario => {
+            if (horario && horario.tipo) {
+              contadorTipos[horario.tipo] = (contadorTipos[horario.tipo] || 0) + 1;
+              if (horario.tipo === 'descanso') {
+                tiposSemana['descanso'] = (tiposSemana['descanso'] || 0) + 24;
+              } else {
+                tiposSemana[horario.tipo] = (tiposSemana[horario.tipo] || 0) + (horario.horas || 0);
+              }
               
-              // El diaKey suele ser 'dia1', 'dia2', etc.
-              const diaNum = parseInt(diaKey.replace('dia', ''));
-              if (!isNaN(diaNum) && diaNum <= currentDayIndex) {
-                horasTranscurridas += horas;
+              if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
+                horasSemanales += horario.horas || 0;
               }
             }
-          }
+          });
+
+          rendimientoPorSemana.push({
+            semana: format(fecha, 'dd/MM', { locale: es }),
+            horas: horasSemanales,
+            ...tiposSemana
+          });
         });
 
-        estadisticasData.semanaActual = { 
-          tipos, 
-          horasTotales: horasTranscurridas,
-          horasPlanificadas: horasTotalesSemana 
-        };
-      }
+        if (mountedRef.current) {
+          setEstadisticas(prev => ({
+            ...prev,
+            distribucionTipos: Object.entries(contadorTipos).map(([tipo, cantidad]) => ({
+              name: tipo.charAt(0).toUpperCase() + tipo.slice(1),
+              value: cantidad,
+              color: COLORS[tipo] || CHART_COLORS[Object.keys(contadorTipos).indexOf(tipo) % CHART_COLORS.length]
+            })),
+            rendimientoSemanal: rendimientoPorSemana.reverse()
+          }));
+        }
+      };
 
-      // Procesar distribución de tipos de asignación
-      const contadorTipos = {};
-      const rendimientoPorSemana = [];
-
-      resultados.forEach(({ fecha, horarios }) => {
-        let horasSemanales = 0;
-        const tiposSemana = {};
-
-        Object.values(horarios).forEach(horario => {
-          if (horario && horario.tipo) {
-            contadorTipos[horario.tipo] = (contadorTipos[horario.tipo] || 0) + 1;
-            
-            // Contar 24h para días de descanso, de lo contrario usar horas del registro
-            if (horario.tipo === 'descanso') {
-              tiposSemana['descanso'] = (tiposSemana['descanso'] || 0) + 24;
-            } else {
-              tiposSemana[horario.tipo] = (tiposSemana[horario.tipo] || 0) + (horario.horas || 0);
-            }
-            
-            if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
-              horasSemanales += horario.horas || 0;
-            }
-          }
-        });
-
-        rendimientoPorSemana.push({
-          semana: format(fecha, 'dd/MM', { locale: es }),
-          horas: horasSemanales,
-          ...tiposSemana
-        });
-      });
-
-      // Convertir contadores a formato para gráfico circular
-      estadisticasData.distribucionTipos = Object.entries(contadorTipos).map(([tipo, cantidad]) => ({
-        name: tipo.charAt(0).toUpperCase() + tipo.slice(1),
-        value: cantidad,
-        color: COLORS[tipo] || CHART_COLORS[Object.keys(contadorTipos).indexOf(tipo) % CHART_COLORS.length]
-      }));
-
-      estadisticasData.rendimientoSemanal = rendimientoPorSemana.reverse(); // Mostrar en orden cronológico
+      // Ejecutar carga de historial
+      cargarSemanasAnteriores();
 
       return estadisticasData;
     } catch (error) {
@@ -340,7 +356,7 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchAllData = async () => {
       try {
         const user = auth.currentUser;
         if (!user) {
@@ -348,76 +364,70 @@ const Dashboard = () => {
           return;
         }
 
-        const userRef = ref(database, `usuarios/${user.uid}`);
-        const horasExtrasRef = ref(database, 'horas_extras');
+        const today = new Date();
+        const weekKey = obtenerClaveSemana(today);
 
-        const [userSnapshot, horasExtrasSnapshot] = await Promise.all([
-          get(userRef),
-          get(horasExtrasRef)
+        // Paralelizar todas las peticiones iniciales para mejorar rendimiento en móvil
+        const [
+          userSnapshot, 
+          horasExtrasSnapshot, 
+          usuariosSnap, 
+          horariosSemSnap,
+          stats
+        ] = await Promise.all([
+          get(ref(database, `usuarios/${user.uid}`)),
+          get(ref(database, 'horas_extras')),
+          get(ref(database, 'usuarios')),
+          get(ref(database, `horarios_registros/${weekKey}`)),
+          procesarEstadisticas(user.uid)
         ]);
 
         if (userSnapshot.exists() && mountedRef.current) {
           const userData = userSnapshot.val();
           setUserData(userData);
 
-          // Las horas extras se guardan en un objeto con todos los usuarios
           const todasLasHorasExtras = horasExtrasSnapshot.exists() ? horasExtrasSnapshot.val() : {};
           const horasExtrasUsuario = todasLasHorasExtras[user.uid] || 0;
           
           setHorasExtras(horasExtrasUsuario);
           
-          // Obtener las horas máximas según el tipo de contrato del usuario
           const horasMaximas = obtenerHorasMaximas(userData?.tipoContrato || 'Operativo');
-          const horasMinimas = Math.max(horasMaximas * 0.8, 30); // Mínimo 80% de las horas del contrato o 30 horas
+          const horasMinimas = Math.max(horasMaximas * 0.8, 30);
           setHorasDisponibles(Math.max(horasMaximas - horasExtrasUsuario, horasMinimas));
-
-          // Procesar estadísticas
-          const stats = await procesarEstadisticas(user.uid);
-          if (mountedRef.current) {
-            setEstadisticas(stats);
-          }
-        } else {
-          console.log('No se encontraron datos del usuario');
+          setEstadisticas(stats);
         }
 
-        // Obtener usuarios y horarios de esta semana para identificar quiénes no trabajan hoy
-        const usuariosRef = ref(database, 'usuarios');
-        const usuariosSnap = await get(usuariosRef);
-        const usuariosArray = usuariosSnap.exists()
-          ? Object.entries(usuariosSnap.val()).map(([id, data]) => ({ id, ...data }))
-          : [];
-        const today = new Date();
-        const weekKey = obtenerClaveSemana(today);
-        const diaIndex = today.getDay() === 0 ? 7 : today.getDay(); // Domingo=7
-        const horariosSemRef = ref(database, `horarios_registros/${weekKey}`);
-        const horariosSemSnap = await get(horariosSemRef);
-        const horariosSemana = horariosSemSnap.exists() ? horariosSemSnap.val() : {};
-        const usuariosFuera = usuariosArray.filter(u => {
-          const userHorarios = horariosSemana[u.id] || {};
-          const turnoHoy = userHorarios[`dia${diaIndex}`];
-          // Usuarios fuera de oficina hoy (no suman horas)
-          return turnoHoy && NO_SUMAN_HORAS.includes(turnoHoy.tipo);
-        });
-        const usuariosTele = usuariosArray.filter(u => {
-          const userHorarios = horariosSemana[u.id] || {};
-          const turnoHoy = userHorarios[`dia${diaIndex}`];
-          // Usuarios en teletrabajo hoy
-          return turnoHoy && turnoHoy.tipo === 'teletrabajo';
-        });
-        if (mountedRef.current) {
+        if (usuariosSnap.exists() && mountedRef.current) {
+          const usuariosArray = Object.entries(usuariosSnap.val()).map(([id, data]) => ({ id, ...data }));
+          const horariosSemana = horariosSemSnap.exists() ? horariosSemSnap.val() : {};
+          const diaIndex = today.getDay() === 0 ? 7 : today.getDay();
+
+          const usuariosFuera = usuariosArray.filter(u => {
+            const userHorarios = horariosSemana[u.id] || {};
+            const turnoHoy = userHorarios[`dia${diaIndex}`];
+            return turnoHoy && NO_SUMAN_HORAS.includes(turnoHoy.tipo);
+          });
+
+          const usuariosTele = usuariosArray.filter(u => {
+            const userHorarios = horariosSemana[u.id] || {};
+            const turnoHoy = userHorarios[`dia${diaIndex}`];
+            return turnoHoy && turnoHoy.tipo === 'teletrabajo';
+          });
+
           setUsuariosNoTrabajan(usuariosFuera);
           setUsuariosTeletrabajo(usuariosTele);
         }
 
       } catch (error) {
-        console.error('Error al cargar datos:', error);
+        console.error('Error al cargar datos del dashboard:', error);
       } finally {
         if (mountedRef.current) {
           setLoading(false);
         }
       }
     };
-    fetchUserData();
+
+    fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
@@ -863,6 +873,7 @@ const Dashboard = () => {
                         fill="#8884d8"
                         dataKey="value"
                         paddingAngle={2}
+                        animationDuration={animationDuration}
                       >
                         {estadisticas.distribucionTipos.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
@@ -924,6 +935,7 @@ const Dashboard = () => {
                         fill="#00830e" 
                         radius={[6, 6, 0, 0]}
                         name="Horas"
+                        animationDuration={animationDuration}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -979,6 +991,7 @@ const Dashboard = () => {
                         strokeWidth={2.5}
                         dot={{ strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6 }}
+                        animationDuration={animationDuration}
                       />
                       <Line 
                         type="monotone" 
@@ -988,6 +1001,7 @@ const Dashboard = () => {
                         strokeWidth={2.5}
                         dot={{ strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6 }}
+                        animationDuration={animationDuration}
                       />
                       <Line 
                         type="monotone" 
@@ -997,6 +1011,7 @@ const Dashboard = () => {
                         strokeWidth={2.5}
                         dot={{ strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6 }}
+                        animationDuration={animationDuration}
                       />
                     </LineChart>
                   </ResponsiveContainer>

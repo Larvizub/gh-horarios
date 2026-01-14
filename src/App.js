@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Box, CircularProgress, ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
+import Navbar from './components/layout/Navbar';
 
 // Importación perezosa de componentes
 const Login = lazy(() => import('./components/auth/Login'));
@@ -14,7 +15,6 @@ const Horarios = lazy(() => import('./components/horarios/Horarios'));
 const Personal = lazy(() => import('./components/personal/Personal'));
 const Configuracion = lazy(() => import('./components/configuracion/Configuracion'));
 const ConsultaHorarios = lazy(() => import('./components/consulta/ConsultaHorarios'));
-const Navbar = lazy(() => import('./components/layout/Navbar'));
 
 // Crear tema personalizado moderno para Material-UI
 const theme = createTheme({

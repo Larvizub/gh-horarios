@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, database } from '../../firebase/config';
@@ -185,7 +185,7 @@ const menuItems = [
   { label: 'Personal', icon: <PersonIcon />, path: '/personal' },
 ];
 
-const Navbar = ({ user }) => {
+const Navbar = memo(({ user }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
@@ -234,34 +234,38 @@ const Navbar = ({ user }) => {
   }, [location.pathname]);
 
   // Filtrar elementos del menú basándose en permisos
-  const menuItemsFiltrados = menuItems.filter(item => {
-    switch (item.path) {
-      case '/personal':
-        return userData && puedeAccederPersonal(userData);
-      case '/horarios':
-      case '/consulta-horarios':
-        return userData && puedeVerHorarios(userData);
-      default:
-        return true;
-    }
-  });
+  const menuItemsFiltrados = React.useMemo(() => {
+    return menuItems.filter(item => {
+      switch (item.path) {
+        case '/personal':
+          return userData && puedeAccederPersonal(userData);
+        case '/horarios':
+        case '/consulta-horarios':
+          return userData && puedeVerHorarios(userData);
+        default:
+          return true;
+      }
+    });
+  }, [userData]);
 
-  const handleOpenUserMenu = (event) => {
+  const handleOpenUserMenu = useCallback((event) => {
     setAnchorElUser(event.currentTarget);
-  };
+  }, []);
 
   // Mantener la referencia estable para useEffect
   const handleCloseUserMenu = useCallback(() => {
     setAnchorElUser(null);
   }, []);
 
-  const handleDrawerToggle = () => {
-    setDrawerOpen(!drawerOpen);
-  };
+  const handleDrawerToggle = useCallback(() => {
+    setDrawerOpen(prev => !prev);
+  }, []);
 
-  const handleDrawerClose = () => setDrawerOpen(false);
+  const handleDrawerClose = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await signOut(auth);
       toast.success('Sesión cerrada exitosamente');
@@ -270,21 +274,21 @@ const Navbar = ({ user }) => {
       console.error('Error al cerrar sesión:', error);
       toast.error('Error al cerrar sesión: ' + error.message);
     }
-  };
+  }, [navigate]);
 
-  const handleNavigateToProfile = () => {
+  const handleNavigateToProfile = useCallback(() => {
     handleCloseUserMenu();
     navigate('/configuracion');
-  };
+  }, [handleCloseUserMenu, navigate]);
 
-  const getUserInitials = () => {
+  const getUserInitials = useCallback(() => {
     if (userData?.nombre) {
       const nombre = userData.nombre.charAt(0).toUpperCase();
       const apellido = userData.apellidos ? userData.apellidos.charAt(0).toUpperCase() : '';
       return `${nombre}${apellido}`;
     }
     return user?.email?.charAt(0).toUpperCase() || 'U';
-  };
+  }, [userData, user]);
 
   const isPathActive = (path) => location.pathname === path;
 
@@ -581,6 +585,6 @@ const Navbar = ({ user }) => {
       </MobileDrawer>
     </>
   );
-};
+});
 
 export default Navbar;

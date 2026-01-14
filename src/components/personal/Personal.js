@@ -241,49 +241,53 @@ const Personal = () => {
   }, [searchTerm, usuarios]);
 
   useEffect(() => {
-    const cargarUsuarios = async () => {
+    const cargarDatos = async () => {
       try {
         const user = auth.currentUser;
         if (!user) {
           navigate('/');
           return;
         }
-        const userRef = ref(database, `usuarios/${user.uid}`);
-        const userSnapshot = await get(userRef);
-        const userData = userSnapshot.val();
-        const userEmail = user.email || '';
-        const userDataWithEmail = { ...userData, email: userData?.email || userEmail };
-        
-        if (!mountedRef.current) return;
-        setCurrentUser(userDataWithEmail);
 
-        if (
-          userDataWithEmail.rol !== ROLES.ADMINISTRADOR &&
-          userDataWithEmail.departamento !== 'Talento Humano' &&
-          userDataWithEmail.email !== 'admin@costaricacc.com'
-        ) {
-          toast.error('No tienes permisos para acceder a esta página');
-          navigate('/dashboard');
-          return;
+        // Paralelizar la carga del usuario actual y la lista completa
+        const [userSnapshot, usuariosSnapshot] = await Promise.all([
+          get(ref(database, `usuarios/${user.uid}`)),
+          get(ref(database, 'usuarios'))
+        ]);
+
+        if (userSnapshot.exists() && mountedRef.current) {
+          const userData = userSnapshot.val();
+          const userEmail = user.email || '';
+          const userDataWithEmail = { ...userData, email: userData?.email || userEmail };
+          
+          setCurrentUser(userDataWithEmail);
+
+          if (
+            userDataWithEmail.rol !== ROLES.ADMINISTRADOR &&
+            userDataWithEmail.departamento !== 'Talento Humano' &&
+            userDataWithEmail.email !== 'admin@costaricacc.com'
+          ) {
+            toast.error('No tienes permisos para acceder a esta página');
+            navigate('/dashboard');
+            return;
+          }
         }
 
-        const usuariosRef = ref(database, 'usuarios');
-        const usuariosSnapshot = await get(usuariosRef);
         if (usuariosSnapshot.exists() && mountedRef.current) {
           const usuariosData = usuariosSnapshot.val();
           const usuariosArray = Object.entries(usuariosData).map(([id, data]) => ({
             id,
             ...data,
-            tipoContrato: data.tipoContrato || 'Operativo', // Valor por defecto para usuarios existentes
-            rol: data.rol || null // Valor por defecto para roles
+            tipoContrato: data.tipoContrato || 'Operativo',
+            rol: data.rol || null
           }));
           setUsuarios(usuariosArray);
-        } else {
+        } else if (mountedRef.current) {
           setUsuarios([]);
         }
       } catch (error) {
-        console.error('Error al cargar usuarios:', error);
-        toast.error('Error al cargar usuarios: ' + error.message);
+        console.error('Error al cargar datos en Personal:', error);
+        toast.error('Error al cargar datos');
       } finally {
         if (mountedRef.current) {
           setLoading(false);
@@ -291,11 +295,7 @@ const Personal = () => {
       }
     };
 
-    cargarUsuarios();
-    
-    return () => {
-      mountedRef.current = false;
-    };
+    cargarDatos();
   }, [navigate]);
 
   const handleEliminarClick = (usuario) => {
