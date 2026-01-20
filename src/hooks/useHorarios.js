@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ref, get, set } from 'firebase/database';
-import { database } from '../firebase/config';
-import { subscribeHorariosSemana } from '../services/firebaseHorarios';
+import { subscribeHorariosSemana, cargarHorariosPorSemana, guardarHorariosSemana } from '../services/firebaseHorarios';
 import { toast } from 'react-toastify';
-import { cargarHorariosPorSemana, guardarHorariosSemana } from '../services/firebaseHorarios';
-import { obtenerHorasMaximas } from '../utils/contratoUtils';
-import { NO_SUMAN_HORAS } from '../utils/horariosConstants';
 
 /**
  * Hook para gestionar la carga, edición, guardado y eliminación de horarios.
@@ -23,21 +18,22 @@ export function useHorarios({ usuarios, currentUser, semanaSeleccionada, semanaA
   const [horariosEditados, setHorariosEditados] = useState({});
   const [editando, setEditando] = useState(false);
 
-  const cargar = useCallback(async () => {
+  useEffect(() => {
     if (!currentUser) return;
     const key = obtenerClaveSemana(semanaSeleccionada);
     setLoading(true);
+
     // Subscribir en tiempo real
     const unsubscribe = subscribeHorariosSemana(key, (data) => {
       setHorarios(data || {});
       setHorariosEditados({});
       setLoading(false);
     });
+
     // Fallback: si no hay respuesta en 3s, intentar carga puntual
     const fallback = setTimeout(async () => {
       try {
-        const clave = obtenerClaveSemana(semanaSeleccionada);
-        const data = await cargarHorariosPorSemana(semanaSeleccionada, clave);
+        const data = await cargarHorariosPorSemana(semanaSeleccionada, key);
         setHorarios(data || {});
       } catch (error) {
         console.error('Error al cargar horarios (fallback):', error);
@@ -49,13 +45,11 @@ export function useHorarios({ usuarios, currentUser, semanaSeleccionada, semanaA
 
     return () => {
       clearTimeout(fallback);
-      try { unsubscribe && unsubscribe(); } catch (e) {}
+      if (unsubscribe) {
+        try { unsubscribe(); } catch (e) {}
+      }
     };
   }, [currentUser, semanaSeleccionada, obtenerClaveSemana]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
 
   const guardar = useCallback(async () => {
     try {
@@ -74,13 +68,13 @@ export function useHorarios({ usuarios, currentUser, semanaSeleccionada, semanaA
     }
   }, [horariosEditados, semanaSeleccionada, obtenerClaveSemana, mostrarModal]);
 
-  const eliminar = useCallback(async (eliminacionSeleccionada) => {
+  const eliminar = useCallback(async (/* eliminacionSeleccionada */) => {
     // TODO: implementar eliminación según tipo...
   }, []);
 
   const recalcular = useCallback(async () => {
     // TODO: implementar recalculo de horas extras...
-  }, [horarios, usuarios, semanaSeleccionada, semanaActual, obtenerClaveSemana]);
+  }, []);
 
   return {
     loading,
