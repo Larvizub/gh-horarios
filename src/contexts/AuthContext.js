@@ -101,10 +101,26 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user && isMounted) {
-          setCurrentUser(user);
-          const userData = await fetchUserData(user.uid);
-          if (isMounted) {
-            setUserData(userData);
+          const lastActivity = localStorage.getItem('lastActivity');
+          const now = Date.now();
+
+          // Verifica inactividad incluso al cargar la app por primera vez
+          if (lastActivity && (now - parseInt(lastActivity)) > INACTIVITY_TIMEOUT) {
+            await signOut(auth);
+            localStorage.removeItem('lastActivity');
+            if (isMounted) {
+              setCurrentUser(null);
+              setUserData(null);
+              toast.info('Tu sesión ha expirado por inactividad');
+            }
+          } else {
+            setCurrentUser(user);
+            const userData = await fetchUserData(user.uid);
+            if (isMounted) {
+              setUserData(userData);
+              // Si no existía registro (login reciente), inicializarlo
+              if (!lastActivity) localStorage.setItem('lastActivity', now.toString());
+            }
           }
         } else if (isMounted) {
           setCurrentUser(null);
