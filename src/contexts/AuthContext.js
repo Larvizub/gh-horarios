@@ -57,8 +57,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) {
-      localStorage.removeItem('lastActivity');
+    if (loading || !currentUser) {
       return;
     }
 
@@ -93,7 +92,20 @@ export const AuthProvider = ({ children }) => {
       events.forEach(event => window.removeEventListener(event, handleActivity));
       clearInterval(interval);
     };
-  }, [currentUser, checkInactivity]);
+  }, [currentUser, loading, checkInactivity]);
+
+  // Función para cerrar sesión manual
+  const logout = useCallback(async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('lastActivity');
+      setCurrentUser(null);
+      setUserData(null);
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      throw error;
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -125,6 +137,7 @@ export const AuthProvider = ({ children }) => {
         } else if (isMounted) {
           setCurrentUser(null);
           setUserData(null);
+          localStorage.removeItem('lastActivity');
         }
       } catch (error) {
         console.error('Error en onAuthStateChanged:', error);
@@ -149,7 +162,8 @@ export const AuthProvider = ({ children }) => {
     userData,
     loading,
     error,
-    fetchUserData
+    fetchUserData,
+    logout
   };
 
   return (

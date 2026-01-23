@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
 import { auth, database } from '../../firebase/config';
 import { ref, get } from 'firebase/database';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../contexts/AuthContext';
 import { puedeAccederPersonal, puedeVerHorarios } from '../../utils/contratoUtils';
 import {
   AppBar,
@@ -194,6 +194,7 @@ const Navbar = memo(({ user }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
+  const { logout } = useAuth();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = React.useRef(true);
@@ -267,14 +268,14 @@ const Navbar = memo(({ user }) => {
 
   const handleLogout = useCallback(async () => {
     try {
-      await signOut(auth);
+      await logout();
       toast.success('Sesión cerrada exitosamente');
       navigate('/');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
       toast.error('Error al cerrar sesión: ' + error.message);
     }
-  }, [navigate]);
+  }, [logout, navigate]);
 
   const handleNavigateToProfile = useCallback(() => {
     handleCloseUserMenu();
