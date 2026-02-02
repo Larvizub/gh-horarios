@@ -56,7 +56,7 @@ import {
 } from 'recharts';
 import { format, subWeeks, startOfWeek, getISOWeek, getYear } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { NO_SUMAN_HORAS } from '../../utils/horariosConstants';
+import { NO_SUMAN_HORAS, TIPO_LABEL } from '../../utils/horariosConstants';
 
 // Styled Components para diseño moderno
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -175,6 +175,7 @@ const COLORS = {
   permiso: '#8b5cf6',
   'tarde-libre': '#64748b',
   personalizado: '#3b82f6',
+  'tele-presencial': '#059669',
 };
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#f97316', '#94a3b8', '#ef4444', '#8b5cf6', '#64748b'];
@@ -247,10 +248,11 @@ const Dashboard = () => {
 
       Object.entries(currentWeekHorarios).forEach(([diaKey, horario]) => {
         if (horario && horario.tipo) {
-          if (horario.tipo === 'descanso') {
+          const tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
+          if (tipoFinal === 'descanso') {
             tipos['descanso'] = (tipos['descanso'] || 0) + 24;
           } else {
-            tipos[horario.tipo] = (tipos[horario.tipo] || 0) + (horario.horas || 0);
+            tipos[tipoFinal] = (tipos[tipoFinal] || 0) + (horario.horas || 0);
           }
 
           if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
@@ -307,11 +309,12 @@ const Dashboard = () => {
 
           Object.values(horarios).forEach(horario => {
             if (horario && horario.tipo) {
-              contadorTipos[horario.tipo] = (contadorTipos[horario.tipo] || 0) + 1;
-              if (horario.tipo === 'descanso') {
+              const tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
+              contadorTipos[tipoFinal] = (contadorTipos[tipoFinal] || 0) + 1;
+              if (tipoFinal === 'descanso') {
                 tiposSemana['descanso'] = (tiposSemana['descanso'] || 0) + 24;
               } else {
-                tiposSemana[horario.tipo] = (tiposSemana[horario.tipo] || 0) + (horario.horas || 0);
+                tiposSemana[tipoFinal] = (tiposSemana[tipoFinal] || 0) + (horario.horas || 0);
               }
               
               if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
@@ -331,7 +334,7 @@ const Dashboard = () => {
           setEstadisticas(prev => ({
             ...prev,
             distribucionTipos: Object.entries(contadorTipos).map(([tipo, cantidad]) => ({
-              name: tipo.charAt(0).toUpperCase() + tipo.slice(1),
+              name: TIPO_LABEL[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1),
               value: cantidad,
               color: COLORS[tipo] || CHART_COLORS[Object.keys(contadorTipos).indexOf(tipo) % CHART_COLORS.length]
             })),
@@ -411,7 +414,7 @@ const Dashboard = () => {
           const usuariosTele = usuariosArray.filter(u => {
             const userHorarios = horariosSemana[u.id] || {};
             const turnoHoy = userHorarios[`dia${diaIndex}`];
-            return turnoHoy && turnoHoy.tipo === 'teletrabajo';
+            return turnoHoy && (turnoHoy.tipo === 'teletrabajo' || turnoHoy.tipo === 'tele-presencial');
           });
 
           setUsuariosNoTrabajan(usuariosFuera);

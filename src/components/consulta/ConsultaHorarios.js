@@ -1106,7 +1106,7 @@ const ConsultaHorarios = () => {
                                             height: 36, 
                                             fontSize: '0.8rem',
                                             fontWeight: 600,
-                                            bgcolor: horario.tipo === 'teletrabajo' 
+                                            bgcolor: (horario.tipo === 'teletrabajo' || horario.tipo === 'tele-presencial')
                                               ? '#2e7d32' 
                                               : horario.tipo === 'personalizado' 
                                               ? 'primary.main' 
