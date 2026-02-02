@@ -181,6 +181,9 @@ const LoadingContainer = styled(Box)(({ theme }) => ({
   gap: theme.spacing(2),
 }));
 
+// Objeto estable para evitar re-renders innecesarios
+const EMPTY_HORAS_EXTRAS = {};
+
 const Horarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -265,6 +268,13 @@ const Horarios = () => {
 
   const usuariosFiltrados = useUsuariosFiltrados(usuarios, departamentoSeleccionado);
   
+  // Función helper para actualizar horarios editados Y el buffer simultáneamente
+  const actualizarHorariosEditados = useCallback((nuevoValor) => {
+    setHorariosEditados(nuevoValor);
+    const key = obtenerClaveSemana(semanaSeleccionada);
+    setBufferEditSemanas(prev => ({ ...prev, [key]: typeof nuevoValor === 'function' ? nuevoValor(horariosEditadosRef.current) : nuevoValor }));
+  }, [semanaSeleccionada, obtenerClaveSemana]);
+  
   // Cleanup al desmontar componente
   useEffect(() => {
     return () => {
@@ -295,7 +305,7 @@ const Horarios = () => {
   // Aplicar el horario copiado a múltiples destinos
   const applyCopiedHorario = useCallback((targets = []) => {
     if (!clipboard || !clipboard.horario) return;
-    setHorariosEditados(prev => {
+    actualizarHorariosEditados(prev => {
       const next = { ...prev };
       targets.forEach(({ usuarioId, diaKey }) => {
         if (!next[usuarioId]) next[usuarioId] = {};
@@ -306,7 +316,7 @@ const Horarios = () => {
     // limpiar el portapapeles
     setClipboard(null);
     mostrarModal({ tipo: 'success', titulo: 'Pegado completo', mensaje: `Se pegaron ${targets.length} destinos.`, soloInfo: true });
-  }, [clipboard, mostrarModal]);
+  }, [clipboard, mostrarModal, actualizarHorariosEditados]);
 
   // Iniciar edición según permisos (evita cargar datos de otros usuarios para no admins)
   const iniciarEdicion = useCallback(() => {
@@ -315,12 +325,12 @@ const Horarios = () => {
     const puedeGuardarTodos = usuarioActual && (
       usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador'
     );
-    if (puedeGuardarTodos) {
-      setHorariosEditados({ ...(horarios || {}) });
-    } else {
-      setHorariosEditados({ [currentUser.uid]: (horarios?.[currentUser.uid] || {}) });
-    }
-  }, [usuarios, currentUser, horarios]);
+    const datosIniciales = puedeGuardarTodos ? { ...(horarios || {}) } : { [currentUser.uid]: (horarios?.[currentUser.uid] || {}) };
+    setHorariosEditados(datosIniciales);
+    // Inicializar el buffer también
+    const key = obtenerClaveSemana(semanaSeleccionada);
+    setBufferEditSemanas({ [key]: datosIniciales });
+  }, [usuarios, currentUser, horarios, semanaSeleccionada, obtenerClaveSemana]);
 
   // Suscribirse en tiempo real a los horarios de la semana seleccionada
   useEffect(() => {
@@ -384,22 +394,12 @@ const Horarios = () => {
     const esAdmin = usuarioActual && (usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador');
     const init = esAdmin ? { ...(horarios || {}) } : { [currentUser?.uid]: (horarios?.[currentUser?.uid] || {}) };
     setHorariosEditados(init);
-    // No actualizamos bufferEditSemanas aquí para evitar bucles infinitos con el efecto de sincronización
+    // Actualizar buffer manualmente al inicializar nueva semana
+    setBufferEditSemanas(prev => ({ ...prev, [key]: init }));
   }, [editando, semanaSeleccionada, loading, lastLoadedWeekKey, horarios, usuarios, currentUser, obtenerClaveSemana]);
 
-  // Sincronizar el buffer con los cambios en horariosEditados para la semana actual
-  useEffect(() => {
-    if (!editando) return;
-    const key = obtenerClaveSemana(semanaSeleccionada);
-    // No sincronizar mientras esperamos data de la semana correcta
-    if (loading || lastLoadedWeekKey !== key) return;
-    
-    setBufferEditSemanas(prev => {
-      // Evitar actualizaciones de estado si el contenido es el mismo para no disparar re-renders innecesarios
-      if (prev[key] === horariosEditados) return prev;
-      return { ...prev, [key]: horariosEditados };
-    });
-  }, [horariosEditados, editando, semanaSeleccionada, obtenerClaveSemana, loading, lastLoadedWeekKey]);
+  // ELIMINADO: Efecto de sincronización automática que causaba bucles infinitos
+  // El buffer ahora se actualiza solo con acciones manuales del usuario
 
   // Función para recalcular horas extras después de modificaciones
   const recalcularHorasExtras = useCallback(async () => {
@@ -522,8 +522,7 @@ const Horarios = () => {
 
     // Finalizar edición. Con la suscripción en tiempo real el estado se actualizará desde Firebase.
     setEditando(false);
-    setBufferEditSemanas({});
-
+    // Limpiar buffer después de guardar exitosamente
       // Recalcular horas extras solo para la semana actual
       await recalcularHorasExtras();
 
@@ -890,7 +889,7 @@ const Horarios = () => {
         horas: 0,
         nota: nota || ''
       };
-      setHorariosEditados(nuevosHorarios);
+      actualizarHorariosEditados(nuevosHorarios);
       setDialogoHorario(false);
       return;
     }
@@ -945,7 +944,7 @@ const Horarios = () => {
         horarios,
         semanaSeleccionada,
         semanaActual,
-        {}, // horasExtras
+        EMPTY_HORAS_EXTRAS,
         (id) => obtenerUsuario(usuarios, id),
         obtenerHorasMaximas
       );
@@ -967,7 +966,7 @@ const Horarios = () => {
               horarios,
               semanaSeleccionada,
               semanaActual,
-              {},
+              EMPTY_HORAS_EXTRAS,
               (uid) => obtenerUsuario(usuarios, uid),
               obtenerHorasMaximas
             ),
@@ -995,7 +994,7 @@ const Horarios = () => {
               horas: horasTrabajadas,
               nota: nota || ''
             };
-            setHorariosEditados(nuevosHorarios);
+            actualizarHorariosEditados(nuevosHorarios);
             setDialogoHorario(false);
             cerrarModal();
           },
@@ -1017,7 +1016,7 @@ const Horarios = () => {
         nota: nota || ''
       };
 
-      setHorariosEditados(nuevosHorarios);
+      actualizarHorariosEditados(nuevosHorarios);
       setDialogoHorario(false);
       return;
     }
@@ -1061,7 +1060,7 @@ const Horarios = () => {
       horarios,
       semanaSeleccionada,
       semanaActual,
-      {}, // horasExtras
+      EMPTY_HORAS_EXTRAS,
       (id) => obtenerUsuario(usuarios, id),
       obtenerHorasMaximas
     );
@@ -1083,7 +1082,7 @@ const Horarios = () => {
             horarios,
             semanaSeleccionada,
             semanaActual,
-            {},
+            EMPTY_HORAS_EXTRAS,
             (uid) => obtenerUsuario(usuarios, uid),
             obtenerHorasMaximas
           ),
@@ -1119,7 +1118,7 @@ const Horarios = () => {
               nota: nota || ''
             };
           }
-          setHorariosEditados(nuevosHorarios);
+          actualizarHorariosEditados(nuevosHorarios);
           setDialogoHorario(false);
           cerrarModal();
         },
@@ -1149,44 +1148,59 @@ const Horarios = () => {
       };
     }
 
-    setHorariosEditados(nuevosHorarios);
+    actualizarHorariosEditados(nuevosHorarios);
     setDialogoHorario(false);
   };
 
-  // Vuelve a agregar la función helper:
-  const calcularExceso = useCallback((usuarioId) => {
-    return calcularHorasExcedentes(
-      usuarioId,
-      editando,
-      horariosEditados,
-      horarios,
-      (id) => obtenerUsuario(usuarios, id),
-      obtenerHorasMaximas
-    );
-  }, [editando, horariosEditados, horarios, usuarios]);
-
-  // Memoizar callback de practicantes para evitar re-renders innecesarios
-  // Ahora soporta parámetros adicionales para filtrar por departamento y evitar al usuario excedido
-  const handleEncontrarPracticantes = useCallback((horasExceso, departamento, usuarioExcedidoId) => 
-    encontrarPracticantesDisponibles(
-      horasExceso,
-      usuarios,
-      (id, edit) => calcularHorasTotales(
-        id,
-        edit,
+  // Función helper optimizada con memoización de resultados
+  const calcularExceso = useMemo(() => {
+    const cache = new Map();
+    return (usuarioId) => {
+      if (cache.has(usuarioId)) return cache.get(usuarioId);
+      const resultado = calcularHorasExcedentes(
+        usuarioId,
+        editando,
         horariosEditados,
         horarios,
-        semanaSeleccionada,
-        semanaActual,
-        {},
-        (uid) => obtenerUsuario(usuarios, uid),
+        (id) => obtenerUsuario(usuarios, id),
+        obtenerHorasMaximas
+      );
+      cache.set(usuarioId, resultado);
+      return resultado;
+    };
+  }, [editando, horariosEditados, horarios, usuarios]);
+
+  // Callback estable de practicantes con cache de resultados
+  const handleEncontrarPracticantes = useMemo(() => {
+    const cache = new Map();
+    return (horasExceso, departamento, usuarioExcedidoId) => {
+      const cacheKey = `${horasExceso}-${departamento}-${usuarioExcedidoId}`;
+      if (cache.has(cacheKey)) return cache.get(cacheKey);
+      
+      const resultado = encontrarPracticantesDisponibles(
+        horasExceso,
+        usuarios,
+        (id, edit) => calcularHorasTotales(
+          id,
+          edit,
+          horariosEditados,
+          horarios,
+          semanaSeleccionada,
+          semanaActual,
+          EMPTY_HORAS_EXTRAS,
+          (uid) => obtenerUsuario(usuarios, uid),
+          obtenerHorasMaximas,
+          true
+        ),
         obtenerHorasMaximas,
-        true
-      ),
-      obtenerHorasMaximas,
-      departamento || departamentoSeleccionado,
-      usuarioExcedidoId
-    ), [usuarios, horariosEditados, horarios, semanaSeleccionada, semanaActual, departamentoSeleccionado]);
+        departamento || departamentoSeleccionado,
+        usuarioExcedidoId
+      );
+      
+      cache.set(cacheKey, resultado);
+      return resultado;
+    };
+  }, [usuarios, horariosEditados, horarios, semanaSeleccionada, semanaActual, departamentoSeleccionado]);
 
   // Control de acceso visual: solo usuarios con permiso pueden ver el módulo
   const usuarioActual = currentUserData;

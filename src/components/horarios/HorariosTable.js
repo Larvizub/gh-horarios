@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { Box, Paper, Grid, Typography, IconButton, Chip, alpha, Button, Stack, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -178,7 +178,7 @@ const MobileUserRow = memo(({
               const tooltipTitle = `${dia} ${format(fecha, 'dd/MM')}`;
               
               return (
-                <Grid item xs={12/7} key={diaKey}>
+                <Grid item sx={{ width: '14.28%', flexBasis: '14.28%' }} key={diaKey}>
                   <Tooltip title={tooltipTitle} arrow placement="top">
                     <DaySlot
                       hasSchedule={tieneHorario}
@@ -352,7 +352,7 @@ const HorariosTable = memo(({
 }) => {
   const [selectedTargets, setSelectedTargets] = useState(new Set());
   
-  const toggleTarget = (usuarioId, diaKey) => {
+  const toggleTarget = useCallback((usuarioId, diaKey) => {
     const key = `${usuarioId}|${diaKey}`;
     setSelectedTargets(prev => {
       const next = new Set(prev);
@@ -360,11 +360,11 @@ const HorariosTable = memo(({
       else next.add(key);
       return next;
     });
-  };
+  }, []);
 
-  const clearSelection = () => setSelectedTargets(new Set());
+  const clearSelection = useCallback(() => setSelectedTargets(new Set()), []);
 
-  const handlePaste = () => {
+  const handlePaste = useCallback(() => {
     if (!onApplyCopiedHorario || !clipboard) return;
     const targets = Array.from(selectedTargets).map(k => {
       const [usuarioId, diaKey] = k.split('|');
@@ -373,7 +373,9 @@ const HorariosTable = memo(({
     if (targets.length === 0) return; // nothing to do
     onApplyCopiedHorario(targets);
     clearSelection();
-  };
+  }, [onApplyCopiedHorario, clipboard, selectedTargets, clearSelection]);
+
+  const EMPTY_EXTRAS = useMemo(() => ({}), []);
 
   return (
     <TableContainer>
@@ -425,7 +427,7 @@ const HorariosTable = memo(({
               horarios, 
               semanaSeleccionada, 
               semanaActual, 
-              {}, 
+              EMPTY_EXTRAS, 
               () => usuario, 
               obtenerHorasMaximas, 
               true
@@ -508,7 +510,7 @@ const HorariosTable = memo(({
               horarios, 
               semanaSeleccionada, 
               semanaActual, 
-              {}, 
+              EMPTY_EXTRAS, 
               () => usuario, 
               obtenerHorasMaximas, 
               true

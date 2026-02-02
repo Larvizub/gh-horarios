@@ -138,10 +138,6 @@ const DialogoHorario = ({
   const usuarioObjetivo = usuarios.find(u => u.id === horarioPersonalizado.usuarioId) || { id: horarioPersonalizado.usuarioId };
   // Permiso para eliminar/modificar
   const puedeEliminar = puedeModificarHorarios(currentUser, usuarioObjetivo);
-  // DEBUG: Mostrar en consola los datos clave para depuración de permisos
-  console.log('DEBUG - currentUser:', currentUser);
-  console.log('DEBUG - usuarioObjetivo:', usuarioObjetivo);
-  console.log('DEBUG - puedeEliminar:', puedeEliminar);
 
   // Al abrir el modal o cambiar de usuario/día, inicializa desde datos existentes pero no borres lo ya tipeado
   React.useEffect(() => {
