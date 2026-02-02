@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Box, Typography, Chip, Alert, Avatar } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -51,7 +51,10 @@ const ExcessChip = styled(Chip)(({ theme }) => ({
   },
 }));
 
-const RecomendacionesPracticantes = ({
+/**
+ * Componente memoizado para mostrar recomendaciones de practicantes cuando hay exceso de horas.
+ */
+const RecomendacionesPracticantes = memo(({
   usuariosFiltrados,
   calcularHorasExcedentes,
   encontrarPracticantesDisponibles
@@ -77,7 +80,8 @@ const RecomendacionesPracticantes = ({
         {usuariosExcedidos.map(usuario => {
           const rawExceso = calcularHorasExcedentes(usuario.id);
           const horasExceso = Math.round(rawExceso * 10) / 10;
-          const practicantes = encontrarPracticantesDisponibles(horasExceso);
+          // Pasar departamento y ID para mejores recomendaciones
+          const practicantes = encontrarPracticantesDisponibles(horasExceso, usuario.departamento, usuario.id);
 
           return (
             <UserCard key={usuario.id}>
@@ -107,10 +111,10 @@ const RecomendacionesPracticantes = ({
                 />
               </UserHeader>
               
-              {practicantes.length > 0 ? (
+              {practicantes && practicantes.length > 0 ? (
                 <Box>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Practicantes sugeridos:
+                    Practicantes/Compañeros sugeridos:
                   </Typography>
                   {practicantes.slice(0, 3).map(p => (
                     <SuggestionItem key={p.usuario.id}>
@@ -130,7 +134,7 @@ const RecomendacionesPracticantes = ({
                 </Box>
               ) : (
                 <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                  No hay practicantes disponibles con suficientes horas.
+                  No hay practicantes ni compañeros disponibles con suficientes horas.
                 </Typography>
               )}
             </UserCard>
@@ -139,6 +143,8 @@ const RecomendacionesPracticantes = ({
       </StyledAlert>
     </Box>
   );
-};
+});
+
+RecomendacionesPracticantes.displayName = 'RecomendacionesPracticantes';
 
 export default RecomendacionesPracticantes;

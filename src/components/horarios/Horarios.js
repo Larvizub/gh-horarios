@@ -198,6 +198,23 @@ const Horarios = () => {
   const [horariosEditados, setHorariosEditados] = useState({});
   // Buffer de ediciones por semana: { [semanaKey]: { ...horariosEditadosSemana } }
   const [bufferEditSemanas, setBufferEditSemanas] = useState({});
+
+  // Refs para acceso estable en callbacks sin disparar re-renders de efectos o ciclos
+  const horariosRef = useRef(horarios);
+  const horariosEditadosRef = useRef(horariosEditados);
+  const bufferEditSemanasRef = useRef(bufferEditSemanas);
+
+  useEffect(() => {
+    horariosRef.current = horarios;
+  }, [horarios]);
+
+  useEffect(() => {
+    horariosEditadosRef.current = horariosEditados;
+  }, [horariosEditados]);
+
+  useEffect(() => {
+    bufferEditSemanasRef.current = bufferEditSemanas;
+  }, [bufferEditSemanas]);
   // Clave de la semana más recientemente cargada desde backend
   const [lastLoadedWeekKey, setLastLoadedWeekKey] = useState(null);
   const [dialogoHorario, setDialogoHorario] = useState(false);
@@ -351,7 +368,8 @@ const Horarios = () => {
   useEffect(() => {
     if (!editando) return;
     const key = obtenerClaveSemana(semanaSeleccionada);
-    const existente = bufferEditSemanas[key];
+    // Usar el ref del buffer para evitar bucles infinitos de re-renderizado
+    const existente = bufferEditSemanasRef.current[key];
     if (existente) {
       setHorariosEditados(existente);
       return;
@@ -366,8 +384,8 @@ const Horarios = () => {
     const esAdmin = usuarioActual && (usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador');
     const init = esAdmin ? { ...(horarios || {}) } : { [currentUser?.uid]: (horarios?.[currentUser?.uid] || {}) };
     setHorariosEditados(init);
-    setBufferEditSemanas(prev => ({ ...prev, [key]: init }));
-  }, [editando, semanaSeleccionada, loading, lastLoadedWeekKey, horarios, usuarios, currentUser, obtenerClaveSemana, bufferEditSemanas]);
+    // No actualizamos bufferEditSemanas aquí para evitar bucles infinitos con el efecto de sincronización
+  }, [editando, semanaSeleccionada, loading, lastLoadedWeekKey, horarios, usuarios, currentUser, obtenerClaveSemana]);
 
   // Sincronizar el buffer con los cambios en horariosEditados para la semana actual
   useEffect(() => {
@@ -375,7 +393,12 @@ const Horarios = () => {
     const key = obtenerClaveSemana(semanaSeleccionada);
     // No sincronizar mientras esperamos data de la semana correcta
     if (loading || lastLoadedWeekKey !== key) return;
-    setBufferEditSemanas(prev => ({ ...prev, [key]: horariosEditados }));
+    
+    setBufferEditSemanas(prev => {
+      // Evitar actualizaciones de estado si el contenido es el mismo para no disparar re-renders innecesarios
+      if (prev[key] === horariosEditados) return prev;
+      return { ...prev, [key]: horariosEditados };
+    });
   }, [horariosEditados, editando, semanaSeleccionada, obtenerClaveSemana, loading, lastLoadedWeekKey]);
 
   // Función para recalcular horas extras después de modificaciones
@@ -731,10 +754,11 @@ const Horarios = () => {
   };
 
   const abrirDialogoHorario = useCallback((usuarioId, diaKey) => {
-    // Buscar datos actuales del horario
-    const horariosEditados = window.__HORARIOS_EDITADOS__ || {};
-    const horarios = window.__HORARIOS__ || {};
-    const horarioActual = (horariosEditados[usuarioId]?.[diaKey]) || (horarios[usuarioId]?.[diaKey]);
+    // Buscar datos actuales del horario usando los refs estables
+    const currentEdits = horariosEditadosRef.current || {};
+    const currentHorarios = horariosRef.current || {};
+    const horarioActual = (currentEdits[usuarioId]?.[diaKey]) || (currentHorarios[usuarioId]?.[diaKey]);
+    
     setHorarioPersonalizado({
       usuarioId,
       diaKey,
@@ -743,7 +767,12 @@ const Horarios = () => {
       horaFin: horarioActual?.horaFin || '',
       horaInicioLibre: horarioActual?.horaInicioLibre || '',
       horaFinLibre: horarioActual?.horaFinLibre || '',
-      nota: horarioActual?.nota || ''
+      nota: horarioActual?.nota || '',
+      // Asegurar que se incluyan campos de tipos compuestos si existen
+      horaInicioTele: horarioActual?.horaInicioTele || '',
+      horaFinTele: horarioActual?.horaFinTele || '',
+      horaInicioPres: horarioActual?.horaInicioPres || '',
+      horaFinPres: horarioActual?.horaFinPres || ''
     });
     setDialogoHorario(true);
   }, []);
@@ -1137,7 +1166,8 @@ const Horarios = () => {
   }, [editando, horariosEditados, horarios, usuarios]);
 
   // Memoizar callback de practicantes para evitar re-renders innecesarios
-  const handleEncontrarPracticantes = useCallback((horasExceso) => 
+  // Ahora soporta parámetros adicionales para filtrar por departamento y evitar al usuario excedido
+  const handleEncontrarPracticantes = useCallback((horasExceso, departamento, usuarioExcedidoId) => 
     encontrarPracticantesDisponibles(
       horasExceso,
       usuarios,
@@ -1150,11 +1180,12 @@ const Horarios = () => {
         semanaActual,
         {},
         (uid) => obtenerUsuario(usuarios, uid),
-        obtenerHorasMaximas
+        obtenerHorasMaximas,
+        true
       ),
       obtenerHorasMaximas,
-      departamentoSeleccionado,
-      null
+      departamento || departamentoSeleccionado,
+      usuarioExcedidoId
     ), [usuarios, horariosEditados, horarios, semanaSeleccionada, semanaActual, departamentoSeleccionado]);
 
   // Control de acceso visual: solo usuarios con permiso pueden ver el módulo
