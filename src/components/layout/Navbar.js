@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { auth, database } from '../../firebase/config';
+import { database } from '../../firebase/config';
 import { ref, get } from 'firebase/database';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
