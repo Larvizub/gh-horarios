@@ -50,6 +50,9 @@ const TurnoUsuario = memo(({
             : tieneHorario ? (
                 horario.tipo === 'viaje-trabajo' ? '#1a237e' : // azul oscuro
                 horario.tipo === 'tele-presencial' ? '#6a1b9a' : // nuevo: morado/berenjena
+                horario.tipo === 'visita-comercial' ? '#795548' :
+                horario.tipo === 'tele-media-libre' ? '#2e7d32' :
+                horario.tipo === 'media-cumple' ? '#607d8b' :
                 horario.tipo === 'teletrabajo' ? '#2e7d32' :
                 horario.tipo === 'cambio' ? '#f57c00' :
                 usuario.id === currentUser?.uid ? 'var(--primary-color)' : 'var(--secondary-color)'
@@ -62,6 +65,9 @@ const TurnoUsuario = memo(({
               ? '#fff'
               : tieneHorario ? (
                   horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
+                  horario.tipo === 'visita-comercial' ? '#5d4037' :
+                  horario.tipo === 'tele-media-libre' ? '#1b5e20' :
+                  horario.tipo === 'media-cumple' ? '#455a64' :
                   horario.tipo === 'teletrabajo' ? '#1b5e20' :
                   horario.tipo === 'cambio' ? '#e65100' :
                   usuario.id === currentUser?.uid ? '#303f9f' : '#c51162'
@@ -186,6 +192,45 @@ const TurnoUsuario = memo(({
                 </Typography>
               )}
             </>
+          ) : horario.tipo === 'tele-media-libre' ? (
+            <>
+              <Typography 
+                variant="caption" 
+                sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
+              >
+                Teletrabajo
+              </Typography>
+              {(horario.horaInicio && horario.horaFin) && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1 }}
+                >
+                  {horario.horaInicio} - {horario.horaFin}
+                </Typography>
+              )}
+              <Typography 
+                variant="caption" 
+                sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold', mt: 0.5 }}
+              >
+                Tiempo Libre
+              </Typography>
+              {(horario.horaInicioLibre && horario.horaFinLibre) && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1 }}
+                >
+                  {horario.horaInicioLibre} - {horario.horaFinLibre}
+                </Typography>
+              )}
+              {horario.nota && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1, mt: 0.5, fontStyle: 'italic' }}
+                >
+                  {horario.nota}
+                </Typography>
+              )}
+            </>
           ) : horario.tipo === 'viaje-trabajo' ? (
             <Typography 
               variant="caption" 
@@ -267,6 +312,7 @@ const TurnoUsuario = memo(({
                      horario.tipo === 'descanso' ? 'D' :
                      horario.tipo === 'vacaciones' ? 'V' :
                      horario.tipo === 'feriado' ? 'F' :
+                     horario.tipo === 'media-cumple' ? '🎂' :
                      horario.tipo === 'permiso' ? 'P' : 'X')
                   : `${horario.horas?.toFixed(1) || '0'}h`
                 }

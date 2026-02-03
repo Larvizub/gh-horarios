@@ -19,7 +19,7 @@ const SENDER_EMAIL = functions.config().email?.sender || "notifications@yourdoma
 // --- CONSTANTES ---
 const NO_SUMAN_HORAS = [
   "descanso", "vacaciones", "feriado", "permiso", "dia-brigada", 
-  "fuera-oficina", "incapacidad-enfermedad", "incapacidad-accidente"
+  "fuera-oficina", "incapacidad-enfermedad", "incapacidad-accidente", "media-cumple"
 ];
 
 const HORAS_MAXIMAS = {
@@ -244,10 +244,10 @@ exports.dailyStatusReminder = functions.pubsub.schedule("0 8 * * 1-5")
       const user = users[userId];
 
       if (user && scheduleType) {
-        if (scheduleType === "teletrabajo" || scheduleType === "tele-presencial") {
+        if (scheduleType === "teletrabajo" || scheduleType === "tele-presencial" || scheduleType === "tele-media-libre") {
           teletrabajo.push(user);
         } else if (
-          ["vacaciones", "incapacidad-enfermedad", "incapacidad-accidente", "permiso", "fuera-oficina", "dia-brigada"].includes(scheduleType)
+          ["vacaciones", "incapacidad-enfermedad", "incapacidad-accidente", "permiso", "fuera-oficina", "dia-brigada", "media-cumple", "visita-comercial"].includes(scheduleType)
         ) {
           fueraOficina.push({ user, type: scheduleType });
         }
@@ -578,11 +578,14 @@ function formatSchedule(val) {
     "permiso": "✋ Permiso",
     "incapacidad-enfermedad": "🏥 Incapacidad",
     "fuera-oficina": "🚫 Fuera Oficina",
-    "dia-brigada": "⛑️ Brigada"
+    "dia-brigada": "⛑️ Brigada",
+    "visita-comercial": "💼 Visita Com.",
+    "tele-media-libre": "🏠 Tele/Libre",
+    "media-cumple": "🎂 Media/Cumple"
   };
 
   // Si es un rango de tiempo (ej. "08:00-17:00"), mostrarlo
-  if (horaInicio && horaFin && !["descanso", "vacaciones", "feriado", "incapacidad-enfermedad", "incapacidad-accidente"].includes(tipo)) {
+  if (horaInicio && horaFin && !["descanso", "vacaciones", "feriado", "incapacidad-enfermedad", "incapacidad-accidente", "media-cumple"].includes(tipo)) {
      return `${horaInicio} - ${horaFin}`;
   }
 

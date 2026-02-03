@@ -26,6 +26,20 @@ import EventBusyIcon from '@mui/icons-material/EventBusy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
+import BusinessIcon from '@mui/icons-material/Business';
+import CakeIcon from '@mui/icons-material/Cake';
+import WeekendIcon from '@mui/icons-material/Weekend';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import LocationOffIcon from '@mui/icons-material/LocationOff';
+import FlightIcon from '@mui/icons-material/Flight';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import HealingIcon from '@mui/icons-material/Healing';
+import SyncAltIcon from '@mui/icons-material/SyncAlt';
 
 // Styled Components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -285,24 +299,102 @@ const DialogoHorario = ({
                   Teletrabajo
                 </Box>
               </MenuItem>
-              <MenuItem value="tele-presencial">Teletrabajo & Presencial</MenuItem>
-              <MenuItem value="cambio">Cambio</MenuItem>
+              <MenuItem value="tele-presencial">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SyncAltIcon sx={{ fontSize: 18, color: '#6a1b9a' }} />
+                  Teletrabajo & Presencial
+                </Box>
+              </MenuItem>
+              <MenuItem value="visita-comercial">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon sx={{ fontSize: 18, color: '#795548' }} />
+                  Visita Comercial
+                </Box>
+              </MenuItem>
+              <MenuItem value="cambio">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SwapHorizIcon sx={{ fontSize: 18, color: '#f57c00' }} />
+                  Cambio
+                </Box>
+              </MenuItem>
               <MenuItem value="descanso">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <EventBusyIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                   Descanso
                 </Box>
               </MenuItem>
-              <MenuItem value="vacaciones">Vacaciones</MenuItem>
-              <MenuItem value="feriado">Feriado</MenuItem>
-              <MenuItem value="permiso">Permiso Otorgado por Jefatura</MenuItem>
-              <MenuItem value="dia-brigada">Día por Brigada</MenuItem>
-              <MenuItem value="beneficio-operaciones">Día libre - beneficio operaciones</MenuItem>
-              <MenuItem value="tarde-libre">Tarde Libre</MenuItem>
-              <MenuItem value="fuera-oficina">Fuera de Oficina</MenuItem>
-              <MenuItem value="viaje-trabajo">Viaje de Trabajo</MenuItem>
-              <MenuItem value="incapacidad-enfermedad">Incapacidad por Enfermedad</MenuItem>
-              <MenuItem value="incapacidad-accidente">Incapacidad por Accidente</MenuItem>
+              <MenuItem value="vacaciones">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BeachAccessIcon sx={{ fontSize: 18, color: '#f97316' }} />
+                  Vacaciones
+                </Box>
+              </MenuItem>
+              <MenuItem value="feriado">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CelebrationIcon sx={{ fontSize: 18, color: '#ef4444' }} />
+                  Feriado
+                </Box>
+              </MenuItem>
+              <MenuItem value="permiso">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <AssignmentIndIcon sx={{ fontSize: 18, color: '#8b5cf6' }} />
+                  Permiso Otorgado por Jefatura
+                </Box>
+              </MenuItem>
+              <MenuItem value="dia-brigada">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <HealthAndSafetyIcon sx={{ fontSize: 18, color: '#d32f2f' }} />
+                  Día por Brigada
+                </Box>
+              </MenuItem>
+              <MenuItem value="beneficio-operaciones">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <EmojiEventsIcon sx={{ fontSize: 18, color: '#ffd700' }} />
+                  Día libre - beneficio operaciones
+                </Box>
+              </MenuItem>
+              <MenuItem value="tarde-libre">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <WeekendIcon sx={{ fontSize: 18, color: '#64748b' }} />
+                  Media Jornada Libre
+                </Box>
+              </MenuItem>
+              <MenuItem value="tele-media-libre">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <HomeWorkIcon sx={{ fontSize: 18, color: '#10b981' }} />
+                    Teletrabajo & Media Jornada Libre
+                  </Box>
+              </MenuItem>
+              <MenuItem value="media-cumple">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CakeIcon sx={{ fontSize: 18, color: '#9e9e9e' }} />
+                  Media Jornada Libre & Mes de cumpleaños
+                </Box>
+              </MenuItem>
+              <MenuItem value="fuera-oficina">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LocationOffIcon sx={{ fontSize: 18, color: '#607d8b' }} />
+                  Fuera de Oficina
+                </Box>
+              </MenuItem>
+              <MenuItem value="viaje-trabajo">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <FlightIcon sx={{ fontSize: 18, color: '#1a237e' }} />
+                  Viaje de Trabajo
+                </Box>
+              </MenuItem>
+              <MenuItem value="incapacidad-enfermedad">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LocalHospitalIcon sx={{ fontSize: 18, color: '#d32f2f' }} />
+                  Incapacidad por Enfermedad
+                </Box>
+              </MenuItem>
+              <MenuItem value="incapacidad-accidente">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <HealingIcon sx={{ fontSize: 18, color: '#c62828' }} />
+                  Incapacidad por Accidente
+                </Box>
+              </MenuItem>
             </Select>
           </StyledFormControl>
 
@@ -338,6 +430,46 @@ const DialogoHorario = ({
               <TimeInput
                 label="Fin tarde libre"
                 value={horarioPersonalizado.horaFinLibre}
+                onChange={(e) => handleTimeChange('horaFinLibre', e.target.value)}
+                isMobile={isMobile}
+              />
+              <HoursDisplay>
+                <AccessTimeIcon color="primary" />
+                <Typography variant="body2" color="text.secondary">Horas laboradas:</Typography>
+                <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
+              </HoursDisplay>
+            </>
+          ) : tipo === 'tele-media-libre' ? (
+            <>
+              <SectionTitle>
+                <HomeWorkIcon sx={{ fontSize: 18 }} />
+                Teletrabajo
+              </SectionTitle>
+              <TimeInput
+                label="Inicio teletrabajo"
+                value={horarioPersonalizado.horaInicio || ''}
+                onChange={(e) => handleTimeChange('horaInicio', e.target.value)}
+                isMobile={isMobile}
+              />
+              <TimeInput
+                label="Fin teletrabajo"
+                value={horarioPersonalizado.horaFin || ''}
+                onChange={(e) => handleTimeChange('horaFin', e.target.value)}
+                isMobile={isMobile}
+              />
+              <SectionTitle>
+                <EventBusyIcon sx={{ fontSize: 18 }} />
+                Tiempo Libre
+              </SectionTitle>
+              <TimeInput
+                label="Inicio tiempo libre"
+                value={horarioPersonalizado.horaInicioLibre || ''}
+                onChange={(e) => handleTimeChange('horaInicioLibre', e.target.value)}
+                isMobile={isMobile}
+              />
+              <TimeInput
+                label="Fin tiempo libre"
+                value={horarioPersonalizado.horaFinLibre || ''}
                 onChange={(e) => handleTimeChange('horaFinLibre', e.target.value)}
                 isMobile={isMobile}
               />

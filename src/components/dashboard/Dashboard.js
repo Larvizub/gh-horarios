@@ -176,9 +176,13 @@ const COLORS = {
   'tarde-libre': '#64748b',
   personalizado: '#3b82f6',
   'tele-presencial': '#059669',
+  'visita-comercial': '#795548',
+  'tele-media-libre': '#10b981',
+  'media-cumple': '#9e9e9e',
+  'fuera-oficina': '#607d8b'
 };
 
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#f97316', '#94a3b8', '#ef4444', '#8b5cf6', '#64748b'];
+const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#f97316', '#94a3b8', '#ef4444', '#8b5cf6', '#64748b', '#795548', '#607d8b'];
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -248,14 +252,17 @@ const Dashboard = () => {
 
       Object.entries(currentWeekHorarios).forEach(([diaKey, horario]) => {
         if (horario && horario.tipo) {
-          const tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
+          let tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
+          if (horario.tipo === 'tele-media-libre') tipoFinal = 'teletrabajo';
+          if (horario.tipo === 'visita-comercial' || horario.tipo === 'media-cumple') tipoFinal = 'fuera-oficina';
+          
           if (tipoFinal === 'descanso') {
             tipos['descanso'] = (tipos['descanso'] || 0) + 24;
           } else {
             tipos[tipoFinal] = (tipos[tipoFinal] || 0) + (horario.horas || 0);
           }
 
-          if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
+          if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre', 'media-cumple'].includes(horario.tipo)) {
             const horas = horario.horas || 0;
             horasTotalesSemana += horas;
             
@@ -309,7 +316,10 @@ const Dashboard = () => {
 
           Object.values(horarios).forEach(horario => {
             if (horario && horario.tipo) {
-              const tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
+              let tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
+              if (horario.tipo === 'tele-media-libre') tipoFinal = 'teletrabajo';
+              if (horario.tipo === 'visita-comercial' || horario.tipo === 'media-cumple') tipoFinal = 'fuera-oficina';
+
               contadorTipos[tipoFinal] = (contadorTipos[tipoFinal] || 0) + 1;
               if (tipoFinal === 'descanso') {
                 tiposSemana['descanso'] = (tiposSemana['descanso'] || 0) + 24;
@@ -317,7 +327,7 @@ const Dashboard = () => {
                 tiposSemana[tipoFinal] = (tiposSemana[tipoFinal] || 0) + (horario.horas || 0);
               }
               
-              if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre'].includes(horario.tipo)) {
+              if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre', 'media-cumple'].includes(horario.tipo)) {
                 horasSemanales += horario.horas || 0;
               }
             }
@@ -408,13 +418,13 @@ const Dashboard = () => {
           const usuariosFuera = usuariosArray.filter(u => {
             const userHorarios = horariosSemana[u.id] || {};
             const turnoHoy = userHorarios[`dia${diaIndex}`];
-            return turnoHoy && NO_SUMAN_HORAS.includes(turnoHoy.tipo);
+            return turnoHoy && (NO_SUMAN_HORAS.includes(turnoHoy.tipo) || turnoHoy.tipo === 'visita-comercial');
           });
 
           const usuariosTele = usuariosArray.filter(u => {
             const userHorarios = horariosSemana[u.id] || {};
             const turnoHoy = userHorarios[`dia${diaIndex}`];
-            return turnoHoy && (turnoHoy.tipo === 'teletrabajo' || turnoHoy.tipo === 'tele-presencial');
+            return turnoHoy && (turnoHoy.tipo === 'teletrabajo' || turnoHoy.tipo === 'tele-presencial' || turnoHoy.tipo === 'tele-media-libre');
           });
 
           setUsuariosNoTrabajan(usuariosFuera);

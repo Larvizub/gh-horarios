@@ -22,7 +22,7 @@ export const diasSemana = [
 ];
 
 export const NO_SUMAN_HORAS = [
-  'descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'fuera-oficina', 'incapacidad-enfermedad', 'incapacidad-accidente', 'beneficio-operaciones'
+  'descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'fuera-oficina', 'incapacidad-enfermedad', 'incapacidad-accidente', 'beneficio-operaciones', 'media-cumple'
   // 'viaje-trabajo' NO debe estar aquí
 ];
 
@@ -44,12 +44,15 @@ export const TIPO_LABEL = {
   vacaciones: 'Vacaciones',
   feriado: 'Feriado',
   permiso: 'Permiso',
-  'tarde-libre': 'Tarde Libre',
+  'tarde-libre': 'Media Jornada Libre',
   'dia-brigada': 'Brigada',
   'fuera-oficina': 'Fuera de Oficina',
   'viaje-trabajo': 'Viaje de Trabajo',
   'incapacidad-enfermedad': 'Incapacidad por Enfermedad',
   'incapacidad-accidente': 'Incapacidad por Accidente',
   'tele-presencial': 'Teletrabajo & Presencial',
-  'beneficio-operaciones': 'Beneficio'
+  'beneficio-operaciones': 'Beneficio',
+  'visita-comercial': 'Visita Comercial',
+  'tele-media-libre': 'Teletrabajo & Media Jornada Libre',
+  'media-cumple': 'Media Jornada Libre & Mes de cumpleaños'
 };
