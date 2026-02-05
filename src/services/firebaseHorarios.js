@@ -15,6 +15,22 @@ export async function cargarHorariosPorSemana(fechaSemana, obtenerClaveSemana) {
   return horariosSnapshot.exists() ? horariosSnapshot.val() : {};
 }
 
+// Nueva función para cargar horarios de una lista específica de usuarios
+export async function cargarHorariosUsuarios(semanaKey, usuarioIds) {
+  if (!semanaKey || !usuarioIds || usuarioIds.length === 0) return {};
+  
+  const results = {};
+  const promises = usuarioIds.map(async (uid) => {
+    const snap = await get(ref(database, `horarios_registros/${semanaKey}/${uid}`));
+    if (snap.exists()) {
+      results[uid] = snap.val();
+    }
+  });
+
+  await Promise.all(promises);
+  return results;
+}
+
 // Suscripción en tiempo real para una semana concreta. Devuelve una función de unsubscribe.
 export function subscribeHorariosSemana(semanaKey, onChange) {
   if (!semanaKey) return () => {};
@@ -29,6 +45,34 @@ export function subscribeHorariosSemana(semanaKey, onChange) {
   });
   // onValue already returns an unsubscribe function when passed to off; normal pattern is to return () => off(r)
   return () => off(r);
+}
+
+// Nueva función para suscribirse solo a los horarios de usuarios específicos
+export function subscribeHorariosUsuarios(semanaKey, usuarioIds, onChange) {
+  if (!semanaKey || !usuarioIds || usuarioIds.length === 0) {
+    onChange({});
+    return () => {};
+  }
+  
+  const currentData = {};
+  const unsubscribes = [];
+  
+  usuarioIds.forEach(uid => {
+    const r = ref(database, `horarios_registros/${semanaKey}/${uid}`);
+    const unsub = onValue(r, (snapshot) => {
+      const val = snapshot.exists() ? snapshot.val() : null;
+      if (val === null) {
+        delete currentData[uid];
+      } else {
+        currentData[uid] = val;
+      }
+      // Emitimos una copia para asegurar que React detecte el cambio de estado
+      onChange({ ...currentData });
+    });
+    unsubscribes.push(unsub);
+  });
+  
+  return () => unsubscribes.forEach(fn => fn());
 }
 
 // Suscripción para horas extras

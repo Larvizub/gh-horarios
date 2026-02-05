@@ -37,7 +37,7 @@ import {
 import { obtenerUsuario } from '../../utils/horariosHelpers';
 import { useUsuariosFiltrados } from '../../hooks/useUsuariosFiltrados';
 import HorariosTable from './HorariosTable';
-import { cargarHorariosPorSemana, guardarBatchHorarios, guardarHorariosUsuarioSemana, subscribeHorariosSemana } from '../../services/firebaseHorarios';
+import { guardarBatchHorarios, guardarHorariosUsuarioSemana, subscribeHorariosUsuarios, cargarHorariosUsuarios } from '../../services/firebaseHorarios';
 import { puedeVerHorarios } from '../../utils/contratoUtils';
 import { useUsuariosYHorarios } from '../../hooks/useUsuariosYHorarios';
 import { useSemana } from '../../hooks/useSemana';
@@ -192,8 +192,8 @@ const Horarios = () => {
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
 
-  // Reemplazar estados de usuarios por el hook
-  const { usuarios, departamentoSeleccionado, setDepartamentoSeleccionado, currentUser } = useUsuariosYHorarios();
+  // Reemplazar estados de usuarios por el hook (Optimizado para carga por depto)
+  const { usuarios, departamentoSeleccionado, setDepartamentoSeleccionado, currentUser, userData } = useUsuariosYHorarios();
   const [loading, setLoading] = useState(true);
   const [horarios, setHorarios] = useState({});
   const { semanaActual, semanaSeleccionada, setSemanaSeleccionada, avanzarSemana, retrocederSemana, obtenerClaveSemana } = useSemana();
@@ -268,6 +268,12 @@ const Horarios = () => {
 
   const usuariosFiltrados = useUsuariosFiltrados(usuarios, departamentoSeleccionado);
   
+  // Memoizar los IDs de los usuarios filtrados para evitar re-suscripciones innecesarias
+  const usuariosFiltradosIds = useMemo(() => 
+    usuariosFiltrados.map(u => u.id).sort().join(','),
+    [usuariosFiltrados]
+  );
+  
   // Función helper para actualizar horarios editados Y el buffer simultáneamente
   const actualizarHorariosEditados = useCallback((nuevoValor) => {
     setHorariosEditados(nuevoValor);
@@ -282,11 +288,8 @@ const Horarios = () => {
     };
   }, []);
 
-  // Memoizar el usuario actual para evitar búsquedas repetidas
-  const currentUserData = useMemo(() => 
-    usuarios.find(u => u.id === currentUser?.uid), 
-    [usuarios, currentUser]
-  );
+  // Usar el usuario actual del hook (ya cargado individualmente)
+  const currentUserData = userData;
 
   // Copiar un horario al portapapeles (invocado por HorariosTable)
   const handleCopiarHorario = useCallback((usuarioId, diaKey, e) => {
@@ -321,7 +324,7 @@ const Horarios = () => {
   // Iniciar edición según permisos (evita cargar datos de otros usuarios para no admins)
   const iniciarEdicion = useCallback(() => {
     setEditando(true);
-    const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+    const usuarioActual = currentUserData;
     const puedeGuardarTodos = usuarioActual && (
       usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador'
     );
@@ -330,15 +333,26 @@ const Horarios = () => {
     // Inicializar el buffer también
     const key = obtenerClaveSemana(semanaSeleccionada);
     setBufferEditSemanas({ [key]: datosIniciales });
-  }, [usuarios, currentUser, horarios, semanaSeleccionada, obtenerClaveSemana]);
+  }, [currentUserData, currentUser, horarios, semanaSeleccionada, obtenerClaveSemana]);
 
-  // Suscribirse en tiempo real a los horarios de la semana seleccionada
+  // Suscribirse en tiempo real a los horarios de la semana seleccionada por departamento (Optimizado)
   useEffect(() => {
     if (!currentUser) return;
+    
+    // Al cambiar de departamento o semana, limpiar datos anteriores para evitar "flashes" de info vieja
     setLoading(true);
+    setHorarios({});
+    
     const key = obtenerClaveSemana(semanaSeleccionada);
-    // subscribeHorariosSemana invoca onChange con el objeto actual
-    const unsubscribe = subscribeHorariosSemana(key, (data) => {
+    const ids = usuariosFiltrados.map(u => u.id);
+
+    if (ids.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // subscribeHorariosUsuarios invoca onChange con el objeto agrupado de los usuarios especificados
+    const unsubscribe = subscribeHorariosUsuarios(key, ids, (data) => {
       if (mountedRef.current) {
         setHorarios(data || {});
         setLastLoadedWeekKey(key);
@@ -346,23 +360,23 @@ const Horarios = () => {
       }
     });
 
-    // En caso de error o timeout, intentamos una carga puntual como fallback
+    // En caso de error o timeout, intentamos una carga puntual como fallback granular
     const fallback = setTimeout(async () => {
       if (!mountedRef.current) return;
       try {
-        const data = await cargarHorariosPorSemana(semanaSeleccionada, obtenerClaveSemana);
+        const data = await cargarHorariosUsuarios(key, ids);
         if (mountedRef.current) {
-          setHorarios(data || {});
+          setHorarios(prev => ({ ...prev, ...data }));
           setLastLoadedWeekKey(key);
         }
       } catch (e) {
-        console.error('Fallback cargarHorariosPorSemana falló:', e);
+        console.error('Fallback cargarHorariosUsuarios falló:', e);
       } finally {
         if (mountedRef.current) {
           setLoading(false);
         }
       }
-    }, 3000);
+    }, 4000);
 
     return () => {
       clearTimeout(fallback);
@@ -372,7 +386,7 @@ const Horarios = () => {
         // no-op
       }
     };
-  }, [semanaSeleccionada, currentUser, obtenerClaveSemana]);
+  }, [semanaSeleccionada, currentUser, obtenerClaveSemana, usuariosFiltrados, usuariosFiltradosIds]);
 
   // Al cambiar de semana durante edición: restaurar del buffer o inicializar desde los horarios cargados
   useEffect(() => {
@@ -390,48 +404,39 @@ const Horarios = () => {
       setHorariosEditados({});
       return;
     }
-    const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+    const usuarioActual = currentUserData;
     const esAdmin = usuarioActual && (usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador');
     const init = esAdmin ? { ...(horarios || {}) } : { [currentUser?.uid]: (horarios?.[currentUser?.uid] || {}) };
     setHorariosEditados(init);
     // Actualizar buffer manualmente al inicializar nueva semana
     setBufferEditSemanas(prev => ({ ...prev, [key]: init }));
-  }, [editando, semanaSeleccionada, loading, lastLoadedWeekKey, horarios, usuarios, currentUser, obtenerClaveSemana]);
+  }, [editando, semanaSeleccionada, loading, lastLoadedWeekKey, horarios, currentUserData, currentUser, obtenerClaveSemana]);
 
   // ELIMINADO: Efecto de sincronización automática que causaba bucles infinitos
   // El buffer ahora se actualiza solo con acciones manuales del usuario
 
-  // Función para recalcular horas extras después de modificaciones
+  // Función para recalcular horas extras después de modificaciones (Optimizado para depto)
   const recalcularHorasExtras = useCallback(async () => {
     try {
       // Solo recalcular si estamos en la semana actual
       const esSemanaActual = format(semanaSeleccionada, 'yyyy-MM-dd') === format(semanaActual, 'yyyy-MM-dd');
       
       if (!esSemanaActual) {
-        return; // No necesitamos recalcular horas extras para semanas que no son la actual
-      }
-
-      const semanaKey = obtenerClaveSemana(semanaSeleccionada);
-      const horariosRef = ref(database, `horarios_registros/${semanaKey}`);
-      const horariosSnapshot = await get(horariosRef);
-      
-      if (!horariosSnapshot.exists()) {
-        // No hay horarios, eliminar todas las horas extras
-        await set(ref(database, 'horas_extras'), {});
         return;
       }
 
-      const horariosActuales = horariosSnapshot.val();
-      const nuevasHorasExtras = {};
+      const snapshots = await get(ref(database, 'horas_extras'));
+      const todasExtras = snapshots.exists() ? snapshots.val() : {};
 
-      // Calcular horas extras para cada usuario
-      Object.keys(horariosActuales).forEach(usuarioId => {
-        const horariosUsuario = horariosActuales[usuarioId];
-        if (!horariosUsuario) return;
+      // Calcular solo para los usuarios del departamento actual (los cargados en el estado 'usuarios')
+      usuarios.forEach(usuario => {
+        const horariosUsuario = horarios[usuario.id];
+        if (!horariosUsuario) {
+          delete todasExtras[usuario.id];
+          return;
+        }
 
-        const usuario = usuarios.find(u => u.id === usuarioId);
         const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
-        
         const horasTotales = Object.values(horariosUsuario).reduce((total, turno) => {
           if (!turno || NO_SUMAN_HORAS.includes(turno.tipo)) return total;
           return total + (turno.horas || 0);
@@ -439,17 +444,19 @@ const Horarios = () => {
 
         const horasExcedentes = Math.max(horasTotales - horasMaximas, 0);
         if (horasExcedentes > 0) {
-          nuevasHorasExtras[usuarioId] = horasExcedentes;
+          todasExtras[usuario.id] = horasExcedentes;
+        } else {
+          delete todasExtras[usuario.id];
         }
       });
 
-      // Actualizar en Firebase y estado local
-      await set(ref(database, 'horas_extras'), nuevasHorasExtras);
+      // Actualizar el nodo global con los valores actualizados
+      await set(ref(database, 'horas_extras'), todasExtras);
       
     } catch (error) {
       console.error('Error al recalcular horas extras:', error);
     }
-  }, [semanaSeleccionada, semanaActual, obtenerClaveSemana, usuarios]);
+  }, [semanaSeleccionada, semanaActual, usuarios, horarios]);
 
   const handleGuardarHorarios = useCallback(async () => {
     try {
@@ -462,7 +469,7 @@ const Horarios = () => {
         buffers[currentWeekKey] = horariosEditados;
       }
 
-      const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+      const usuarioActual = currentUserData;
       const esAdmin = usuarioActual && (usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador');
       let operaciones = 0;
 
@@ -543,7 +550,7 @@ const Horarios = () => {
     } finally {
       setLoading(false);
     }
-  }, [bufferEditSemanas, horariosEditados, semanaSeleccionada, obtenerClaveSemana, usuarios, currentUser, mostrarModal, recalcularHorasExtras]);
+  }, [bufferEditSemanas, horariosEditados, semanaSeleccionada, obtenerClaveSemana, currentUserData, currentUser, mostrarModal, recalcularHorasExtras]);
 
   const handleEliminarSeleccionado = async () => {
     try {
@@ -553,13 +560,9 @@ const Horarios = () => {
   const { tipo, usuarioId, dia, diasSeleccionados } = eliminacionSeleccionada;
 
       // Verificar permisos
-      // Aseguramos que usuarioActual sea el objeto completo, no solo el UID
-      let usuarioActual = null;
-      if (currentUser && currentUser.rol) {
-        usuarioActual = currentUser;
-      } else if (currentUser && currentUser.uid) {
-        usuarioActual = usuarios.find(u => u.id === currentUser.uid);
-      }
+      // Aseguramos que usuarioActual sea el objeto completo
+      let usuarioActual = currentUserData;
+      
       if (!usuarioActual) {
         mostrarModal({
           tipo: 'error',
@@ -838,7 +841,7 @@ const Horarios = () => {
   const handleCambiarTurno = useCallback((usuarioId, diaKey) => {
     if (!editando) return;
 
-    const usuarioActual = usuarios.find(u => u.id === currentUser?.uid);
+    const usuarioActual = currentUserData;
     const usuarioObjetivo = usuarios.find(u => u.id === usuarioId);
 
     if (!usuarioActual || !usuarioObjetivo) return;
@@ -855,7 +858,7 @@ const Horarios = () => {
     }
 
     abrirDialogoHorario(usuarioId, diaKey);
-  }, [editando, usuarios, currentUser, abrirDialogoHorario, mostrarModal]);
+  }, [editando, usuarios, currentUserData, abrirDialogoHorario, mostrarModal]);
 
   const guardarHorarioPersonalizado = () => {
     const {
@@ -1364,7 +1367,7 @@ const Horarios = () => {
                     variant="contained" 
                     color="primary"
                     onClick={iniciarEdicion}
-                    disabled={loading || !puedeEditarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
+                    disabled={loading || !puedeEditarHorarios(currentUserData)}
                     startIcon={<EditIcon />}
                     sx={{
                       flex: { xs: 1, sm: 'none' },
@@ -1391,7 +1394,7 @@ const Horarios = () => {
                       minWidth: { sm: 180 },
                     }}
                     onClick={() => setDialogoEliminar(true)}
-                    disabled={loading || !puedeEliminarHorarios(usuarios.find(u => u.id === currentUser?.uid))}
+                    disabled={loading || !puedeEliminarHorarios(currentUserData)}
                     startIcon={<DeleteOutlineIcon />}
                   >
                     Eliminar Horarios
@@ -1452,7 +1455,7 @@ const Horarios = () => {
         guardarHorarioPersonalizado={guardarHorarioPersonalizado}
         isMobile={isMobile}
         isSmallMobile={isSmallMobile}
-        currentUser={usuarios.find(u => u.id === currentUser?.uid) || null}
+        currentUser={currentUserData || null}
         usuarios={usuarios}
         editando={editando}
         horariosEditados={horariosEditados}
