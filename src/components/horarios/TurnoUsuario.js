@@ -55,7 +55,7 @@ const TurnoUsuario = memo(({
                 horario.tipo === 'media-cumple' ? '#607d8b' :
                 horario.tipo === 'teletrabajo' ? '#2e7d32' :
                 horario.tipo === 'cambio' ? '#f57c00' :
-                usuario.id === currentUser?.uid ? 'var(--primary-color)' : 'var(--secondary-color)'
+                usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
               ) : 'transparent',
           color: soloLabel
             ? '#333'

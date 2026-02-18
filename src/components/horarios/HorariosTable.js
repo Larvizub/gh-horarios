@@ -55,7 +55,7 @@ const DaySlot = styled(Box)(({ theme, hasSchedule, scheduleType, isCurrentUser }
   position: 'relative',
   cursor: 'pointer',
   transition: 'all 0.15s ease',
-  backgroundColor: hasSchedule
+  background: hasSchedule
     ? scheduleType === 'descanso' || scheduleType === 'vacaciones' || scheduleType === 'feriado' || scheduleType === 'permiso'
       ? 'rgba(158, 158, 158, 0.15)'
       : scheduleType === 'teletrabajo'

@@ -20,7 +20,7 @@ Una aplicación web moderna para la gestión de horarios de empleados en Costa R
 - **Estado**: Context API de React
 - **Rutas**: React Router DOM
 - **Gestión de Estado**: Hooks personalizados
-- **Build Tool**: Create React App
+- **Build Tool**: Vite
 - **Gestor de Paquetes**: pnpm / npm
 
 ## 📋 Requisitos Previos
@@ -47,13 +47,13 @@ Una aplicación web moderna para la gestión de horarios de empleados en Costa R
 3. **Configura las variables de entorno**:
    Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
    ```
-   REACT_APP_FIREBASE_API_KEY=tu_api_key
-   REACT_APP_FIREBASE_AUTH_DOMAIN=tu_auth_domain
-   REACT_APP_FIREBASE_DATABASE_URL=tu_database_url
-   REACT_APP_FIREBASE_PROJECT_ID=tu_project_id
-   REACT_APP_FIREBASE_STORAGE_BUCKET=tu_storage_bucket
-   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=tu_messaging_sender_id
-   REACT_APP_FIREBASE_APP_ID=tu_app_id
+   VITE_FIREBASE_API_KEY=tu_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=tu_auth_domain
+   VITE_FIREBASE_DATABASE_URL=tu_database_url
+   VITE_FIREBASE_PROJECT_ID=tu_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=tu_storage_bucket
+   VITE_FIREBASE_MESSAGING_SENDER_ID=tu_messaging_sender_id
+   VITE_FIREBASE_APP_ID=tu_app_id
    ```
 
 4. **Configura Firebase**:
@@ -64,12 +64,12 @@ Una aplicación web moderna para la gestión de horarios de empleados en Costa R
 
 ### Modo Desarrollo
 ```bash
-pnpm start
+pnpm dev
 # o
-npm start
+npm run dev
 ```
 
-La aplicación estará disponible en `http://localhost:3000`.
+La aplicación estará disponible en `http://localhost:5173`.
 
 ### Build de Producción
 ```bash

@@ -290,7 +290,7 @@ const Register = () => {
       }
 
       // Crear usuario en Firebase Auth usando la REST API
-      const apiKey = process.env.REACT_APP_FIREBASE_API_KEY || auth.app.options.apiKey;
+      const apiKey = import.meta.env.VITE_FIREBASE_API_KEY || auth.app.options.apiKey;
       const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`;
       
       console.log('Enviando solicitud a Firebase Auth...');
@@ -340,7 +340,7 @@ const Register = () => {
       // Guardar datos del usuario en la base de datos
       try {
         // Obtener la URL de la base de datos desde la configuración
-        const databaseURL = process.env.REACT_APP_FIREBASE_DATABASE_URL || 'https://horarios-costaricacc-default-rtdb.firebaseio.com';
+        const databaseURL = import.meta.env.VITE_FIREBASE_DATABASE_URL || 'https://horarios-costaricacc-default-rtdb.firebaseio.com';
         
         // Estrategia 1: Intentar escribir sin autenticación (para registros públicos)
         let writeSuccess = false;
