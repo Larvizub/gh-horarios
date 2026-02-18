@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { database } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import { ref, get, query, orderByChild, equalTo } from 'firebase/database';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../services/notify';
 import { departamentos } from '../utils/horariosConstants';
 
 /**

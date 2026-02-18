@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { subscribeHorariosSemana, cargarHorariosPorSemana, guardarHorariosSemana } from '../services/firebaseHorarios';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../services/notify';
 
 /**
  * Hook para gestionar la carga, edición, guardado y eliminación de horarios.

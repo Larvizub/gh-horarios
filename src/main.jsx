@@ -3,23 +3,19 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
 import { BrowserRouter } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { Toaster } from 'sileo';
 
 const root = createRoot(document.getElementById('root'));
 root.render(
   <BrowserRouter>
     <App />
-    <ToastContainer
+    <Toaster
       position="top-right"
-      autoClose={3000}
-      hideProgressBar={false}
-      newestOnTop
-      closeOnClick
-      rtl={false}
-      pauseOnFocusLoss={false}
-      draggable
-      pauseOnHover
+      offset={{ top: 80, right: 16 }}
+      options={{
+        duration: 4000,
+        roundness: 16,
+      }}
     />
   </BrowserRouter>
 );

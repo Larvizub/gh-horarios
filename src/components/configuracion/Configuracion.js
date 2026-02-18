@@ -3,7 +3,7 @@ import { ref, get, update } from 'firebase/database';
 import { updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { database, auth } from '../../firebase/config';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../../services/notify';
 import { puedeModificarTipoContrato, puedeAsignarRoles, ROLES } from '../../utils/contratoUtils';
 import {
   Container,

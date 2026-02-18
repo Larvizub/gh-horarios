@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ref, get } from 'firebase/database';
 import { database, auth } from '../../firebase/config';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../../services/notify';
 import { obtenerHorasMaximas } from '../../utils/contratoUtils';
 import {
   Container,

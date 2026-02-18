@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { auth, database } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../services/notify';
 
 const AuthContext = createContext();
 

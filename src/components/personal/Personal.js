@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ref, get, remove } from 'firebase/database';
 import { database, auth, functions } from '../../firebase/config';
 import { httpsCallable } from 'firebase/functions';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../../services/notify';
 import { useNavigate } from 'react-router-dom';
 import { 
   puedeModificarTipoContrato, 

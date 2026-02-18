@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { auth, database } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../../services/notify';
 import { 
   TextField, 
   Button, 

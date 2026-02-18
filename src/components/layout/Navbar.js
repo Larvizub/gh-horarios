@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { database } from '../../firebase/config';
 import { ref, get } from 'firebase/database';
-import { toast } from 'react-toastify';
+import { notify as toast } from '../../services/notify';
 import { useAuth } from '../../contexts/AuthContext';
 import { puedeAccederPersonal, puedeVerHorarios } from '../../utils/contratoUtils';
 import {
