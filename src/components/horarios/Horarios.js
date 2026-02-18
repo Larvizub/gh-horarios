@@ -302,7 +302,7 @@ const Horarios = () => {
     }
     // Guardar copia profunda para evitar referencias compartidas
     setClipboard({ origen: { usuarioId, diaKey }, horario: JSON.parse(JSON.stringify(horario)) });
-    mostrarModal({ tipo: 'success', titulo: 'Horario copiado', mensaje: 'Selecciona los días destino y presiona "Pegar".', soloInfo: true });
+    mostrarModal({ tipo: 'success', titulo: 'Horario copiado', mensaje: 'Selecciona los días destino y presiona "Pegar".', soloInfo: true, position: 'top-center', fill: '#00830e' });
   }, [editando, horarios, horariosEditados, mostrarModal]);
 
   // Aplicar el horario copiado a múltiples destinos
@@ -318,7 +318,7 @@ const Horarios = () => {
     });
     // limpiar el portapapeles
     setClipboard(null);
-    mostrarModal({ tipo: 'success', titulo: 'Pegado completo', mensaje: `Se pegaron ${targets.length} destinos.`, soloInfo: true });
+    mostrarModal({ tipo: 'success', titulo: 'Pegado completo', mensaje: `Se pegaron ${targets.length} destinos.`, soloInfo: true, position: 'top-center', fill: '#00830e' });
   }, [clipboard, mostrarModal, actualizarHorariosEditados]);
 
   // Iniciar edición según permisos (evita cargar datos de otros usuarios para no admins)
@@ -825,7 +825,9 @@ const Horarios = () => {
         tipo: 'success',
         titulo: '✅ Horario Copiado',
         mensaje: `El horario se ha copiado exitosamente de ${DIAS_LABELS[horarioACopiar.diaOriginal]} a ${DIAS_LABELS[diaDestino]}.`,
-        soloInfo: true
+        soloInfo: true,
+        position: 'top-center',
+        fill: '#00830e'
       });
 
       setDialogoCopiar(false);
