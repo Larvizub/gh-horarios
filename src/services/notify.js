@@ -1,18 +1,35 @@
 import { sileo } from 'sileo';
 
+const EMOJI_REGEX = /[\p{Extended_Pictographic}\uFE0F]/gu;
+
+const sanitizeText = (value) => {
+  if (typeof value !== 'string') return value;
+  return value.replace(EMOJI_REGEX, '').replace(/\s{2,}/g, ' ').trim();
+};
+
+const sanitizeOptions = (options) => {
+  if (!options || typeof options !== 'object') return options;
+
+  return {
+    ...options,
+    title: sanitizeText(options.title),
+    description: sanitizeText(options.description),
+  };
+};
+
 const toOptions = (input) => {
   if (typeof input === 'string') {
-    return { title: input };
+    return sanitizeOptions({ title: input });
   }
 
   if (input instanceof Error) {
-    return {
+    return sanitizeOptions({
       title: 'Error',
       description: input.message,
-    };
+    });
   }
 
-  return input || {};
+  return sanitizeOptions(input || {});
 };
 
 export const notify = {

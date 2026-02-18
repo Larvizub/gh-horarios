@@ -257,9 +257,23 @@ input, textarea, select {
 /* Neumorphism suave */
 .neumorphic {
   background: var(--background-secondary);
-  box-shadow: 
+  box-shadow:
     6px 6px 12px rgba(0, 0, 0, 0.08),
     -6px -6px 12px rgba(255, 255, 255, 0.9);
+}
+
+/* === SILEO TOASTS === */
+.sileo-title {
+  color: #f8fafc !important;
+  font-weight: 600 !important;
+}
+
+.sileo-description {
+  color: rgba(248, 250, 252, 0.88) !important;
+}
+
+.sileo-badge-hidden {
+  display: none !important;
 }
 
 /* Gradiente de texto */

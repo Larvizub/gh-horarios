@@ -59,10 +59,10 @@ export function useHorarios({ usuarios, currentUser, semanaSeleccionada, semanaA
       await guardarHorariosSemana(clave, horariosEditados);
       // No sobrescribir el estado local completo: dejamos que el listener sincronice los cambios.
       setEditando(false);
-      mostrarModal({ tipo: 'success', titulo: '✅ Horarios Guardados', mensaje: 'Guardado exitoso.', soloInfo: true });
+      mostrarModal({ tipo: 'success', titulo: '✅ Horarios Guardados', mensaje: 'Guardado exitoso.', soloInfo: true, position: 'top-center', fill: '#00830e' });
     } catch (error) {
       console.error('Error al guardar horarios:', error);
-      mostrarModal({ tipo: 'error', titulo: '❌ Error', mensaje: error.message, soloInfo: true });
+      mostrarModal({ tipo: 'error', titulo: '❌ Error', mensaje: error.message, soloInfo: true, position: 'top-center' });
     } finally {
       setLoading(false);
     }

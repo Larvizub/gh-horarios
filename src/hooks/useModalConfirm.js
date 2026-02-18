@@ -22,6 +22,8 @@ export function useModalConfirm() {
       const toastPayload = {
         title: options.titulo || 'Información',
         description: options.mensaje || '',
+        position: options.position,
+        fill: options.fill,
       };
 
       if (options.tipo === 'success') {

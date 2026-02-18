@@ -16,6 +16,12 @@ root.render(
       options={{
         duration: 4000,
         roundness: 16,
+        fill: '#0f172a',
+        styles: {
+          title: 'sileo-title',
+          description: 'sileo-description',
+          badge: 'sileo-badge-hidden',
+        },
       }}
     />
   </BrowserRouter>

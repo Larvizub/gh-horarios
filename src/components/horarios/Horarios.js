@@ -537,7 +537,9 @@ const Horarios = () => {
         tipo: 'success',
         titulo: '✅ Horarios Guardados',
         mensaje: 'Los horarios se han guardado correctamente.',
-        soloInfo: true
+        soloInfo: true,
+        position: 'top-center',
+        fill: '#00830e'
       });
     } catch (error) {
       console.error('Error al guardar horarios:', error);
@@ -545,7 +547,8 @@ const Horarios = () => {
         tipo: 'error',
         titulo: '❌ Error al Guardar',
         mensaje: `Ocurrió un error al guardar los horarios:\n\n${error.message}`,
-        soloInfo: true
+        soloInfo: true,
+        position: 'top-center'
       });
     } finally {
       setLoading(false);
