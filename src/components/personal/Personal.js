@@ -215,6 +215,11 @@ const Personal = () => {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [desktopTableScrollWidth, setDesktopTableScrollWidth] = useState(0);
+  const topScrollRef = useRef(null);
+  const tableScrollRef = useRef(null);
+  const syncingFromTopRef = useRef(false);
+  const syncingFromTableRef = useRef(false);
   const navigate = useNavigate();
   
   // Cleanup al desmontar
@@ -297,6 +302,57 @@ const Personal = () => {
 
     cargarDatos();
   }, [navigate]);
+
+  useEffect(() => {
+    if (isMobile) return;
+
+    const updateScrollWidth = () => {
+      if (!tableScrollRef.current) return;
+      const tableElement = tableScrollRef.current.querySelector('table');
+      setDesktopTableScrollWidth(tableElement?.scrollWidth || 0);
+    };
+
+    updateScrollWidth();
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(updateScrollWidth)
+      : null;
+
+    if (resizeObserver && tableScrollRef.current) {
+      resizeObserver.observe(tableScrollRef.current);
+      const tableElement = tableScrollRef.current.querySelector('table');
+      if (tableElement) {
+        resizeObserver.observe(tableElement);
+      }
+    }
+
+    window.addEventListener('resize', updateScrollWidth);
+
+    return () => {
+      window.removeEventListener('resize', updateScrollWidth);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [isMobile, filteredUsuarios.length]);
+
+  const handleTopScroll = (event) => {
+    if (!tableScrollRef.current || syncingFromTableRef.current) return;
+    syncingFromTopRef.current = true;
+    tableScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
+    requestAnimationFrame(() => {
+      syncingFromTopRef.current = false;
+    });
+  };
+
+  const handleTableScroll = (event) => {
+    if (!topScrollRef.current || syncingFromTopRef.current) return;
+    syncingFromTableRef.current = true;
+    topScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
+    requestAnimationFrame(() => {
+      syncingFromTableRef.current = false;
+    });
+  };
 
   const handleEliminarClick = (usuario) => {
     setUsuarioSeleccionado(usuario);
@@ -493,8 +549,24 @@ const Personal = () => {
 
   // Vista desktop con tabla
   const renderDesktopView = () => (
-    <StyledTableContainer>
-      <Table>
+    <>
+      <Box
+        ref={topScrollRef}
+        onScroll={handleTopScroll}
+        sx={{
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          height: 14,
+          mb: 1,
+          '&::-webkit-scrollbar': {
+            height: 10,
+          },
+        }}
+      >
+        <Box sx={{ width: desktopTableScrollWidth, height: 1 }} />
+      </Box>
+      <StyledTableContainer ref={tableScrollRef} onScroll={handleTableScroll}>
+      <Table sx={{ minWidth: 1240 }}>
         <StyledTableHead>
           <TableRow>
             <TableCell>Nombre</TableCell>
@@ -633,7 +705,8 @@ const Personal = () => {
           ))}
         </TableBody>
       </Table>
-    </StyledTableContainer>
+      </StyledTableContainer>
+    </>
   );
 
   return (
