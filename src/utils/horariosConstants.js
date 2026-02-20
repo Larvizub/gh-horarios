@@ -39,6 +39,7 @@ export const DIAS_LABELS = {
 export const TIPO_LABEL = {
   personalizado: 'Presencial',
   teletrabajo: 'Teletrabajo',
+  'horario-dividido': 'Horario Dividido',
   cambio: 'Cambio',
   descanso: 'Descanso',
   vacaciones: 'Vacaciones',

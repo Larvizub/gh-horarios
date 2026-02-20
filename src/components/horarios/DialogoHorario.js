@@ -172,8 +172,16 @@ const DialogoHorario = ({
           tipo: horarioActual?.tipo || 'personalizado',
           horaInicio: horarioActual?.horaInicio || '',
           horaFin: horarioActual?.horaFin || '',
+          horaInicioBloque1: horarioActual?.horaInicioBloque1 || '',
+          horaFinBloque1: horarioActual?.horaFinBloque1 || '',
+          horaInicioBloque2: horarioActual?.horaInicioBloque2 || '',
+          horaFinBloque2: horarioActual?.horaFinBloque2 || '',
           horaInicioLibre: horarioActual?.horaInicioLibre || '',
           horaFinLibre: horarioActual?.horaFinLibre || '',
+          horaInicioTele: horarioActual?.horaInicioTele || '',
+          horaFinTele: horarioActual?.horaFinTele || '',
+          horaInicioPres: horarioActual?.horaInicioPres || '',
+          horaFinPres: horarioActual?.horaFinPres || '',
           nota: horarioActual?.nota || ''
         };
       }
@@ -242,8 +250,16 @@ const DialogoHorario = ({
       tipo: 'personalizado',
       horaInicio: '',
       horaFin: '',
+      horaInicioBloque1: '',
+      horaFinBloque1: '',
+      horaInicioBloque2: '',
+      horaFinBloque2: '',
       horaInicioLibre: '',
       horaFinLibre: '',
+      horaInicioTele: '',
+      horaFinTele: '',
+      horaInicioPres: '',
+      horaFinPres: '',
       nota: ''
     }));
     // Cerrar el modal después de eliminar
@@ -303,6 +319,12 @@ const DialogoHorario = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <SyncAltIcon sx={{ fontSize: 18, color: '#6a1b9a' }} />
                   Teletrabajo & Presencial
+                </Box>
+              </MenuItem>
+              <MenuItem value="horario-dividido">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <AccessTimeIcon sx={{ fontSize: 18, color: '#7c3aed' }} />
+                  Horario Dividido
                 </Box>
               </MenuItem>
               <MenuItem value="visita-comercial">
@@ -580,6 +602,110 @@ const DialogoHorario = ({
                     const tele = calc(horarioPersonalizado.horaInicioTele, horarioPersonalizado.horaFinTele);
                     const pres = calc(horarioPersonalizado.horaInicioPres, horarioPersonalizado.horaFinPres);
                     return (tele + pres).toFixed(1) + 'h';
+                  })()}</span>
+                </HoursDisplay>
+              </Box>
+            </>
+          ) : tipo === 'horario-dividido' ? (
+            <>
+              <SectionTitle>
+                <AccessTimeIcon sx={{ fontSize: 18 }} />
+                Bloque 1
+              </SectionTitle>
+              <TimeInput
+                label="Inicio Bloque 1"
+                value={horarioPersonalizado.horaInicioBloque1 || ''}
+                onChange={(e) => handleTimeChange('horaInicioBloque1', e.target.value)}
+                isMobile={isMobile}
+              />
+              <TimeInput
+                label="Fin Bloque 1"
+                value={horarioPersonalizado.horaFinBloque1 || ''}
+                onChange={(e) => handleTimeChange('horaFinBloque1', e.target.value)}
+                isMobile={isMobile}
+              />
+
+              <SectionTitle>
+                <AccessTimeIcon sx={{ fontSize: 18 }} />
+                Bloque 2
+              </SectionTitle>
+              <TimeInput
+                label="Inicio Bloque 2"
+                value={horarioPersonalizado.horaInicioBloque2 || ''}
+                onChange={(e) => handleTimeChange('horaInicioBloque2', e.target.value)}
+                isMobile={isMobile}
+              />
+              <TimeInput
+                label="Fin Bloque 2"
+                value={horarioPersonalizado.horaFinBloque2 || ''}
+                onChange={(e) => handleTimeChange('horaFinBloque2', e.target.value)}
+                isMobile={isMobile}
+              />
+
+              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Chip
+                  icon={<AccessTimeIcon />}
+                  label={`Bloque 1: ${(() => {
+                    const s = horarioPersonalizado.horaInicioBloque1;
+                    const e = horarioPersonalizado.horaFinBloque1;
+                    if (!s || !e) return '0.0h';
+                    try {
+                      const [h1, m1] = s.split(':').map(Number);
+                      const [h2, m2] = e.split(':').map(Number);
+                      let v = 0;
+                      if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+                        v = (h2 - h1) + (m2 - m1) / 60;
+                      } else {
+                        v = (24 - h1 + h2) + (m2 - m1) / 60;
+                      }
+                      return v.toFixed(1) + 'h';
+                    } catch { return '0.0h'; }
+                  })()}`}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ justifyContent: 'flex-start' }}
+                />
+                <Chip
+                  icon={<AccessTimeIcon />}
+                  label={`Bloque 2: ${(() => {
+                    const s = horarioPersonalizado.horaInicioBloque2;
+                    const e = horarioPersonalizado.horaFinBloque2;
+                    if (!s || !e) return '0.0h';
+                    try {
+                      const [h1, m1] = s.split(':').map(Number);
+                      const [h2, m2] = e.split(':').map(Number);
+                      let v = 0;
+                      if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+                        v = (h2 - h1) + (m2 - m1) / 60;
+                      } else {
+                        v = (24 - h1 + h2) + (m2 - m1) / 60;
+                      }
+                      return v.toFixed(1) + 'h';
+                    } catch { return '0.0h'; }
+                  })()}`}
+                  color="secondary"
+                  variant="outlined"
+                  sx={{ justifyContent: 'flex-start' }}
+                />
+                <HoursDisplay>
+                  <AccessTimeIcon color="primary" />
+                  <Typography variant="body2" color="text.secondary">Total:</Typography>
+                  <span className="hours-value">{(() => {
+                    const calc = (s, e) => {
+                      if (!s || !e) return 0;
+                      const [h1, m1] = s.split(':').map(Number);
+                      const [h2, m2] = e.split(':').map(Number);
+                      let v = 0;
+                      if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+                        v = (h2 - h1) + (m2 - m1) / 60;
+                      } else {
+                        v = (24 - h1 + h2) + (m2 - m1) / 60;
+                      }
+                      return v;
+                    };
+                    const b1 = calc(horarioPersonalizado.horaInicioBloque1, horarioPersonalizado.horaFinBloque1);
+                    const b2 = calc(horarioPersonalizado.horaInicioBloque2, horarioPersonalizado.horaFinBloque2);
+                    return (b1 + b2).toFixed(1) + 'h';
                   })()}</span>
                 </HoursDisplay>
               </Box>

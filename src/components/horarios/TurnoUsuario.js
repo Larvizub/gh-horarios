@@ -50,6 +50,7 @@ const TurnoUsuario = memo(({
             : tieneHorario ? (
                 horario.tipo === 'viaje-trabajo' ? '#1a237e' : // azul oscuro
                 horario.tipo === 'tele-presencial' ? '#6a1b9a' : // nuevo: morado/berenjena
+                horario.tipo === 'horario-dividido' ? '#7c3aed' :
                 horario.tipo === 'visita-comercial' ? '#795548' :
                 horario.tipo === 'tele-media-libre' ? '#2e7d32' :
                 horario.tipo === 'media-cumple' ? '#607d8b' :
@@ -65,6 +66,7 @@ const TurnoUsuario = memo(({
               ? '#fff'
               : tieneHorario ? (
                   horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
+                  horario.tipo === 'horario-dividido' ? '#6d28d9' :
                   horario.tipo === 'visita-comercial' ? '#5d4037' :
                   horario.tipo === 'tele-media-libre' ? '#1b5e20' :
                   horario.tipo === 'media-cumple' ? '#455a64' :
@@ -281,6 +283,49 @@ const TurnoUsuario = memo(({
               {horario.nota && (
                 <Typography 
                   variant="caption" 
+                  sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1, mt: 0.5, color: '#fff', fontStyle: 'italic' }}
+                >
+                  {horario.nota}
+                </Typography>
+              )}
+            </>
+          ) : horario.tipo === 'horario-dividido' ? (
+            <>
+              <Typography
+                variant="caption"
+                sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
+              >
+                {TIPO_LABEL[horario.tipo] || 'Horario Dividido'}
+              </Typography>
+
+              {(horario.horaInicioBloque1 && horario.horaFinBloque1) && (
+                <Typography
+                  variant="caption"
+                  sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1 }}
+                >
+                  B1: {horario.horaInicioBloque1} - {horario.horaFinBloque1}
+                </Typography>
+              )}
+
+              {(horario.horaInicioBloque2 && horario.horaFinBloque2) && (
+                <Typography
+                  variant="caption"
+                  sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1, mt: 0.3 }}
+                >
+                  B2: {horario.horaInicioBloque2} - {horario.horaFinBloque2}
+                </Typography>
+              )}
+
+              <Typography
+                variant="caption"
+                sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1, mt: 0.5 }}
+              >
+                {`${horario.horas?.toFixed(1) || '0.0'}h`}
+              </Typography>
+
+              {horario.nota && (
+                <Typography
+                  variant="caption"
                   sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1, mt: 0.5, color: '#fff', fontStyle: 'italic' }}
                 >
                   {horario.nota}

@@ -199,7 +199,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 }));
 
 const TimeCell = styled(TableCell)(({ theme, tipo }) => ({
-  backgroundColor: tipo === 'teletrabajo' || tipo === 'tele-presencial'
+  backgroundColor: tipo === 'teletrabajo' || tipo === 'tele-presencial' || tipo === 'horario-dividido'
     ? alpha('#2e7d32', 0.06)
     : (tipo === 'personalizado' ? alpha('#3f51b5', 0.06) : 'inherit'),
   fontWeight: tipo === 'descanso' ? 'normal' : 600,
@@ -243,6 +243,7 @@ const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sába
 const TIPO_LABEL = {
   personalizado: 'Presencial',
   teletrabajo: 'Teletrabajo',
+  'horario-dividido': 'Horario Dividido',
   descanso: 'Descanso',
   vacaciones: 'Vacaciones',
   feriado: 'Feriado',
@@ -556,6 +557,36 @@ const ConsultaHorarios = () => {
       };
     }
 
+    if (turno.tipo === 'horario-dividido') {
+      const bloque1Inicio = turno.horaInicioBloque1 || '';
+      const bloque1Fin = turno.horaFinBloque1 || '';
+      const bloque2Inicio = turno.horaInicioBloque2 || '';
+      const bloque2Fin = turno.horaFinBloque2 || '';
+
+      const horasBloque1 = Number.isFinite(turno.horasBloque1) ? turno.horasBloque1 : (turno.horasBloque1 ? Number(turno.horasBloque1) : 0);
+      const horasBloque2 = Number.isFinite(turno.horasBloque2) ? turno.horasBloque2 : (turno.horasBloque2 ? Number(turno.horasBloque2) : 0);
+      const total = Number.isFinite(turno.horas) ? turno.horas : (horasBloque1 + horasBloque2);
+
+      const partes = [];
+      if (bloque1Inicio && bloque1Fin) {
+        partes.push(`Bloque 1: ${bloque1Inicio} - ${bloque1Fin} (${horasBloque1.toFixed(1)}h)`);
+      } else if (horasBloque1 > 0) {
+        partes.push(`Bloque 1: ${horasBloque1.toFixed(1)}h`);
+      }
+
+      if (bloque2Inicio && bloque2Fin) {
+        partes.push(`Bloque 2: ${bloque2Inicio} - ${bloque2Fin} (${horasBloque2.toFixed(1)}h)`);
+      } else if (horasBloque2 > 0) {
+        partes.push(`Bloque 2: ${horasBloque2.toFixed(1)}h`);
+      }
+
+      const textoPartes = partes.length > 0 ? partes.join(' / ') : 'Horario Dividido';
+      return {
+        texto: `${tipoTexto}: ${textoPartes} (Total: ${Number(total || 0).toFixed(1)}h)`,
+        tipo: turno.tipo
+      };
+    }
+
     // Manejo genérico para turnos con un solo bloque (incluye "personalizado" => Presencial)
     const horaInicio = turno.horaInicio || '';
     const horaFin = turno.horaFin || '';
@@ -610,6 +641,12 @@ const ConsultaHorarios = () => {
         const horasTele = Number.isFinite(turno.horasTele) ? turno.horasTele : (turno.horasTele ? Number(turno.horasTele) : 0);
         const horasPres = Number.isFinite(turno.horasPres) ? turno.horasPres : (turno.horasPres ? Number(turno.horasPres) : 0);
         return total + horasTele + horasPres;
+      }
+
+      if (turno.tipo === 'horario-dividido') {
+        const horasBloque1 = Number.isFinite(turno.horasBloque1) ? turno.horasBloque1 : (turno.horasBloque1 ? Number(turno.horasBloque1) : 0);
+        const horasBloque2 = Number.isFinite(turno.horasBloque2) ? turno.horasBloque2 : (turno.horasBloque2 ? Number(turno.horasBloque2) : 0);
+        return total + horasBloque1 + horasBloque2;
       }
 
       // Para otros tipos, intentar sumar campo 'horas' o 0
@@ -1106,7 +1143,7 @@ const ConsultaHorarios = () => {
                                             height: 36, 
                                             fontSize: '0.8rem',
                                             fontWeight: 600,
-                                            bgcolor: (horario.tipo === 'teletrabajo' || horario.tipo === 'tele-presencial')
+                                            bgcolor: (horario.tipo === 'teletrabajo' || horario.tipo === 'tele-presencial' || horario.tipo === 'horario-dividido')
                                               ? '#2e7d32' 
                                               : horario.tipo === 'personalizado' 
                                               ? 'primary.main' 

@@ -224,6 +224,10 @@ const Horarios = () => {
   const [horarioPersonalizado, setHorarioPersonalizado] = useState({
     horaInicio: '',
     horaFin: '',
+    horaInicioBloque1: '',
+    horaFinBloque1: '',
+    horaInicioBloque2: '',
+    horaFinBloque2: '',
     usuarioId: null,
     diaKey: null,
     tipo: 'personalizado'
@@ -770,6 +774,10 @@ const Horarios = () => {
       tipo: horarioActual?.tipo || 'personalizado',
       horaInicio: horarioActual?.horaInicio || '',
       horaFin: horarioActual?.horaFin || '',
+      horaInicioBloque1: horarioActual?.horaInicioBloque1 || '',
+      horaFinBloque1: horarioActual?.horaFinBloque1 || '',
+      horaInicioBloque2: horarioActual?.horaInicioBloque2 || '',
+      horaFinBloque2: horarioActual?.horaFinBloque2 || '',
       horaInicioLibre: horarioActual?.horaInicioLibre || '',
       horaFinLibre: horarioActual?.horaFinLibre || '',
       nota: horarioActual?.nota || '',
@@ -793,6 +801,18 @@ const Horarios = () => {
         tipo: horarioACopiar.tipo,
         horaInicio: horarioACopiar.horaInicio || '',
         horaFin: horarioACopiar.horaFin || '',
+        horaInicioTele: horarioACopiar.horaInicioTele || '',
+        horaFinTele: horarioACopiar.horaFinTele || '',
+        horaInicioPres: horarioACopiar.horaInicioPres || '',
+        horaFinPres: horarioACopiar.horaFinPres || '',
+        horaInicioBloque1: horarioACopiar.horaInicioBloque1 || '',
+        horaFinBloque1: horarioACopiar.horaFinBloque1 || '',
+        horaInicioBloque2: horarioACopiar.horaInicioBloque2 || '',
+        horaFinBloque2: horarioACopiar.horaFinBloque2 || '',
+        horasTele: horarioACopiar.horasTele,
+        horasPres: horarioACopiar.horasPres,
+        horasBloque1: horarioACopiar.horasBloque1,
+        horasBloque2: horarioACopiar.horasBloque2,
         horas: horarioACopiar.horas || 0
       };
 
@@ -879,7 +899,11 @@ const Horarios = () => {
       horaInicioTele,
       horaFinTele,
       horaInicioPres,
-      horaFinPres
+      horaFinPres,
+      horaInicioBloque1,
+      horaFinBloque1,
+      horaInicioBloque2,
+      horaFinBloque2
     } = horarioPersonalizado;
 
     const nuevosHorarios = { ...horariosEditados };
@@ -1020,6 +1044,114 @@ const Horarios = () => {
         horaInicioPres,
         horaFinPres,
         horasPres,
+        horas: horasTrabajadas,
+        nota: nota || ''
+      };
+
+      actualizarHorariosEditados(nuevosHorarios);
+      setDialogoHorario(false);
+      return;
+    }
+
+    if (tipo === 'horario-dividido') {
+      if (!horaInicioBloque1 || !horaFinBloque1 || !horaInicioBloque2 || !horaFinBloque2) {
+        mostrarModal({
+          tipo: 'error',
+          titulo: '⏰ Horario obligatorio',
+          mensaje: 'Debes ingresar ambos bloques del Horario Dividido para guardar la asignación.',
+          soloInfo: true
+        });
+        return;
+      }
+
+      if (!validarHora(horaInicioBloque1) || !validarHora(horaFinBloque1) || !validarHora(horaInicioBloque2) || !validarHora(horaFinBloque2)) {
+        mostrarModal({
+          tipo: 'error',
+          titulo: '⏰ Formato de Hora Inválido',
+          mensaje: 'El formato de hora debe ser HH:mm (24 horas).',
+          soloInfo: true
+        });
+        return;
+      }
+
+      const horasBloque1 = Number(calcHoras(horaInicioBloque1, horaFinBloque1).toFixed(1));
+      const horasBloque2 = Number(calcHoras(horaInicioBloque2, horaFinBloque2).toFixed(1));
+      const horasTrabajadas = Number((horasBloque1 + horasBloque2).toFixed(1));
+
+      const horasActuales = calcularHorasTotales(
+        usuarioId,
+        editando,
+        horariosEditados,
+        horarios,
+        semanaSeleccionada,
+        semanaActual,
+        EMPTY_HORAS_EXTRAS,
+        (id) => obtenerUsuario(usuarios, id),
+        obtenerHorasMaximas
+      );
+      const usuario = obtenerUsuario(usuarios, usuarioId);
+      const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
+
+      if (horasActuales + horasTrabajadas > horasMaximas) {
+        const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
+        const recomendacion = generarRecomendacionPracticantes(
+          usuario,
+          exceso,
+          (horasExceso, departamentoDestino, usuarioExcedidoId) => encontrarPracticantesDisponibles(
+            horasExceso,
+            usuarios,
+            (id, edit) => calcularHorasTotales(
+              id,
+              edit,
+              horariosEditados,
+              horarios,
+              semanaSeleccionada,
+              semanaActual,
+              EMPTY_HORAS_EXTRAS,
+              (uid) => obtenerUsuario(usuarios, uid),
+              obtenerHorasMaximas
+            ),
+            obtenerHorasMaximas,
+            departamentoDestino,
+            usuarioExcedidoId
+          )
+        );
+
+        mostrarModal({
+          tipo: 'warning',
+          titulo: '⚠️ Exceso de Horas Detectado',
+          mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
+          textoConfirmar: 'Continuar de todas formas',
+          textoCancelar: 'Cancelar',
+          onConfirmar: () => {
+            nuevosHorarios[usuarioId][diaKey] = {
+              tipo,
+              horaInicioBloque1,
+              horaFinBloque1,
+              horasBloque1,
+              horaInicioBloque2,
+              horaFinBloque2,
+              horasBloque2,
+              horas: horasTrabajadas,
+              nota: nota || ''
+            };
+            actualizarHorariosEditados(nuevosHorarios);
+            setDialogoHorario(false);
+            cerrarModal();
+          },
+          onCancelar: cerrarModal
+        });
+        return;
+      }
+
+      nuevosHorarios[usuarioId][diaKey] = {
+        tipo,
+        horaInicioBloque1,
+        horaFinBloque1,
+        horasBloque1,
+        horaInicioBloque2,
+        horaFinBloque2,
+        horasBloque2,
         horas: horasTrabajadas,
         nota: nota || ''
       };

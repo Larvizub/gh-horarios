@@ -62,6 +62,8 @@ const DaySlot = styled(Box)(({ theme, hasSchedule, scheduleType, isCurrentUser }
       ? '#2e7d32'
       : scheduleType === 'tele-presencial'
       ? 'linear-gradient(135deg, #2e7d32 50%, #00830e 50%)'
+      : scheduleType === 'horario-dividido'
+      ? 'linear-gradient(135deg, #7c3aed 50%, #4c1d95 50%)'
       : scheduleType === 'cambio'
       ? '#f57c00'
       : isCurrentUser
