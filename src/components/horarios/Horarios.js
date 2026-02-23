@@ -277,6 +277,11 @@ const Horarios = () => {
     usuariosFiltrados.map(u => u.id).sort().join(','),
     [usuariosFiltrados]
   );
+  const usuariosFiltradosIdsArray = useMemo(
+    () => (usuariosFiltradosIds ? usuariosFiltradosIds.split(',') : []),
+    [usuariosFiltradosIds]
+  );
+  const activeSubscriptionRef = useRef('');
   
   // Función helper para actualizar horarios editados Y el buffer simultáneamente
   const actualizarHorariosEditados = useCallback((nuevoValor) => {
@@ -348,9 +353,18 @@ const Horarios = () => {
     setHorarios({});
     
     const key = obtenerClaveSemana(semanaSeleccionada);
-    const ids = usuariosFiltrados.map(u => u.id);
+    const ids = usuariosFiltradosIdsArray;
+    const signature = `${key}|${usuariosFiltradosIds}`;
+
+    // Evita reinstalar la misma suscripción por re-renderes no relevantes (común en móvil)
+    if (signature === activeSubscriptionRef.current) {
+      setLoading(false);
+      return;
+    }
+    activeSubscriptionRef.current = signature;
 
     if (ids.length === 0) {
+      activeSubscriptionRef.current = '';
       setLoading(false);
       return;
     }
@@ -390,7 +404,7 @@ const Horarios = () => {
         // no-op
       }
     };
-  }, [semanaSeleccionada, currentUser, obtenerClaveSemana, usuariosFiltrados, usuariosFiltradosIds]);
+  }, [semanaSeleccionada, currentUser, obtenerClaveSemana, usuariosFiltradosIds, usuariosFiltradosIdsArray]);
 
   // Al cambiar de semana durante edición: restaurar del buffer o inicializar desde los horarios cargados
   useEffect(() => {
@@ -1369,7 +1383,7 @@ const Horarios = () => {
   return (
     <PageContainer>
       <ContentContainer maxWidth="xl">
-        <Fade in timeout={400}>
+        <Fade in timeout={isSmallMobile ? 0 : 400}>
           <StyledPaper elevation={0}>
             <PageTitle>
               <span className="icon">📅</span>
@@ -1405,56 +1419,96 @@ const Horarios = () => {
             {/* Mensaje informativo sobre consideraciones */}
             <ModernAlert 
               severity="info" 
+              icon={isSmallMobile ? false : undefined}
               sx={{ 
                 mx: { xs: 1, sm: 2, md: 3 }, 
                 mb: 2, 
                 mt: 2,
+                '& .MuiAlert-message': {
+                  p: 0,
+                  width: '100%',
+                  textAlign: 'left',
+                },
+                '& .MuiAlert-icon': {
+                  alignItems: 'flex-start',
+                  pt: 0.25,
+                }
               }}
             >
               <Box sx={{ 
                 display: 'flex', 
                 flexDirection: { xs: 'column', md: 'row' },
                 gap: { xs: 2, md: 4 },
+                p: { xs: 1, sm: 0.5 },
+                width: '100%',
               }}>
                 {/* Columna izquierda - Antes de asignar */}
-                <Box sx={{ flex: 1 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="subtitle2" sx={{ 
                     fontWeight: 600, 
-                    mb: 1,
+                    mb: 1.25,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.5,
+                    color: 'info.dark',
+                    textAlign: 'left',
                   }}>
                     ℹ️ Antes de asignar:
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      • Verificar tipo de jornada según contrato
-                    </Typography>
-                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      • Verificar disponibilidad antes de asignar
-                    </Typography>
+                  <Box
+                    component="ul"
+                    sx={{
+                      m: 0,
+                      pl: 2.5,
+                      listStylePosition: 'outside',
+                      textAlign: 'left',
+                      '& li': {
+                        fontSize: { xs: '0.88rem', sm: '0.9rem' },
+                        lineHeight: 1.45,
+                        display: 'list-item',
+                      },
+                      '& li + li': {
+                        mt: 0.75,
+                      },
+                    }}
+                  >
+                    <Box component="li">Verificar tipo de jornada según contrato</Box>
+                    <Box component="li">Verificar disponibilidad antes de asignar</Box>
                   </Box>
                 </Box>
 
                 {/* Columna derecha - Consideraciones importantes */}
-                <Box sx={{ flex: 1 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="subtitle2" sx={{ 
                     fontWeight: 600, 
-                    mb: 1,
+                    mb: 1.25,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.5,
+                    color: 'info.dark',
+                    textAlign: 'left',
                   }}>
                     📋 Consideraciones importantes:
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      • Descanso mínimo entre jornadas: 12 horas
-                    </Typography>
-                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      • Compensar horas acumuladas la semana siguiente
-                    </Typography>
+                  <Box
+                    component="ul"
+                    sx={{
+                      m: 0,
+                      pl: 2.5,
+                      listStylePosition: 'outside',
+                      textAlign: 'left',
+                      '& li': {
+                        fontSize: { xs: '0.88rem', sm: '0.9rem' },
+                        lineHeight: 1.45,
+                        display: 'list-item',
+                      },
+                      '& li + li': {
+                        mt: 0.75,
+                      },
+                    }}
+                  >
+                    <Box component="li">Descanso mínimo entre jornadas: 12 horas</Box>
+                    <Box component="li">Compensar horas acumuladas la semana siguiente</Box>
                   </Box>
                 </Box>
               </Box>
