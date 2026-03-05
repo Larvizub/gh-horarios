@@ -24,7 +24,9 @@ const HeaderRow = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(1.5),
 }));
 
-const UserCard = styled(Paper)(({ theme, isCurrentUser }) => ({
+const UserCard = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isCurrentUser',
+})(({ theme, isCurrentUser }) => ({
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1),
   borderRadius: 12,
@@ -46,7 +48,10 @@ const UserCard = styled(Paper)(({ theme, isCurrentUser }) => ({
   },
 }));
 
-const DaySlot = styled(Box)(({ theme, hasSchedule, scheduleType, isCurrentUser }) => ({
+const DaySlot = styled(Box, {
+  shouldForwardProp: (prop) =>
+    prop !== 'hasSchedule' && prop !== 'scheduleType' && prop !== 'isCurrentUser',
+})(({ theme, hasSchedule, scheduleType, isCurrentUser }) => ({
   height: 36,
   display: 'flex',
   justifyContent: 'center',
@@ -87,7 +92,9 @@ const DaySlot = styled(Box)(({ theme, hasSchedule, scheduleType, isCurrentUser }
   },
 }));
 
-const TotalBadge = styled(Paper)(({ theme, exceeded }) => ({
+const TotalBadge = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'exceeded',
+})(({ theme, exceeded }) => ({
   textAlign: 'center',
   padding: theme.spacing(0.75),
   borderRadius: 10,
