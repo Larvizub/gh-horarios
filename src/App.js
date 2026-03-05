@@ -461,12 +461,7 @@ function AppContent() {
             minHeight: currentUser ? 'calc(100vh - 64px)' : '100vh',
           }}
         >
-          <Routes
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true
-            }}
-          >
+          <Routes>
             {/* Rutas públicas */}
             <Route path="/" element={currentUser ? <Navigate to="/dashboard" /> : <Login />} />
             {/* Ruta de registro accesible para administradores y desde login */}

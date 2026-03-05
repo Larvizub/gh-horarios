@@ -7,7 +7,12 @@ import { Toaster } from 'sileo';
 
 const root = createRoot(document.getElementById('root'));
 root.render(
-  <BrowserRouter>
+  <BrowserRouter
+    future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}
+  >
     <App />
     <Toaster
       position="top-right"
