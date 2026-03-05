@@ -2,6 +2,9 @@ import { sileo } from 'sileo';
 
 const EMOJI_REGEX = /[\p{Extended_Pictographic}\uFE0F]/gu;
 const SUCCESS_FILL = '#00830e';
+const ERROR_FILL = '#d32f2f';
+const WARNING_FILL = '#ed6c02';
+const INFO_FILL = '#0288d1';
 
 const sanitizeText = (value) => {
   if (typeof value !== 'string') return value;
@@ -41,9 +44,9 @@ const withDefaultFill = (options, fill) => {
 
 export const notify = {
   success: (input) => sileo.success(withDefaultFill(toOptions(input), SUCCESS_FILL)),
-  error: (input) => sileo.error(toOptions(input)),
-  warning: (input) => sileo.warning(toOptions(input)),
-  info: (input) => sileo.info(toOptions(input)),
+  error: (input) => sileo.error(withDefaultFill(toOptions(input), ERROR_FILL)),
+  warning: (input) => sileo.warning(withDefaultFill(toOptions(input), WARNING_FILL)),
+  info: (input) => sileo.info(withDefaultFill(toOptions(input), INFO_FILL)),
   action: (input) => sileo.action(toOptions(input)),
   show: (input) => sileo.show(toOptions(input)),
   promise: (promise, options) => sileo.promise(promise, options),
