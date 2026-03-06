@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 import { database } from '../../firebase/config';
 import { Container, Paper, Typography, Box, Button, useMediaQuery, useTheme, Alert, Fade, Skeleton } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
@@ -678,16 +678,20 @@ const Horarios = () => {
             });
             return;
           }
-          let huboEliminacion = false;
-          Object.keys(updates).forEach(uid => {
-            if (updates[uid] && updates[uid][dia]) {
-              delete updates[uid][dia];
-              huboEliminacion = true;
+          // Cargar la semana completa para evitar eliminar accidentalmente usuarios no cargados en el estado local.
+          const semanaSnap = await get(ref(database, refPath));
+          const semanaCompleta = semanaSnap.exists() ? semanaSnap.val() : {};
+          const updatesDia = {};
+
+          Object.entries(semanaCompleta).forEach(([uid, horariosUsuario]) => {
+            if (horariosUsuario && horariosUsuario[dia]) {
+              updatesDia[`horarios_registros/${semanaKey}/${uid}/${dia}`] = null;
             }
           });
-          if (huboEliminacion) {
-            await set(ref(database, refPath), updates);
-            // No sobrescribimos el estado local completamente: limpiar buffer de edición y dejar que el listener sincronice
+
+          if (Object.keys(updatesDia).length > 0) {
+            await update(ref(database), updatesDia);
+            // Limpiar buffer local; el listener sincroniza el estado final desde backend.
             setHorariosEditados({});
             setBufferEditSemanas({});
           } else {
@@ -741,7 +745,13 @@ const Horarios = () => {
             }
           });
 
-          await set(ref(database, refPath), updates);
+          // Eliminar solo los días seleccionados del usuario actual para no sobrescribir la semana completa.
+          const updatesMisDias = {};
+          diasSeleccionados.forEach(diaKey => {
+            updatesMisDias[`horarios_registros/${semanaKey}/${currentUser.uid}/${diaKey}`] = null;
+          });
+          await update(ref(database), updatesMisDias);
+
           // Limpiar buffer de edición y dejar que el listener actualice el estado
           setHorariosEditados({});
           setBufferEditSemanas({});
