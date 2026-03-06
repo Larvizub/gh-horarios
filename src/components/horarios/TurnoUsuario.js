@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Grid, Box, Typography, IconButton } from '@mui/material';
-import { TIPO_LABEL } from '../../utils/horariosConstants';
+import useTiposHorario from '../../hooks/useTiposHorario';
 
 const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso', 'beneficio-operaciones'];
 
@@ -16,9 +16,12 @@ const TurnoUsuario = memo(({
   NO_SUMAN_HORAS,
   suppressOpen // when true, clicking the slot should not open the edit dialog (used during multi-target selection)
 }) => {
+  const { getTipoLabel, tiposMap } = useTiposHorario();
   const horariosUsuario = editando ? horariosEditados[usuario.id] : horarios[usuario.id];
   const horario = horariosUsuario?.[diaKey];
   const tieneHorario = horario && horario.tipo !== 'libre';
+  const tipoCatalogo = horario?.tipo ? tiposMap[horario.tipo] : null;
+  const colorTipoDinamico = tipoCatalogo?.editable ? tipoCatalogo?.color : null;
 
   // Determina si solo se debe mostrar el label
   const soloLabel = tieneHorario && TIPOS_SOLO_LABEL.includes(horario.tipo);
@@ -56,6 +59,7 @@ const TurnoUsuario = memo(({
                 horario.tipo === 'media-cumple' ? '#607d8b' :
                 horario.tipo === 'teletrabajo' ? '#2e7d32' :
                 horario.tipo === 'cambio' ? '#f57c00' :
+                colorTipoDinamico ? colorTipoDinamico :
                 usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
               ) : 'transparent',
           color: soloLabel
@@ -72,6 +76,7 @@ const TurnoUsuario = memo(({
                   horario.tipo === 'media-cumple' ? '#455a64' :
                   horario.tipo === 'teletrabajo' ? '#1b5e20' :
                   horario.tipo === 'cambio' ? '#e65100' :
+                  colorTipoDinamico ? colorTipoDinamico :
                   usuario.id === currentUser?.uid ? '#303f9f' : '#c51162'
                 ) : '#f0f0f0'
           } : {}
@@ -144,7 +149,7 @@ const TurnoUsuario = memo(({
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
               >
-                {TIPO_LABEL[horario.tipo] || horario.tipo}
+                {getTipoLabel(horario.tipo)}
               </Typography>
               {horario.nota && (
                 <Typography
@@ -238,7 +243,7 @@ const TurnoUsuario = memo(({
               variant="caption" 
               sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1, fontWeight: 'bold' }}
             >
-              {TIPO_LABEL[horario.tipo] || horario.tipo}
+              {getTipoLabel(horario.tipo)}
             </Typography>
           ) : horario.tipo === 'tele-presencial' ? (
             <>
@@ -246,7 +251,7 @@ const TurnoUsuario = memo(({
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
               >
-                {TIPO_LABEL[horario.tipo] || 'Teletrabajo & Presencial'}
+                {getTipoLabel(horario.tipo)}
               </Typography>
 
               {/* Teletrabajo */}
@@ -295,7 +300,7 @@ const TurnoUsuario = memo(({
                 variant="caption"
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
               >
-                {TIPO_LABEL[horario.tipo] || 'Horario Dividido'}
+                {getTipoLabel(horario.tipo)}
               </Typography>
 
               {(horario.horaInicioBloque1 && horario.horaFinBloque1) && (
@@ -338,7 +343,7 @@ const TurnoUsuario = memo(({
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1, fontWeight: 'bold' }}
               >
-                {TIPO_LABEL[horario.tipo] || horario.tipo}
+                {getTipoLabel(horario.tipo)}
               </Typography>
               {(horario.horaInicio && horario.horaFin) && (
                 <Typography 

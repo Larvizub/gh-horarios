@@ -1,3 +1,5 @@
+import { DEFAULT_TIPOS_LABEL } from './tiposHorario';
+
 export const departamentos = [
   'Planeación de Eventos',
   'Gestión de la Protección',
@@ -36,24 +38,4 @@ export const DIAS_LABELS = {
   dia7: 'Domingo'
 };
 
-export const TIPO_LABEL = {
-  personalizado: 'Presencial',
-  teletrabajo: 'Teletrabajo',
-  'horario-dividido': 'Horario Dividido',
-  cambio: 'Cambio',
-  descanso: 'Descanso',
-  vacaciones: 'Vacaciones',
-  feriado: 'Feriado',
-  permiso: 'Permiso',
-  'tarde-libre': 'Media Jornada Libre',
-  'dia-brigada': 'Brigada',
-  'fuera-oficina': 'Fuera de Oficina',
-  'viaje-trabajo': 'Viaje de Trabajo',
-  'incapacidad-enfermedad': 'Incapacidad por Enfermedad',
-  'incapacidad-accidente': 'Incapacidad por Accidente',
-  'tele-presencial': 'Teletrabajo & Presencial',
-  'beneficio-operaciones': 'Beneficio',
-  'visita-comercial': 'Visita Comercial',
-  'tele-media-libre': 'Teletrabajo & Media Jornada Libre',
-  'media-cumple': 'Media Jornada Libre & Mes de cumpleaños'
-};
+export const TIPO_LABEL = DEFAULT_TIPOS_LABEL;

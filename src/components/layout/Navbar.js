@@ -33,6 +33,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import HistoryIcon from '@mui/icons-material/History';
 import PersonIcon from '@mui/icons-material/Person';
+import CategoryIcon from '@mui/icons-material/Category';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import CloseIcon from '@mui/icons-material/Close';
@@ -183,6 +184,7 @@ const menuItems = [
   { label: 'Horarios', icon: <EventNoteIcon />, path: '/horarios' },
   { label: 'Consulta', icon: <HistoryIcon />, path: '/consulta-horarios' },
   { label: 'Personal', icon: <PersonIcon />, path: '/personal' },
+  { label: 'Tipos', icon: <CategoryIcon />, path: '/tipos-horario', onlyAdmin: true },
 ];
 
 const Navbar = memo(({ user }) => {
@@ -236,7 +238,18 @@ const Navbar = memo(({ user }) => {
 
   // Filtrar elementos del menú basándose en permisos
   const menuItemsFiltrados = React.useMemo(() => {
+    const esAdmin = Boolean(
+      userData && (
+        userData.rol === 'Administrador' ||
+        userData.departamento === 'Talento Humano'
+      )
+    );
+
     return menuItems.filter(item => {
+      if (item.onlyAdmin) {
+        return esAdmin;
+      }
+
       switch (item.path) {
         case '/personal':
           return userData && puedeAccederPersonal(userData);
@@ -373,7 +386,7 @@ const Navbar = memo(({ user }) => {
                 <NavButton
                   key={item.path}
                   component={Link}
-                  to={item.path}
+                  to={item.to || item.path}
                   startIcon={item.icon}
                   active={isPathActive(item.path) ? 1 : 0}
                 >
@@ -521,7 +534,7 @@ const Navbar = memo(({ user }) => {
                   active={isActive ? 1 : 0}
                   onClick={() => {
                     handleDrawerClose();
-                    setTimeout(() => navigate(item.path), 100);
+                    setTimeout(() => navigate(item.to || item.path), 100);
                   }}
                 >
                   <ListItemIcon>{item.icon}</ListItemIcon>

@@ -42,6 +42,7 @@ import { puedeVerHorarios } from '../../utils/contratoUtils';
 import { useUsuariosYHorarios } from '../../hooks/useUsuariosYHorarios';
 import { useSemana } from '../../hooks/useSemana';
 import { useModalConfirm } from '../../hooks/useModalConfirm';
+import useTiposHorario from '../../hooks/useTiposHorario';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -188,6 +189,7 @@ const Horarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { tipos } = useTiposHorario();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -271,6 +273,15 @@ const Horarios = () => {
   };
 
   const usuariosFiltrados = useUsuariosFiltrados(usuarios, departamentoSeleccionado);
+  const tiposNoSumaHoras = useMemo(() => {
+    const base = new Set(NO_SUMAN_HORAS);
+    tipos.forEach((tipo) => {
+      if (tipo.noSumaHoras) {
+        base.add(tipo.key);
+      }
+    });
+    return base;
+  }, [tipos]);
   
   // Memoizar los IDs de los usuarios filtrados para evitar re-suscripciones innecesarias
   const usuariosFiltradosIds = useMemo(() => 
@@ -473,7 +484,7 @@ const Horarios = () => {
 
         const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
         const horasTotales = Object.values(horariosUsuario).reduce((total, turno) => {
-          if (!turno || NO_SUMAN_HORAS.includes(turno.tipo)) return total;
+          if (!turno || tiposNoSumaHoras.has(turno.tipo)) return total;
           return total + (turno.horas || 0);
         }, 0);
 
@@ -491,7 +502,7 @@ const Horarios = () => {
     } catch (error) {
       console.error('Error al recalcular horas extras:', error);
     }
-  }, [semanaSeleccionada, semanaActual, usuarios, horarios]);
+  }, [semanaSeleccionada, semanaActual, usuarios, horarios, tiposNoSumaHoras]);
 
   const handleGuardarHorarios = useCallback(async () => {
     try {
@@ -972,7 +983,7 @@ const Horarios = () => {
     }
 
     // Si es un tipo que no suma horas
-    if (NO_SUMAN_HORAS.includes(tipo)) {
+    if (tiposNoSumaHoras.has(tipo)) {
       nuevosHorarios[usuarioId][diaKey] = {
         tipo,
         horaInicio: '00:00',
@@ -1573,7 +1584,7 @@ const Horarios = () => {
               handleCopiarHorario={handleCopiarHorario}
               clipboard={clipboard}
               onApplyCopiedHorario={applyCopiedHorario}
-              NO_SUMAN_HORAS={NO_SUMAN_HORAS}
+              NO_SUMAN_HORAS={Array.from(tiposNoSumaHoras)}
               calcularExceso={calcularExceso}
               calcularHorasTotales={calcularHorasTotales}
               semanaSeleccionada={semanaSeleccionada}

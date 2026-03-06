@@ -26,20 +26,8 @@ import EventBusyIcon from '@mui/icons-material/EventBusy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
-import BusinessIcon from '@mui/icons-material/Business';
-import CakeIcon from '@mui/icons-material/Cake';
-import WeekendIcon from '@mui/icons-material/Weekend';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import BeachAccessIcon from '@mui/icons-material/BeachAccess';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
-import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import LocationOffIcon from '@mui/icons-material/LocationOff';
-import FlightIcon from '@mui/icons-material/Flight';
-import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
-import HealingIcon from '@mui/icons-material/Healing';
-import SyncAltIcon from '@mui/icons-material/SyncAlt';
+import useTiposHorario from '../../hooks/useTiposHorario';
+import { getTipoIconComponent, TIPO_TEMPLATES } from '../../utils/tiposHorario';
 
 // Styled Components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -152,6 +140,7 @@ const DialogoHorario = ({
   const usuarioObjetivo = usuarios.find(u => u.id === horarioPersonalizado.usuarioId) || { id: horarioPersonalizado.usuarioId };
   // Permiso para eliminar/modificar
   const puedeEliminar = puedeModificarHorarios(currentUser, usuarioObjetivo);
+  const { tipos, tiposMap } = useTiposHorario();
 
   // Al abrir el modal o cambiar de usuario/día, inicializa desde datos existentes pero no borres lo ya tipeado
   React.useEffect(() => {
@@ -199,6 +188,8 @@ const DialogoHorario = ({
   };
 
   const tipo = horarioPersonalizado.tipo || 'personalizado';
+  const tipoConfig = tiposMap[tipo] || {};
+  const tipoTemplate = tipoConfig.template || TIPO_TEMPLATES.SIMPLE;
   const horasLaboradas = (() => {
     if (!horarioPersonalizado.horaInicio || !horarioPersonalizado.horaFin) return 0;
     const [h1, m1] = horarioPersonalizado.horaInicio.split(':').map(Number);
@@ -288,11 +279,12 @@ const DialogoHorario = ({
               value={tipo}
               onChange={(e) => {
                 const nuevoTipo = e.target.value;
-                // Si selecciona viaje-trabajo, asigna por defecto 08:00-18:00 y 10h
-                if (nuevoTipo === 'viaje-trabajo') {
+                const newTemplate = tiposMap[nuevoTipo]?.template || TIPO_TEMPLATES.SIMPLE;
+                // Para viaje-trabajo mantenemos los valores por defecto históricos.
+                if (newTemplate === TIPO_TEMPLATES.VIAJE_TRABAJO) {
                   setHorarioPersonalizado(prev => ({
                     ...prev,
-                    tipo: 'viaje-trabajo',
+                    tipo: nuevoTipo,
                     horaInicio: '08:00',
                     horaFin: '18:00',
                     horas: 10
@@ -303,125 +295,22 @@ const DialogoHorario = ({
               }}
               size={isMobile ? 'small' : 'medium'}
             >
-              <MenuItem value="personalizado">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <WorkIcon sx={{ fontSize: 18, color: 'primary.main' }} />
-                  Presencial
-                </Box>
-              </MenuItem>
-              <MenuItem value="teletrabajo">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HomeWorkIcon sx={{ fontSize: 18, color: 'info.main' }} />
-                  Teletrabajo
-                </Box>
-              </MenuItem>
-              <MenuItem value="tele-presencial">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <SyncAltIcon sx={{ fontSize: 18, color: '#6a1b9a' }} />
-                  Teletrabajo & Presencial
-                </Box>
-              </MenuItem>
-              <MenuItem value="horario-dividido">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <AccessTimeIcon sx={{ fontSize: 18, color: '#7c3aed' }} />
-                  Horario Dividido
-                </Box>
-              </MenuItem>
-              <MenuItem value="visita-comercial">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BusinessIcon sx={{ fontSize: 18, color: '#795548' }} />
-                  Visita Comercial
-                </Box>
-              </MenuItem>
-              <MenuItem value="cambio">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <SwapHorizIcon sx={{ fontSize: 18, color: '#f57c00' }} />
-                  Cambio
-                </Box>
-              </MenuItem>
-              <MenuItem value="descanso">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <EventBusyIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                  Descanso
-                </Box>
-              </MenuItem>
-              <MenuItem value="vacaciones">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BeachAccessIcon sx={{ fontSize: 18, color: '#f97316' }} />
-                  Vacaciones
-                </Box>
-              </MenuItem>
-              <MenuItem value="feriado">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CelebrationIcon sx={{ fontSize: 18, color: '#ef4444' }} />
-                  Feriado
-                </Box>
-              </MenuItem>
-              <MenuItem value="permiso">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <AssignmentIndIcon sx={{ fontSize: 18, color: '#8b5cf6' }} />
-                  Permiso Otorgado por Jefatura
-                </Box>
-              </MenuItem>
-              <MenuItem value="dia-brigada">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HealthAndSafetyIcon sx={{ fontSize: 18, color: '#d32f2f' }} />
-                  Día por Brigada
-                </Box>
-              </MenuItem>
-              <MenuItem value="beneficio-operaciones">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <EmojiEventsIcon sx={{ fontSize: 18, color: '#ffd700' }} />
-                  Día libre - beneficio operaciones
-                </Box>
-              </MenuItem>
-              <MenuItem value="tarde-libre">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <WeekendIcon sx={{ fontSize: 18, color: '#64748b' }} />
-                  Media Jornada Libre
-                </Box>
-              </MenuItem>
-              <MenuItem value="tele-media-libre">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <HomeWorkIcon sx={{ fontSize: 18, color: '#10b981' }} />
-                    Teletrabajo & Media Jornada Libre
-                  </Box>
-              </MenuItem>
-              <MenuItem value="media-cumple">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CakeIcon sx={{ fontSize: 18, color: '#9e9e9e' }} />
-                  Media Jornada Libre & Mes de cumpleaños
-                </Box>
-              </MenuItem>
-              <MenuItem value="fuera-oficina">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <LocationOffIcon sx={{ fontSize: 18, color: '#607d8b' }} />
-                  Fuera de Oficina
-                </Box>
-              </MenuItem>
-              <MenuItem value="viaje-trabajo">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FlightIcon sx={{ fontSize: 18, color: '#1a237e' }} />
-                  Viaje de Trabajo
-                </Box>
-              </MenuItem>
-              <MenuItem value="incapacidad-enfermedad">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <LocalHospitalIcon sx={{ fontSize: 18, color: '#d32f2f' }} />
-                  Incapacidad por Enfermedad
-                </Box>
-              </MenuItem>
-              <MenuItem value="incapacidad-accidente">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HealingIcon sx={{ fontSize: 18, color: '#c62828' }} />
-                  Incapacidad por Accidente
-                </Box>
-              </MenuItem>
+              {tipos.map((tipoItem) => {
+                const Icon = getTipoIconComponent(tipoItem.icon);
+                return (
+                  <MenuItem key={tipoItem.key} value={tipoItem.key}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Icon sx={{ fontSize: 18, color: tipoItem.color || 'primary.main' }} />
+                      {tipoItem.label}
+                    </Box>
+                  </MenuItem>
+                );
+              })}
             </Select>
           </StyledFormControl>
 
-          {tipo === 'viaje-trabajo' ? null
-          : tipo === 'tarde-libre' ? (
+          {tipoTemplate === TIPO_TEMPLATES.VIAJE_TRABAJO ? null
+          : tipoTemplate === TIPO_TEMPLATES.TARDE_LIBRE ? (
             <>
               <SectionTitle>
                 <WorkIcon sx={{ fontSize: 18 }} />
@@ -461,7 +350,7 @@ const DialogoHorario = ({
                 <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
               </HoursDisplay>
             </>
-          ) : tipo === 'tele-media-libre' ? (
+          ) : tipoTemplate === TIPO_TEMPLATES.TELE_MEDIA_LIBRE ? (
             <>
               <SectionTitle>
                 <HomeWorkIcon sx={{ fontSize: 18 }} />
@@ -501,7 +390,7 @@ const DialogoHorario = ({
                 <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
               </HoursDisplay>
             </>
-          ) : tipo === 'tele-presencial' ? (
+          ) : tipoTemplate === TIPO_TEMPLATES.TELE_PRESENCIAL ? (
             <>
               <SectionTitle>
                 <HomeWorkIcon sx={{ fontSize: 18 }} />
@@ -606,7 +495,7 @@ const DialogoHorario = ({
                 </HoursDisplay>
               </Box>
             </>
-          ) : tipo === 'horario-dividido' ? (
+          ) : tipoTemplate === TIPO_TEMPLATES.HORARIO_DIVIDIDO ? (
             <>
               <SectionTitle>
                 <AccessTimeIcon sx={{ fontSize: 18 }} />
@@ -710,7 +599,7 @@ const DialogoHorario = ({
                 </HoursDisplay>
               </Box>
             </>
-          ) : tipo !== 'descanso' && tipo !== 'vacaciones' && tipo !== 'feriado' && tipo !== 'permiso' && tipo !== 'dia-brigada' && tipo !== 'incapacidad-enfermedad' && tipo !== 'incapacidad-accidente' ? (
+          ) : tipoTemplate !== TIPO_TEMPLATES.SIN_HORAS ? (
             <>
               <TimeInput
                 label="Hora de inicio"

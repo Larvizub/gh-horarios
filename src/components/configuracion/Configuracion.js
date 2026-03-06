@@ -972,6 +972,7 @@ const Configuracion = () => {
                     </Grid>
                   </>
                 )}
+
               </Box>
             )}
           </Box>

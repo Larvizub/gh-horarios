@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ref, get } from 'firebase/database';
 import { database, auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
@@ -56,7 +56,8 @@ import {
 } from 'recharts';
 import { format, subWeeks, startOfWeek, getISOWeek, getYear } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { NO_SUMAN_HORAS, TIPO_LABEL } from '../../utils/horariosConstants';
+import { NO_SUMAN_HORAS } from '../../utils/horariosConstants';
+import useTiposHorario from '../../hooks/useTiposHorario';
 
 // Styled Components para diseño moderno
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -200,7 +201,17 @@ const Dashboard = () => {
   const [usuariosNoTrabajan, setUsuariosNoTrabajan] = useState([]);
   const [usuariosTeletrabajo, setUsuariosTeletrabajo] = useState([]);
   const [modalUsuarios, setModalUsuarios] = useState({ open: false, tipo: '', usuarios: [] });
+  const { getTipoLabel, tipos } = useTiposHorario();
   const navigate = useNavigate();
+  const tiposNoSumaHoras = useMemo(() => {
+    const merged = new Set(NO_SUMAN_HORAS);
+    tipos.forEach((tipo) => {
+      if (tipo.noSumaHoras) {
+        merged.add(tipo.key);
+      }
+    });
+    return merged;
+  }, [tipos]);
   
   // Flag para prevenir actualizaciones de estado después de desmontar
   const mountedRef = React.useRef(true);
@@ -262,7 +273,7 @@ const Dashboard = () => {
             tipos[tipoFinal] = (tipos[tipoFinal] || 0) + (horario.horas || 0);
           }
 
-          if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre', 'media-cumple'].includes(horario.tipo)) {
+          if (!tiposNoSumaHoras.has(horario.tipo)) {
             const horas = horario.horas || 0;
             horasTotalesSemana += horas;
             
@@ -327,7 +338,7 @@ const Dashboard = () => {
                 tiposSemana[tipoFinal] = (tiposSemana[tipoFinal] || 0) + (horario.horas || 0);
               }
               
-              if (!['descanso', 'vacaciones', 'feriado', 'permiso', 'tarde-libre', 'media-cumple'].includes(horario.tipo)) {
+              if (!tiposNoSumaHoras.has(horario.tipo)) {
                 horasSemanales += horario.horas || 0;
               }
             }
@@ -344,7 +355,7 @@ const Dashboard = () => {
           setEstadisticas(prev => ({
             ...prev,
             distribucionTipos: Object.entries(contadorTipos).map(([tipo, cantidad]) => ({
-              name: TIPO_LABEL[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1),
+              name: getTipoLabel(tipo),
               value: cantidad,
               color: COLORS[tipo] || CHART_COLORS[Object.keys(contadorTipos).indexOf(tipo) % CHART_COLORS.length]
             })),
@@ -418,7 +429,7 @@ const Dashboard = () => {
           const usuariosFuera = usuariosArray.filter(u => {
             const userHorarios = horariosSemana[u.id] || {};
             const turnoHoy = userHorarios[`dia${diaIndex}`];
-            return turnoHoy && (NO_SUMAN_HORAS.includes(turnoHoy.tipo) || turnoHoy.tipo === 'visita-comercial');
+            return turnoHoy && (tiposNoSumaHoras.has(turnoHoy.tipo) || turnoHoy.tipo === 'visita-comercial');
           });
 
           const usuariosTele = usuariosArray.filter(u => {

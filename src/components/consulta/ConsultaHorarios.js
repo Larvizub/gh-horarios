@@ -60,6 +60,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { departamentos } from '../../utils/horariosConstants';
+import useTiposHorario from '../../hooks/useTiposHorario';
 import * as XLSX from 'xlsx';
 
 // Styled Components modernos
@@ -240,22 +241,10 @@ const LoadingContainer = styled(Box)(({ theme }) => ({
 
 const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-const TIPO_LABEL = {
-  personalizado: 'Presencial',
-  teletrabajo: 'Teletrabajo',
-  'horario-dividido': 'Horario Dividido',
-  descanso: 'Descanso',
-  vacaciones: 'Vacaciones',
-  feriado: 'Feriado',
-  permiso: 'Permiso Otorgado por Jefatura',
-  'tarde-libre': 'Tarde Libre',
-  'dia-brigada': 'Día por Brigada',
-  'beneficio-operaciones': 'Día libre - beneficio operaciones'
-};
-
 const ConsultaHorarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { getTipoLabel } = useTiposHorario();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -524,7 +513,7 @@ const ConsultaHorarios = () => {
       return { texto: 'Descanso', tipo: 'descanso' };
     }
 
-    const tipoTexto = TIPO_LABEL[turno.tipo] || turno.tipo;
+    const tipoTexto = getTipoLabel(turno.tipo);
 
     // Nuevo manejo para tele-presencial (dos franjas: tele y presencial)
     if (turno.tipo === 'tele-presencial') {

@@ -5,21 +5,10 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import InfoIcon from '@mui/icons-material/Info';
 import CloseIcon from '@mui/icons-material/Close';
+import useTiposHorario from '../../hooks/useTiposHorario';
 
 const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const diasKeys = ['dia1', 'dia2', 'dia3', 'dia4', 'dia5', 'dia6', 'dia7'];
-const TIPO_LABEL = {
-  personalizado: 'Presencial',
-  teletrabajo: 'Teletrabajo',
-  cambio: 'Cambio',
-  descanso: 'Descanso',
-  vacaciones: 'Vacaciones',
-  feriado: 'Feriado',
-  permiso: 'Permiso Otorgado por Jefatura',
-  'tarde-libre': 'Tarde Libre',
-  'dia-brigada': 'Día por Brigada',
-  'beneficio-operaciones': 'Día libre - beneficio operaciones'
-};
 
 // Styled Components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -114,6 +103,8 @@ const DialogoCopiar = ({
   horariosEditados,
   horarios
 }) => {
+  const { getTipoLabel } = useTiposHorario();
+
   if (!horarioACopiar) return null;
 
   const handleSeleccionarDia = (diaKey) => {
@@ -141,7 +132,7 @@ const DialogoCopiar = ({
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
             <Chip 
-              label={TIPO_LABEL[horarioACopiar.tipo] || horarioACopiar.tipo}
+              label={getTipoLabel(horarioACopiar.tipo)}
               color="primary"
               sx={{ fontWeight: 600 }}
             />

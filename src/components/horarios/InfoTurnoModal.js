@@ -18,6 +18,8 @@ import WorkIcon from '@mui/icons-material/Work';
 import HomeWorkIcon from '@mui/icons-material/HomeWork';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import CloseIcon from '@mui/icons-material/Close';
+import useTiposHorario from '../../hooks/useTiposHorario';
+import { getTipoIconComponent } from '../../utils/tiposHorario';
 
 // Styled Components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -107,7 +109,12 @@ const ActionButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-const getTipoIcon = (tipo) => {
+const getTipoIcon = (tipo, tipoConfig) => {
+  if (tipoConfig?.icon) {
+    const DynamicIcon = getTipoIconComponent(tipoConfig.icon);
+    return <DynamicIcon sx={{ color: tipoConfig.color || '#00830e' }} />;
+  }
+
   switch (tipo) {
     case 'teletrabajo':
       return <HomeWorkIcon sx={{ color: '#2196f3' }} />;
@@ -119,13 +126,9 @@ const getTipoIcon = (tipo) => {
   }
 };
 
-const getTipoLabel = (tipo) => {
-  if (!tipo) return 'Descanso';
-  if (tipo === 'personalizado') return 'Presencial';
-  return tipo.charAt(0).toUpperCase() + tipo.slice(1).replace(/-/g, ' ');
-};
-
 const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccionada }) => {
+  const { getTipoLabel, tiposMap } = useTiposHorario();
+
   const getDiaInfo = () => {
     if (!diaKey) return { nombre: '', fecha: '' };
     const idx = parseInt(diaKey.replace('dia', ''), 10) - 1;
@@ -135,6 +138,9 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
   };
 
   const diaInfo = getDiaInfo();
+
+  const tipoActual = turno?.tipo;
+  const tipoConfig = tipoActual ? tiposMap[tipoActual] : null;
 
   return (
     <StyledDialog
@@ -180,10 +186,10 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
 
         <InfoCard>
           <InfoRow>
-            {getTipoIcon(turno?.tipo)}
+            {getTipoIcon(tipoActual, tipoConfig)}
             <Box sx={{ flex: 1 }}>
               <InfoLabel>Tipo de Turno</InfoLabel>
-              <InfoValue>{getTipoLabel(turno?.tipo)}</InfoValue>
+              <InfoValue>{getTipoLabel(tipoActual)}</InfoValue>
             </Box>
           </InfoRow>
 
