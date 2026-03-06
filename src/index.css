@@ -272,6 +272,15 @@ input, textarea, select {
   color: rgba(248, 250, 252, 0.88) !important;
 }
 
+.sileo-title-dark {
+  color: #111111 !important;
+  font-weight: 700 !important;
+}
+
+.sileo-description-dark {
+  color: rgba(17, 17, 17, 0.9) !important;
+}
+
 .sileo-badge-hidden {
   display: none !important;
 }

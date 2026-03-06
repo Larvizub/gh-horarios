@@ -151,6 +151,11 @@ const TiposHorarioManager = () => {
           duration: 7000,
           position: 'top-center',
           fill: HIGHLIGHT_YELLOW,
+          styles: {
+            title: 'sileo-title-dark',
+            description: 'sileo-description-dark',
+            badge: 'sileo-badge-hidden',
+          },
         });
         setFeedback({ type: 'success', text: detail });
       } else {
@@ -161,6 +166,11 @@ const TiposHorarioManager = () => {
           duration: 6000,
           position: 'top-center',
           fill: HIGHLIGHT_YELLOW,
+          styles: {
+            title: 'sileo-title-dark',
+            description: 'sileo-description-dark',
+            badge: 'sileo-badge-hidden',
+          },
         });
         setFeedback({ type: 'success', text: detail });
       }
