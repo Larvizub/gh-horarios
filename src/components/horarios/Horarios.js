@@ -1034,9 +1034,11 @@ const Horarios = () => {
         return;
       }
 
-      const horasTele = Number(calcHoras(horaInicioTele, horaFinTele).toFixed(1));
-      const horasPres = Number(calcHoras(horaInicioPres, horaFinPres).toFixed(1));
-      const horasTrabajadas = Number((horasTele + horasPres).toFixed(1));
+      const horasTeleRaw = calcHoras(horaInicioTele, horaFinTele);
+      const horasPresRaw = calcHoras(horaInicioPres, horaFinPres);
+      const horasTele = Number(horasTeleRaw.toFixed(1));
+      const horasPres = Number(horasPresRaw.toFixed(1));
+      const horasTrabajadas = Number((horasTeleRaw + horasPresRaw).toFixed(1));
 
       // Verificar exceso como en los demás tipos
       const horasActuales = calcularHorasTotales(
@@ -1144,9 +1146,11 @@ const Horarios = () => {
         return;
       }
 
-      const horasBloque1 = Number(calcHoras(horaInicioBloque1, horaFinBloque1).toFixed(1));
-      const horasBloque2 = Number(calcHoras(horaInicioBloque2, horaFinBloque2).toFixed(1));
-      const horasTrabajadas = Number((horasBloque1 + horasBloque2).toFixed(1));
+      const horasBloque1Raw = calcHoras(horaInicioBloque1, horaFinBloque1);
+      const horasBloque2Raw = calcHoras(horaInicioBloque2, horaFinBloque2);
+      const horasBloque1 = Number(horasBloque1Raw.toFixed(1));
+      const horasBloque2 = Number(horasBloque2Raw.toFixed(1));
+      const horasTrabajadas = Number((horasBloque1Raw + horasBloque2Raw).toFixed(1));
 
       const horasActuales = calcularHorasTotales(
         usuarioId,

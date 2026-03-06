@@ -42,6 +42,42 @@ export const convertirA24h = (hora) => {
   return { hora: h, minutos: m };
 };
 
+const calcularHorasRango = (inicio, fin) => {
+  if (!inicio || !fin) return 0;
+  const [h1, m1] = inicio.split(':').map(Number);
+  const [h2, m2] = fin.split(':').map(Number);
+  if ([h1, m1, h2, m2].some((v) => Number.isNaN(v))) return 0;
+
+  // Si son iguales, no hay horas laboradas.
+  if (h1 === h2 && m1 === m2) return 0;
+
+  if (h2 > h1 || (h2 === h1 && m2 > m1)) {
+    return (h2 - h1) + (m2 - m1) / 60;
+  }
+
+  return (24 - h1 + h2) + (m2 - m1) / 60;
+};
+
+const calcularHorasTurno = (turno) => {
+  if (!turno) return 0;
+
+  if (typeof turno.horas === 'number' && Number.isFinite(turno.horas) && turno.horas > 0) {
+    return turno.horas;
+  }
+
+  if (turno.tipo === 'tele-presencial') {
+    return calcularHorasRango(turno.horaInicioTele, turno.horaFinTele) +
+      calcularHorasRango(turno.horaInicioPres, turno.horaFinPres);
+  }
+
+  if (turno.tipo === 'horario-dividido') {
+    return calcularHorasRango(turno.horaInicioBloque1, turno.horaFinBloque1) +
+      calcularHorasRango(turno.horaInicioBloque2, turno.horaFinBloque2);
+  }
+
+  return calcularHorasRango(turno.horaInicio, turno.horaFin);
+};
+
 // Cálculo de horas totales
 export const calcularHorasTotales = (
   usuarioId,
@@ -69,7 +105,7 @@ export const calcularHorasTotales = (
   const NO_SUMAN_HORAS = ['descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'media-cumple'];
   const total = Object.values(horariosUsuario).reduce((total, turno) => {
     if (!turno || NO_SUMAN_HORAS.includes(turno.tipo)) return total;
-    return total + (turno.horas || 0);
+    return total + calcularHorasTurno(turno);
   }, 0);
 
   // Si estamos en la pestaña de la semana actual, las horas totales son las horas trabajadas

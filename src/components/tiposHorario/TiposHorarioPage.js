@@ -6,6 +6,7 @@ import { styled } from '@mui/material/styles';
 import CategoryIcon from '@mui/icons-material/Category';
 import { auth, database } from '../../firebase/config';
 import TiposHorarioManager from '../configuracion/TiposHorarioManager';
+import { getTiposHorario, saveTiposHorario } from '../../services/tiposHorarioService';
 
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
@@ -42,6 +43,12 @@ const TiposHorarioPage = () => {
         const userData = snapshot.exists() ? snapshot.val() : null;
         const canAccess = userData?.rol === 'Administrador' || userData?.departamento === 'Talento Humano';
         setAuthorized(Boolean(canAccess));
+
+        // Sincroniza defaults corregidos de tipos base para evitar configuraciones viejas inconsistentes.
+        if (canAccess) {
+          const { tipos } = await getTiposHorario();
+          await saveTiposHorario(tipos);
+        }
       } catch (error) {
         setAuthorized(false);
       } finally {

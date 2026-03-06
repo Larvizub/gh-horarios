@@ -273,7 +273,7 @@ const TurnoUsuario = memo(({
                     variant="caption" 
                     sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1, mt: 0.3 }}
                   >
-                    Pres: {horario.horaInicioPres} - {horario.horaFinPres}
+                    Presencial: {horario.horaInicioPres} - {horario.horaFinPres}
                   </Typography>
                 </>
               )}
@@ -308,7 +308,7 @@ const TurnoUsuario = memo(({
                   variant="caption"
                   sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1 }}
                 >
-                  B1: {horario.horaInicioBloque1} - {horario.horaFinBloque1}
+                  Presencial B1: {horario.horaInicioBloque1} - {horario.horaFinBloque1}
                 </Typography>
               )}
 
@@ -317,7 +317,7 @@ const TurnoUsuario = memo(({
                   variant="caption"
                   sx={{ fontSize: '0.75rem', textAlign: 'center', lineHeight: 1, mt: 0.3 }}
                 >
-                  B2: {horario.horaInicioBloque2} - {horario.horaFinBloque2}
+                  Presencial B2: {horario.horaInicioBloque2} - {horario.horaFinBloque2}
                 </Typography>
               )}
 

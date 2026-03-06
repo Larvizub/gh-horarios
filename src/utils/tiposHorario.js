@@ -85,8 +85,8 @@ export const DEFAULT_TIPOS_HORARIO = [
   { key: 'permiso', label: 'Permiso Otorgado por Jefatura', icon: 'AssignmentInd', color: '#8b5cf6', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, orden: 10, editable: false },
   { key: 'dia-brigada', label: 'Día por Brigada', icon: 'HealthAndSafety', color: '#d32f2f', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, orden: 11, editable: false },
   { key: 'beneficio-operaciones', label: 'Día libre - beneficio operaciones', icon: 'EmojiEvents', color: '#ffd700', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, orden: 12, editable: false },
-  { key: 'tarde-libre', label: 'Media Jornada Libre', icon: 'Weekend', color: '#64748b', template: TIPO_TEMPLATES.TARDE_LIBRE, noSumaHoras: true, orden: 13, editable: false },
-  { key: 'tele-media-libre', label: 'Teletrabajo & Media Jornada Libre', icon: 'HomeWork', color: '#10b981', template: TIPO_TEMPLATES.TELE_MEDIA_LIBRE, noSumaHoras: true, orden: 14, editable: false },
+  { key: 'tarde-libre', label: 'Media Jornada Libre', icon: 'Weekend', color: '#64748b', template: TIPO_TEMPLATES.TARDE_LIBRE, noSumaHoras: false, orden: 13, editable: false },
+  { key: 'tele-media-libre', label: 'Teletrabajo & Media Jornada Libre', icon: 'HomeWork', color: '#10b981', template: TIPO_TEMPLATES.TELE_MEDIA_LIBRE, noSumaHoras: false, orden: 14, editable: false },
   { key: 'media-cumple', label: 'Media Jornada Libre & Mes de cumpleaños', icon: 'Cake', color: '#607d8b', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, orden: 15, editable: false },
   { key: 'fuera-oficina', label: 'Fuera de Oficina', icon: 'LocationOff', color: '#607d8b', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, orden: 16, editable: false },
   { key: 'viaje-trabajo', label: 'Viaje de Trabajo', icon: 'Flight', color: '#1a237e', template: TIPO_TEMPLATES.VIAJE_TRABAJO, noSumaHoras: false, orden: 17, editable: false },
@@ -120,6 +120,7 @@ export const sanitizeTipoKey = (value = '') => {
 
 export const normalizeTipo = (key, raw = {}, index = 0) => {
   const base = DEFAULT_TIPOS_MAP[key] || {};
+  const isBuiltIn = Object.prototype.hasOwnProperty.call(DEFAULT_TIPOS_MAP, key);
   const iconName = raw.icon || base.icon || 'Work';
   const template = raw.template || base.template || TIPO_TEMPLATES.SIMPLE;
   return {
@@ -128,9 +129,11 @@ export const normalizeTipo = (key, raw = {}, index = 0) => {
     icon: TIPO_ICON_COMPONENTS[iconName] ? iconName : 'Work',
     color: raw.color || base.color || '#00830e',
     template,
-    noSumaHoras: typeof raw.noSumaHoras === 'boolean' ? raw.noSumaHoras : Boolean(base.noSumaHoras),
+    noSumaHoras: isBuiltIn
+      ? Boolean(base.noSumaHoras)
+      : (typeof raw.noSumaHoras === 'boolean' ? raw.noSumaHoras : Boolean(base.noSumaHoras)),
     orden: Number.isFinite(raw.orden) ? raw.orden : (base.orden || index + 1),
-    editable: Object.prototype.hasOwnProperty.call(DEFAULT_TIPOS_MAP, key) ? false : true
+    editable: isBuiltIn ? false : true
   };
 };
 
