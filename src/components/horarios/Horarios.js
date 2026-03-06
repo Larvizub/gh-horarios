@@ -299,6 +299,23 @@ const Horarios = () => {
 
   // Usar el usuario actual del hook (ya cargado individualmente)
   const currentUserData = userData;
+  const esModificador = currentUserData?.rol === 'Modificador';
+
+  const departamentosDisponibles = useMemo(() => {
+    if (esModificador && currentUserData?.departamento) {
+      return [currentUserData.departamento];
+    }
+    return departamentos;
+  }, [esModificador, currentUserData]);
+
+  // Defensa extra: si un modificador intenta cambiar de departamento por fuera de la UI,
+  // se fuerza nuevamente al suyo.
+  useEffect(() => {
+    if (!esModificador || !currentUserData?.departamento) return;
+    if (departamentoSeleccionado !== currentUserData.departamento) {
+      setDepartamentoSeleccionado(currentUserData.departamento);
+    }
+  }, [esModificador, currentUserData, departamentoSeleccionado, setDepartamentoSeleccionado]);
 
   // Copiar un horario al portapapeles (invocado por HorariosTable)
   const handleCopiarHorario = useCallback((usuarioId, diaKey, e) => {
@@ -488,12 +505,24 @@ const Horarios = () => {
       }
 
       const usuarioActual = currentUserData;
-      const esAdmin = usuarioActual && (usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador');
+      const esAdmin = usuarioActual?.rol === 'Administrador';
+      const esModDept = usuarioActual?.rol === 'Modificador';
       let operaciones = 0;
 
       // Construir un update en lote para minimizar roundtrips
       const updates = {};
-      if (!esAdmin) {
+      if (esModDept) {
+        for (const [weekKey, data] of Object.entries(buffers)) {
+          if (!data || Object.keys(data).length === 0) continue;
+          for (const [uid, horariosUsuario] of Object.entries(data)) {
+            const usuarioObjetivo = usuarios.find(u => u.id === uid);
+            const mismoDepartamento = usuarioObjetivo?.departamento === usuarioActual?.departamento;
+            if (!mismoDepartamento) continue;
+            updates[`horarios_registros/${weekKey}/${uid}`] = horariosUsuario || {};
+            operaciones += 1;
+          }
+        }
+      } else if (!esAdmin) {
         for (const [weekKey, data] of Object.entries(buffers)) {
           const propios = data?.[currentUser?.uid];
           if (propios && Object.keys(propios).length > 0) {
@@ -571,7 +600,7 @@ const Horarios = () => {
     } finally {
       setLoading(false);
     }
-  }, [bufferEditSemanas, horariosEditados, semanaSeleccionada, obtenerClaveSemana, currentUserData, currentUser, mostrarModal, recalcularHorasExtras]);
+  }, [bufferEditSemanas, horariosEditados, semanaSeleccionada, obtenerClaveSemana, currentUserData, currentUser, mostrarModal, recalcularHorasExtras, usuarios]);
 
   const handleEliminarSeleccionado = async () => {
     try {
@@ -629,11 +658,17 @@ const Horarios = () => {
           }
           // Permitir que el administrador elimine horarios de cualquier usuario
           // Los usuarios normales solo pueden eliminar sus propios horarios
-          if (usuarioActual.rol !== 'Administrador' && usuarioId !== currentUser.uid) {
+          const usuarioObjetivo = usuarios.find(u => u.id === usuarioId);
+          const puedeEliminarObjetivo =
+            usuarioActual.rol === 'Administrador' ||
+            usuarioId === currentUser.uid ||
+            (usuarioActual.rol === 'Modificador' && usuarioObjetivo?.departamento === usuarioActual?.departamento);
+
+          if (!puedeEliminarObjetivo) {
             mostrarModal({
               tipo: 'error',
               titulo: '🚫 Acceso Denegado',
-              mensaje: 'Solo puedes eliminar tus propios horarios.\n\nLos administradores pueden eliminar horarios de cualquier usuario.',
+              mensaje: 'No tienes permisos para eliminar horarios de este usuario.\n\nLos modificadores solo pueden alterar horarios de su departamento.',
               soloInfo: true
             });
             return;
@@ -1401,7 +1436,7 @@ const Horarios = () => {
             </PageTitle>
 
             <HeaderSemana
-              departamentos={departamentos}
+              departamentos={departamentosDisponibles}
               departamentoSeleccionado={departamentoSeleccionado}
               setDepartamentoSeleccionado={setDepartamentoSeleccionado}
               loading={loading}
