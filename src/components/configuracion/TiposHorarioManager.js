@@ -32,6 +32,8 @@ import {
   TIPO_TEMPLATES
 } from '../../utils/tiposHorario';
 
+const HIGHLIGHT_YELLOW = '#fff59d';
+
 const TEMPLATES_OPTIONS = [
   { value: TIPO_TEMPLATES.SIMPLE, label: 'Horario simple (inicio-fin)' },
   { value: TIPO_TEMPLATES.SIN_HORAS, label: 'Sin horas (solo etiqueta)' },
@@ -56,6 +58,7 @@ const TiposHorarioManager = () => {
   const [saving, setSaving] = useState(false);
   const [editingKey, setEditingKey] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [feedback, setFeedback] = useState(null);
 
   const sortedTipos = useMemo(() => {
     return [...tipos].sort((a, b) => a.orden - b.orden);
@@ -138,9 +141,33 @@ const TiposHorarioManager = () => {
       })();
 
       await saveTiposHorario(nextTipos);
-      toast.success(editingKey ? 'Tipo actualizado correctamente.' : 'Tipo creado correctamente.');
+
+      if (editingKey) {
+        const templateLabel = TEMPLATES_OPTIONS.find((item) => item.value === form.template)?.label || form.template;
+        const detail = `Se actualizo "${form.label}" (${form.key}). Icono: ${form.icon}. Color: ${form.color}. Plantilla: ${templateLabel}. ${form.noSumaHoras ? 'No suma horas.' : 'Si suma horas.'}`;
+        toast.success({
+          title: 'Tipo de horario actualizado',
+          description: detail,
+          duration: 7000,
+          position: 'top-center',
+          fill: HIGHLIGHT_YELLOW,
+        });
+        setFeedback({ type: 'success', text: detail });
+      } else {
+        const detail = `Se creo "${form.label}" con clave "${form.key}".`;
+        toast.success({
+          title: 'Tipo de horario creado',
+          description: detail,
+          duration: 6000,
+          position: 'top-center',
+          fill: HIGHLIGHT_YELLOW,
+        });
+        setFeedback({ type: 'success', text: detail });
+      }
+
       resetForm();
     } catch (error) {
+      setFeedback({ type: 'error', text: `No se pudo guardar el tipo: ${error.message}` });
       toast.error(`No se pudo guardar el tipo: ${error.message}`);
     } finally {
       setSaving(false);
@@ -190,6 +217,24 @@ const TiposHorarioManager = () => {
       <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
         Los tipos base del sistema se pueden editar, pero no eliminar.
       </Alert>
+
+      {feedback && (
+        <Alert
+          severity={feedback.type}
+          sx={{
+            mb: 2,
+            borderRadius: 2,
+            backgroundColor: HIGHLIGHT_YELLOW,
+            color: '#4a3b00',
+            '& .MuiAlert-icon': {
+              color: '#7a5a00'
+            }
+          }}
+          onClose={() => setFeedback(null)}
+        >
+          {feedback.text}
+        </Alert>
+      )}
 
       <Box sx={{ p: 2, borderRadius: 2, backgroundColor: alpha('#00830e', 0.04), border: '1px solid rgba(0, 131, 14, 0.12)' }}>
         <Grid container spacing={2}>
