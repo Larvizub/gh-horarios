@@ -310,23 +310,6 @@ const Horarios = () => {
 
   // Usar el usuario actual del hook (ya cargado individualmente)
   const currentUserData = userData;
-  const esModificador = currentUserData?.rol === 'Modificador';
-
-  const departamentosDisponibles = useMemo(() => {
-    if (esModificador && currentUserData?.departamento) {
-      return [currentUserData.departamento];
-    }
-    return departamentos;
-  }, [esModificador, currentUserData]);
-
-  // Defensa extra: si un modificador intenta cambiar de departamento por fuera de la UI,
-  // se fuerza nuevamente al suyo.
-  useEffect(() => {
-    if (!esModificador || !currentUserData?.departamento) return;
-    if (departamentoSeleccionado !== currentUserData.departamento) {
-      setDepartamentoSeleccionado(currentUserData.departamento);
-    }
-  }, [esModificador, currentUserData, departamentoSeleccionado, setDepartamentoSeleccionado]);
 
   // Copiar un horario al portapapeles (invocado por HorariosTable)
   const handleCopiarHorario = useCallback((usuarioId, diaKey, e) => {
@@ -1451,7 +1434,7 @@ const Horarios = () => {
             </PageTitle>
 
             <HeaderSemana
-              departamentos={departamentosDisponibles}
+              departamentos={departamentos}
               departamentoSeleccionado={departamentoSeleccionado}
               setDepartamentoSeleccionado={setDepartamentoSeleccionado}
               loading={loading}
