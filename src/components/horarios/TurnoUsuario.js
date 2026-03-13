@@ -94,7 +94,7 @@ const TurnoUsuario = memo(({
             aria-hidden="true"
             sx={{
               position: 'absolute',
-              right: -8,
+              right: -10,
               top: '50%',
               transform: 'translateY(-50%) rotate(-14deg)',
               opacity: soloLabel ? 0.14 : 0.25,
@@ -104,7 +104,7 @@ const TurnoUsuario = memo(({
               zIndex: 0
             }}
           >
-            <IconoTipoHorario sx={{ fontSize: '3.1rem' }} />
+            <IconoTipoHorario sx={{ fontSize: '3.8rem' }} />
           </Box>
         )}
         {/* Icono de copiar para desktop */}
