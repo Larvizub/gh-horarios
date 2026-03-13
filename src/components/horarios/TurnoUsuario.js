@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Grid, Box, Typography, IconButton } from '@mui/material';
 import useTiposHorario from '../../hooks/useTiposHorario';
+import { getTipoIconComponent } from '../../utils/tiposHorario';
 
 const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso', 'beneficio-operaciones'];
 
@@ -22,6 +23,7 @@ const TurnoUsuario = memo(({
   const tieneHorario = horario && horario.tipo !== 'libre';
   const tipoCatalogo = horario?.tipo ? tiposMap[horario.tipo] : null;
   const colorTipoDinamico = tipoCatalogo?.editable ? tipoCatalogo?.color : null;
+  const IconoTipoHorario = getTipoIconComponent(tipoCatalogo?.icon);
 
   // Determina si solo se debe mostrar el label
   const soloLabel = tieneHorario && TIPOS_SOLO_LABEL.includes(horario.tipo);
@@ -48,6 +50,7 @@ const TurnoUsuario = memo(({
           border: '1px solid #e0e0e0',
           cursor: editando ? 'pointer' : 'default',
           position: 'relative',
+          overflow: 'hidden',
           bgcolor: soloLabel
             ? '#fff'
             : tieneHorario ? (
@@ -65,6 +68,10 @@ const TurnoUsuario = memo(({
           color: soloLabel
             ? '#333'
             : tieneHorario ? 'white' : 'text.secondary',
+          '& > :not([aria-hidden="true"])': {
+            position: 'relative',
+            zIndex: 1
+          },
           '&:hover': editando ? {
             backgroundColor: soloLabel
               ? '#fff'
@@ -82,6 +89,24 @@ const TurnoUsuario = memo(({
           } : {}
         }}
       >
+        {tieneHorario && (
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+              right: -8,
+              top: '50%',
+              transform: 'translateY(-50%) rotate(-14deg)',
+              opacity: soloLabel ? 0.14 : 0.25,
+              color: soloLabel ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.45)',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              zIndex: 0
+            }}
+          >
+            <IconoTipoHorario sx={{ fontSize: '3.1rem' }} />
+          </Box>
+        )}
         {/* Icono de copiar para desktop */}
         {tieneHorario && editando && !soloLabel &&
           currentUser &&
@@ -96,6 +121,7 @@ const TurnoUsuario = memo(({
                 position: 'absolute',
                 top: 2,
                 right: 2,
+                zIndex: 2,
                 backgroundColor: 'transparent',
                 color: copiarColor,
                 minWidth: 'auto',
@@ -126,6 +152,7 @@ const TurnoUsuario = memo(({
                 position: 'absolute',
                 top: 2,
                 right: 2,
+                zIndex: 2,
                 backgroundColor: 'transparent',
                 color: copiarColor,
                 minWidth: 'auto',
@@ -143,8 +170,8 @@ const TurnoUsuario = memo(({
             </IconButton>
           ) : null}
         {tieneHorario ? (
-          soloLabel ? (
-            <>
+            soloLabel ? (
+              <>
               <Typography 
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
@@ -159,9 +186,9 @@ const TurnoUsuario = memo(({
                   {horario.nota}
                 </Typography>
               )}
-            </>
-          ) : horario.tipo === 'tarde-libre' ? (
-            <>
+              </>
+            ) : horario.tipo === 'tarde-libre' ? (
+              <>
               <Typography 
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
@@ -198,9 +225,9 @@ const TurnoUsuario = memo(({
                   {horario.nota}
                 </Typography>
               )}
-            </>
-          ) : horario.tipo === 'tele-media-libre' ? (
-            <>
+              </>
+            ) : horario.tipo === 'tele-media-libre' ? (
+              <>
               <Typography 
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
@@ -237,16 +264,16 @@ const TurnoUsuario = memo(({
                   {horario.nota}
                 </Typography>
               )}
-            </>
-          ) : horario.tipo === 'viaje-trabajo' ? (
-            <Typography 
+              </>
+            ) : horario.tipo === 'viaje-trabajo' ? (
+              <Typography 
               variant="caption" 
               sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1, fontWeight: 'bold' }}
             >
               {getTipoLabel(horario.tipo)}
             </Typography>
-          ) : horario.tipo === 'tele-presencial' ? (
-            <>
+            ) : horario.tipo === 'tele-presencial' ? (
+              <>
               <Typography 
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
@@ -293,9 +320,9 @@ const TurnoUsuario = memo(({
                   {horario.nota}
                 </Typography>
               )}
-            </>
-          ) : horario.tipo === 'horario-dividido' ? (
-            <>
+              </>
+            ) : horario.tipo === 'horario-dividido' ? (
+              <>
               <Typography
                 variant="caption"
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.2, fontWeight: 'bold' }}
@@ -336,9 +363,9 @@ const TurnoUsuario = memo(({
                   {horario.nota}
                 </Typography>
               )}
-            </>
-          ) : (
-            <>
+              </>
+            ) : (
+              <>
               <Typography 
                 variant="caption" 
                 sx={{ fontSize: '0.85rem', textAlign: 'center', lineHeight: 1, fontWeight: 'bold' }}
@@ -375,16 +402,16 @@ const TurnoUsuario = memo(({
                       {horario.nota}
                     </Typography>
               )}
-            </>
-          )
-        ) : (
+              </>
+            )
+          ) : (
           <Typography 
             variant="caption" 
             sx={{ fontSize: '0.8rem', textAlign: 'center', lineHeight: 1.2, color: '#888' }}
           >
             Sin Turno
           </Typography>
-        )}
+          )}
       </Box>
     </Grid>
   );
