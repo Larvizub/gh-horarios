@@ -24,6 +24,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import HistoryIcon from '@mui/icons-material/History';
+import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import PersonIcon from '@mui/icons-material/Person';
@@ -136,7 +137,7 @@ const UserAvatar = styled(Avatar)(() => ({
 }));
 
 const menuItems = [
-  { label: 'Inicio', icon: <DashboardIcon />, path: '/dashboard' },
+  { label: 'Inicio', icon: <HomeIcon />, path: '/dashboard' },
   { label: 'Horarios', icon: <EventNoteIcon />, path: '/horarios' },
   { label: 'Consulta', icon: <HistoryIcon />, path: '/consulta-horarios' },
   { label: 'Personal', icon: <PersonIcon />, path: '/personal' },
@@ -240,6 +241,10 @@ const Navbar = memo(({ user }) => {
     navigate(path);
     setDrawerOpen(false);
   }, [navigate]);
+
+  const toggleDrawer = useCallback(() => {
+    setDrawerOpen((current) => !current);
+  }, []);
 
   const renderNavigationItems = (collapsed = false, onSelect = null) => (
     <List sx={{ px: 0, py: 1 }}>
@@ -367,8 +372,8 @@ const Navbar = memo(({ user }) => {
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
             <IconButton
-              aria-label="Abrir navegacion"
-              onClick={() => setDrawerOpen(true)}
+              aria-label={drawerOpen ? 'Cerrar navegacion' : 'Abrir navegacion'}
+              onClick={toggleDrawer}
               sx={{ display: { xs: 'inline-flex', md: 'none' }, color: '#1a1a2e' }}
             >
               <MenuIcon />
@@ -409,13 +414,16 @@ const Navbar = memo(({ user }) => {
         >
           <Box
             sx={{
-              px: sidebarExpanded ? 2.2 : 1.1,
-              pt: 1.5,
-              pb: 1,
-              display: 'flex',
+              width: '100%',
+              px: sidebarExpanded ? 2.2 : 0,
+              pt: sidebarExpanded ? 1.5 : 1.25,
+              pb: sidebarExpanded ? 1 : 0.75,
+              display: sidebarExpanded ? 'flex' : 'grid',
               alignItems: 'center',
-              gap: 1.2,
-              minHeight: 72,
+              justifyContent: sidebarExpanded ? 'flex-start' : 'center',
+              placeItems: sidebarExpanded ? 'initial' : 'center',
+              gap: sidebarExpanded ? 1.2 : 0,
+              minHeight: sidebarExpanded ? 72 : 68,
             }}
           >
             <Box
@@ -424,14 +432,27 @@ const Navbar = memo(({ user }) => {
                 height: 44,
                 borderRadius: 3,
                 background: 'linear-gradient(135deg, rgba(0,131,14,0.1), rgba(0,131,14,0.03))',
-                display: 'grid',
-                placeItems: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 flex: '0 0 auto',
               }}
             >
-              <Typography sx={{ fontWeight: 800, color: '#00830e', fontSize: '0.85rem' }}>GP</Typography>
+              <Typography
+                component="span"
+                sx={{ fontWeight: 800, color: '#00830e', fontSize: '0.85rem', lineHeight: 1, display: 'block' }}
+              >
+                GP
+              </Typography>
             </Box>
-            <Box sx={{ minWidth: 0, opacity: sidebarExpanded ? 1 : 0, transition: 'opacity 180ms ease' }}>
+            <Box
+              sx={{
+                minWidth: 0,
+                display: sidebarExpanded ? 'block' : 'none',
+                opacity: sidebarExpanded ? 1 : 0,
+                transition: 'opacity 180ms ease',
+              }}
+            >
               <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1a1a2e' }} noWrap>
                 Navegacion
               </Typography>
