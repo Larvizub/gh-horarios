@@ -458,8 +458,11 @@ function AppContent() {
           component="main" 
           sx={{ 
             flexGrow: 1,
-            pt: currentUser ? { xs: 0, md: 0 } : 0,
-            minHeight: currentUser ? 'calc(100vh - 64px)' : '100vh',
+            pt: currentUser ? { xs: '56px', md: '80px' } : 0,
+            pl: currentUser ? { xs: 0, md: '112px' } : 0,
+            pr: { xs: 0, md: 3 },
+            pb: 3,
+            minHeight: '100vh',
           }}
         >
           <Routes>
