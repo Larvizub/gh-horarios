@@ -17,7 +17,7 @@ export const buildDefaultRolesCatalog = () => {
     },
     {
       id: 'modificador',
-      label: 'Modificador',
+      label: 'Gestor',
       permisos: defaultPerms(['puedeVerHorarios', 'puedeModificarHorarios', 'puedeAccederPersonal']),
       editable: true,
       orden: 2,

@@ -74,7 +74,8 @@ export function useUsuariosYHorarios() {
             ...userData,
             tipoContrato: userData.tipoContrato || 'Operativo'
           }));
-          setUsuarios(array);
+          // Excluir usuarios inactivos (aprobados como 'activo' !== false)
+          setUsuarios(array.filter(u => u.activo !== false));
         } else {
           setUsuarios([]);
         }

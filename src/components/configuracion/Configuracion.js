@@ -221,7 +221,7 @@ const AdminModuleHeader = styled(ButtonBase)(() => ({
 const rolesDisponibles = [
   { value: null, label: 'Sin rol' },
   { value: ROLES.ADMINISTRADOR, label: 'Administrador' },
-  { value: ROLES.MODIFICADOR, label: 'Modificador' }, 
+  { value: ROLES.MODIFICADOR, label: 'Gestor' }, 
   { value: ROLES.VISOR, label: 'Visor' }
 ];
 
@@ -270,6 +270,7 @@ const Configuracion = () => {
     departamento: '',
     tipoContrato: '',
     rol: null,
+    activo: true,
   });
   const [usuarioEliminarAbierto, setUsuarioEliminarAbierto] = useState(false);
   const [usuarioAEliminar, setUsuarioAEliminar] = useState(null);
@@ -782,6 +783,7 @@ const Configuracion = () => {
       departamento: usuario.departamento || '',
       tipoContrato: usuario.tipoContrato || 'Operativo',
       rol: usuario.rol || null,
+      activo: usuario.activo !== false,
     });
     setUsuarioEdicionAbierto(true);
   };
@@ -789,12 +791,13 @@ const Configuracion = () => {
   const cerrarEdicionUsuario = () => {
     setUsuarioEdicionAbierto(false);
     setUsuarioEnEdicion(null);
-    setUsuarioEdicionForm({ nombre: '', apellidos: '', email: '', cargo: '', departamento: '', tipoContrato: '', rol: null });
+    setUsuarioEdicionForm({ nombre: '', apellidos: '', email: '', cargo: '', departamento: '', tipoContrato: '', rol: null, activo: true });
   };
 
   const handleUsuarioEdicionChange = (event) => {
-    const { name, value } = event.target;
-    setUsuarioEdicionForm((current) => ({ ...current, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    const finalValue = type === 'checkbox' ? checked : value;
+    setUsuarioEdicionForm((current) => ({ ...current, [name]: finalValue }));
   };
 
   const handleGuardarEdicionUsuario = async () => {
@@ -814,6 +817,7 @@ const Configuracion = () => {
         departamento: usuarioEdicionForm.departamento,
         tipoContrato: usuarioEdicionForm.tipoContrato,
         ...(puedeAsignarRoles(userData) && { rol: usuarioEdicionForm.rol }),
+        activo: usuarioEdicionForm.activo !== false,
       };
 
       await update(ref(database, `usuarios/${targetUserId}`), updateData);
@@ -1729,6 +1733,20 @@ const Configuracion = () => {
                             <MenuItem value="Confianza">Confianza (72h)</MenuItem>
                           </StyledSelect>
                         </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              name="activo"
+                              checked={Boolean(usuarioEdicionForm.activo)}
+                              onChange={handleUsuarioEdicionChange}
+                              color="primary"
+                              disabled={loading}
+                            />
+                          }
+                          label={usuarioEdicionForm.activo ? 'Activo' : 'Inactivo'}
+                        />
                       </Grid>
                     </Grid>
                   </DialogContent>
