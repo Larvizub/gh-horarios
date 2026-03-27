@@ -57,7 +57,9 @@ import useDepartamentos from '../../hooks/useDepartamentos';
 import { saveDepartamentosCatalogo } from '../../services/departamentosService';
 import { DEFAULT_DEPARTAMENTOS, normalizeDepartamentoLabel } from '../../utils/departamentos';
 import useCargos from '../../hooks/useCargos';
+import useRoles from '../../hooks/useRoles';
 import { saveCargosCatalogo } from '../../services/cargosService';
+import { saveRolesCatalogo } from '../../services/rolesService';
 import { buildCargoIdFromLabel, buildDefaultCargoPermissions, groupCargosByDepartamento, normalizeCargoDepartamentoId, normalizeCargoLabel, normalizeCargoPermissions, PERMISOS_CARGO, resolveCargoRecord } from '../../utils/cargos';
 
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -227,10 +229,11 @@ const Configuracion = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { departamentos, departamentosActivos, loadingDepartamentos } = useDepartamentos();
   const { cargos, loadingCargos } = useCargos();
+  const { roles, loadingRoles } = useRoles();
   const [busquedaCargo, setBusquedaCargo] = useState('');
   const [permisosModuleOpen, setPermisosModuleOpen] = useState(false);
-  const [cargoPermisoSeleccionado, setCargoPermisoSeleccionado] = useState('');
-  const [permisosCargoForm, setPermisosCargoForm] = useState(buildDefaultCargoPermissions());
+  const [roleSeleccionadoId, setRoleSeleccionadoId] = useState('');
+  const [permisosRolForm, setPermisosRolForm] = useState(buildDefaultCargoPermissions());
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('');
   const [busquedaDepartamentos, setBusquedaDepartamentos] = useState('');
   const [nuevoCargoDepartamentoId, setNuevoCargoDepartamentoId] = useState('');
@@ -244,6 +247,7 @@ const Configuracion = () => {
   const [cargoEdicionForm, setCargoEdicionForm] = useState({
     label: '',
     departamentoId: '',
+    roleId: null,
   });
 
   const mountedRef = useRef(true);
@@ -255,7 +259,18 @@ const Configuracion = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [usuarios, setUsuarios] = useState([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
-  const [usuarioEdicionAbierta, setUsuarioEdicionAbierta] = useState(false);
+  const [usuarioEdicionAbierto, setUsuarioEdicionAbierto] = useState(false);
+  const [usuarioEnEdicion, setUsuarioEnEdicion] = useState(null);
+  const [usuarioEdicionForm, setUsuarioEdicionForm] = useState({
+    nombre: '',
+    apellidos: '',
+    email: '',
+    cargo: '',
+    departamento: '',
+    tipoContrato: '',
+    rol: null,
+  });
+  const [usuarioEliminarAbierto, setUsuarioEliminarAbierto] = useState(false);
   const [usuarioAEliminar, setUsuarioAEliminar] = useState(null);
   const [adminModuleOpen, setAdminModuleOpen] = useState(false);
   const [catalogModuleOpen, setCatalogModuleOpen] = useState(false);
@@ -397,10 +412,10 @@ const Configuracion = () => {
   }, [busquedaCargo, cargosOrdenados]);
 
   useEffect(() => {
-    if (!cargoPermisoSeleccionado && cargosOrdenados.length > 0) {
-      setCargoPermisoSeleccionado(cargosOrdenados[0].id);
+    if (!roleSeleccionadoId && roles.length > 0) {
+      setRoleSeleccionadoId(roles[0].id);
     }
-  }, [cargoPermisoSeleccionado, cargosOrdenados]);
+  }, [roles, roleSeleccionadoId]);
 
   useEffect(() => {
     if (!nuevoCargoDepartamentoId && departamentos.length > 0) {
@@ -409,13 +424,13 @@ const Configuracion = () => {
   }, [departamentos, nuevoCargoDepartamentoId]);
 
   useEffect(() => {
-    const cargoSeleccionado = cargosOrdenados.find((item) => item.id === cargoPermisoSeleccionado);
-    setPermisosCargoForm(normalizeCargoPermissions(cargoSeleccionado?.permisos));
-  }, [cargoPermisoSeleccionado, cargosOrdenados]);
+    const rolSeleccionado = roles.find((r) => r.id === roleSeleccionadoId);
+    setPermisosRolForm(normalizeCargoPermissions(rolSeleccionado?.permisos));
+  }, [roleSeleccionadoId, roles]);
 
-  const cargoSeleccionadoPermisos = useMemo(() => {
-    return cargosOrdenados.find((item) => item.id === cargoPermisoSeleccionado) || null;
-  }, [cargosOrdenados, cargoPermisoSeleccionado]);
+  const rolSeleccionado = useMemo(() => {
+    return roles.find((r) => r.id === roleSeleccionadoId) || null;
+  }, [roles, roleSeleccionadoId]);
 
   const cargosSugeridosDesdeUsuarios = useMemo(() => {
     const vistos = new Map();
@@ -641,6 +656,7 @@ const Configuracion = () => {
     setCargoEdicionForm({
       label: cargo.label || '',
       departamentoId: cargo.departamentoId || '',
+      roleId: cargo.roleId || null,
     });
     setCargoEdicionAbierto(true);
   };
@@ -648,7 +664,7 @@ const Configuracion = () => {
   const cerrarEdicionCargo = () => {
     setCargoEdicionAbierto(false);
     setCargoEnEdicion(null);
-    setCargoEdicionForm({ label: '', departamentoId: '' });
+    setCargoEdicionForm({ label: '', departamentoId: '', roleId: null });
   };
 
   const handleCargoEdicionChange = (event) => {
@@ -698,6 +714,7 @@ const Configuracion = () => {
           ...item,
           label,
           departamentoId,
+          roleId: cargoEdicionForm.roleId || null,
         };
       });
 
@@ -732,36 +749,133 @@ const Configuracion = () => {
     }
   };
 
+  const abrirEdicionUsuario = (usuario) => {
+    setUsuarioEnEdicion(usuario);
+    setUsuarioEdicionForm({
+      nombre: usuario.nombre || '',
+      apellidos: usuario.apellidos || '',
+      email: usuario.email || '',
+      cargo: usuario.cargo || '',
+      departamento: usuario.departamento || '',
+      tipoContrato: usuario.tipoContrato || 'Operativo',
+      rol: usuario.rol || null,
+    });
+    setUsuarioEdicionAbierto(true);
+  };
+
+  const cerrarEdicionUsuario = () => {
+    setUsuarioEdicionAbierto(false);
+    setUsuarioEnEdicion(null);
+    setUsuarioEdicionForm({ nombre: '', apellidos: '', email: '', cargo: '', departamento: '', tipoContrato: '', rol: null });
+  };
+
+  const handleUsuarioEdicionChange = (event) => {
+    const { name, value } = event.target;
+    setUsuarioEdicionForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleGuardarEdicionUsuario = async () => {
+    if (!usuarioEnEdicion) return;
+
+    try {
+      setLoading(true);
+      const targetUserId = usuarioEnEdicion.id;
+      const cargoRecord = resolveCargoRecord(usuarioEdicionForm.cargo || '');
+
+      const updateData = {
+        nombre: usuarioEdicionForm.nombre,
+        apellidos: usuarioEdicionForm.apellidos,
+        email: usuarioEdicionForm.email,
+        cargo: cargoRecord.cargo,
+        cargoId: cargoRecord.cargoId,
+        departamento: usuarioEdicionForm.departamento,
+        tipoContrato: usuarioEdicionForm.tipoContrato,
+        ...(puedeAsignarRoles(userData) && { rol: usuarioEdicionForm.rol }),
+      };
+
+      await update(ref(database, `usuarios/${targetUserId}`), updateData);
+
+      setUsuarios((current) => current.map((u) => (u.id === targetUserId ? { ...u, ...updateData } : u)));
+      if (usuarioSeleccionado && usuarioSeleccionado.id === targetUserId) {
+        setUsuarioSeleccionado((prev) => ({ ...prev, ...updateData }));
+      }
+
+      toast.success('Usuario actualizado correctamente.');
+      cerrarEdicionUsuario();
+    } catch (error) {
+      console.error('Error al actualizar usuario:', error);
+      toast.error('No se pudo actualizar el usuario: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEliminarUsuario = async (usuario) => {
+    try {
+      setLoading(true);
+      await remove(ref(database, `usuarios/${usuario.id}`));
+      setUsuarios((current) => current.filter((u) => u.id !== usuario.id));
+      toast.success('Usuario eliminado correctamente.');
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      toast.error('No se pudo eliminar el usuario: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCargoDepartamentoChange = (event) => {
     setNuevoCargoDepartamentoId(event.target.value);
   };
 
   const handleGuardarPermisosCargo = async () => {
-    if (!cargoSeleccionadoPermisos) {
-      toast.error('Selecciona un cargo para administrar sus permisos.');
+    if (!rolSeleccionado) {
+      toast.error('Selecciona un rol para administrar sus permisos.');
       return;
     }
 
     try {
       setLoading(true);
-      const cargosActualizados = cargosOrdenados.map((cargo) => {
-        if (cargo.id !== cargoSeleccionadoPermisos.id) {
-          return cargo;
-        }
-
+      const rolesActualizados = roles.map((role) => {
+        if (role.id !== rolSeleccionado.id) return role;
         return {
-          ...cargo,
-          permisos: normalizeCargoPermissions(permisosCargoForm),
+          ...role,
+          permisos: normalizeCargoPermissions(permisosRolForm),
         };
       });
 
-      await saveCargosCatalogo(cargosActualizados);
-      toast.success('Permisos del cargo actualizados correctamente.');
+      await saveRolesCatalogo(rolesActualizados);
+      toast.success('Permisos del rol actualizados correctamente.');
     } catch (error) {
-      console.error('Error al guardar permisos del cargo:', error);
+      console.error('Error al guardar permisos del rol:', error);
       toast.error('No se pudieron guardar los permisos: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleModule = (module) => {
+    const currentStates = {
+      admin: adminModuleOpen,
+      catalog: catalogModuleOpen,
+      cargo: cargoModuleOpen,
+      permisos: permisosModuleOpen,
+    };
+
+    const isCurrentlyOpen = currentStates[module];
+
+    // Close all modules first
+    setAdminModuleOpen(false);
+    setCatalogModuleOpen(false);
+    setCargoModuleOpen(false);
+    setPermisosModuleOpen(false);
+
+    // If the requested module was closed, open it; otherwise leave closed
+    if (!isCurrentlyOpen) {
+      if (module === 'admin') setAdminModuleOpen(true);
+      if (module === 'catalog') setCatalogModuleOpen(true);
+      if (module === 'cargo') setCargoModuleOpen(true);
+      if (module === 'permisos') setPermisosModuleOpen(true);
     }
   };
 
@@ -846,7 +960,19 @@ const Configuracion = () => {
                   tipoContrato: usuarioEncontrado.tipoContrato || 'Operativo',
                   rol: usuarioEncontrado.rol || null
                 });
-                setUsuarioEdicionAbierta(true);
+                // Abrir el modal de edición de usuario directamente
+                setUsuarioEnEdicion(usuarioEncontrado);
+                setUsuarioEdicionForm({
+                  nombre: usuarioEncontrado.nombre || '',
+                  apellidos: usuarioEncontrado.apellidos || '',
+                  email: usuarioEncontrado.email || '',
+                  cargo: usuarioEncontrado.cargo || '',
+                  departamento: usuarioEncontrado.departamento || '',
+                  tipoContrato: usuarioEncontrado.tipoContrato || 'Operativo',
+                  rol: usuarioEncontrado.rol || null,
+                });
+                setUsuarioEdicionAbierto(true);
+                setTabIndex(2); // Cambiar a la pestaña de administración
               }
             }
           }
@@ -933,53 +1059,6 @@ const Configuracion = () => {
     });
   };
 
-  const abrirEdicionUsuario = (usuario) => {
-    setUsuarioSeleccionado(usuario);
-    setFormData({
-      nombre: usuario.nombre || '',
-      apellidos: usuario.apellidos || '',
-      email: usuario.email || '',
-      cargo: usuario.cargo || '',
-      departamento: usuario.departamento || '',
-      tipoContrato: usuario.tipoContrato || 'Operativo',
-      rol: usuario.rol || null,
-    });
-    setUsuarioEdicionAbierta(true);
-  };
-
-  const cerrarEdicionUsuario = () => {
-    setUsuarioEdicionAbierta(false);
-    setUsuarioSeleccionado(null);
-  };
-
-  const abrirEliminarUsuario = (usuario) => {
-    setUsuarioAEliminar(usuario);
-  };
-
-  const cerrarEliminarUsuario = () => {
-    setUsuarioAEliminar(null);
-  };
-
-  const eliminarUsuario = async () => {
-    if (!usuarioAEliminar) return;
-
-    try {
-      setLoading(true);
-      await remove(ref(database, `usuarios/${usuarioAEliminar.id}`));
-      setUsuarios((currentUsuarios) => currentUsuarios.filter((usuario) => usuario.id !== usuarioAEliminar.id));
-      if (usuarioSeleccionado?.id === usuarioAEliminar.id) {
-        cerrarEdicionUsuario();
-      }
-      toast.success('Usuario eliminado correctamente.');
-      cerrarEliminarUsuario();
-    } catch (error) {
-      console.error('Error al eliminar usuario:', error);
-      toast.error('Error al eliminar usuario: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const guardarPerfil = async () => {
     try {
       setLoading(true);
@@ -1039,8 +1118,6 @@ const Configuracion = () => {
           cargoId: cargoRecord.cargoId,
         });
       }
-
-      setUsuarioEdicionAbierta(false);
     } catch (error) {
       console.error('Error al actualizar perfil:', error);
       setError('Error al actualizar perfil: ' + error.message);
@@ -1110,7 +1187,6 @@ const Configuracion = () => {
       setDialogoReautenticacion(false);
       setReautenticacionPassword('');
       setAccionPendiente(null);
-      setUsuarioEdicionAbierta(false);
     } catch (error) {
       console.error('Error en la reautenticación:', error);
       setError('Error en la reautenticación: ' + error.message);
@@ -1154,7 +1230,7 @@ const Configuracion = () => {
             {isAdmin ? (
               <>
                 <AdminModuleCard elevation={0}>
-                <AdminModuleHeader type="button" onClick={() => setAdminModuleOpen((current) => !current)}>
+                <AdminModuleHeader type="button" onClick={() => toggleModule('admin')}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                     <Avatar sx={{ width: 44, height: 44, bgcolor: '#00830e', color: '#ffffff', fontWeight: 700 }}>
                       {usuarios.length}
@@ -1179,21 +1255,15 @@ const Configuracion = () => {
                 </AdminModuleHeader>
 
                 <Collapse in={adminModuleOpen} timeout="auto">
-                  <Box sx={{ p: { xs: 2, md: 3 } }}>
+                  <Box sx={{ p: { xs: 2, md: 4 }, pt: 3 }}>
                     <TextField
                       fullWidth
                       label="Buscar usuario"
                       value={busquedaUsuarios}
                       onChange={(event) => setBusquedaUsuarios(event.target.value)}
                       placeholder="Nombre, correo, cargo o departamento"
-                      sx={{ mb: 2.5 }}
+                      sx={{ mb: 3 }}
                     />
-
-                    {busquedaUsuarios && usuariosFiltrados.length === 0 && (
-                      <Alert severity="info" sx={{ mb: 2.5, borderRadius: 3 }}>
-                        No hay usuarios que coincidan con la búsqueda.
-                      </Alert>
-                    )}
 
                     <Box
                       sx={{
@@ -1206,7 +1276,7 @@ const Configuracion = () => {
                       <Box
                         sx={{
                           display: { xs: 'none', md: 'grid' },
-                          gridTemplateColumns: '1.5fr 1.2fr 1.2fr 1fr auto',
+                          gridTemplateColumns: '2fr 1.2fr 1.2fr 0.9fr auto',
                           gap: 2,
                           px: 2.5,
                           py: 1.5,
@@ -1224,7 +1294,7 @@ const Configuracion = () => {
                           Departamento
                         </Typography>
                         <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                          Tipo contrato
+                          Tipo
                         </Typography>
                         <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4, textAlign: 'right' }}>
                           Acciones
@@ -1235,7 +1305,7 @@ const Configuracion = () => {
                         {usuariosFiltrados.length === 0 ? (
                           <Box sx={{ p: 2.5 }}>
                             <Alert severity="info" sx={{ borderRadius: 3, mb: 0 }}>
-                              No hay usuarios disponibles.
+                              No hay usuarios que coincidan con la búsqueda.
                             </Alert>
                           </Box>
                         ) : (
@@ -1244,10 +1314,10 @@ const Configuracion = () => {
                               key={usuario.id}
                               sx={{
                                 display: 'grid',
-                                gridTemplateColumns: { xs: '1fr', md: '1.5fr 1.2fr 1.2fr 1fr auto' },
+                                gridTemplateColumns: { xs: '1fr', md: '2fr 1.2fr 1.2fr 0.9fr auto' },
                                 gap: { xs: 1.1, md: 2 },
                                 px: 2.5,
-                                py: 1.75,
+                                py: 1.5,
                                 borderBottom: index < usuariosFiltrados.length - 1 ? '1px solid rgba(15, 23, 42, 0.08)' : 'none',
                                 alignItems: { xs: 'flex-start', md: 'center' },
                                 background: '#ffffff',
@@ -1257,17 +1327,22 @@ const Configuracion = () => {
                                 <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
                                   Nombre
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }} noWrap>
-                                  {usuario.nombre} {usuario.apellidos}
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#00830e', fontSize: '0.85rem' }}>
+                                    {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
+                                  </Avatar>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                                    {usuario.nombre} {usuario.apellidos}
+                                  </Typography>
+                                </Box>
                               </Box>
 
                               <Box sx={{ display: 'grid', gap: 0.4 }}>
                                 <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
                                   Cargo
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: '#334155' }} noWrap>
-                                  {usuario.cargo || 'Sin cargo'}
+                                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                                  {usuario.cargo}
                                 </Typography>
                               </Box>
 
@@ -1275,33 +1350,38 @@ const Configuracion = () => {
                                 <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
                                   Departamento
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: '#334155' }} noWrap>
-                                  {usuario.departamento || 'Sin departamento'}
+                                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                                  {usuario.departamento}
                                 </Typography>
                               </Box>
 
-                              <Box sx={{ display: 'grid', gap: 0.4 }}>
+                              <Box sx={{ display: 'grid', gap: 0.4, justifyItems: 'center' }}>
                                 <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
-                                  Tipo contrato
+                                  Tipo
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: '#334155' }} noWrap>
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    maxWidth: 88,
+                                    minWidth: 48,
+                                    px: 1.25,
+                                    py: 0.45,
+                                    borderRadius: 999,
+                                    bgcolor: 'rgba(0, 131, 14, 0.04)',
+                                    color: '#065f46',
+                                    fontWeight: 700,
+                                  }}
+                                >
                                   {usuario.tipoContrato || 'Operativo'}
-                                </Typography>
+                                </Box>
                               </Box>
 
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: { xs: 'flex-start', md: 'flex-end' },
-                                  gap: 0.5,
-                                }}
-                              >
-                                <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase', mr: 0.5 }}>
-                                  Acciones
-                                </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 0.5 }}>
                                 <IconButton
-                                  aria-label={`Editar ${usuario.nombre} ${usuario.apellidos}`}
+                                  aria-label={`Editar ${usuario.nombre}`}
                                   onClick={() => abrirEdicionUsuario(usuario)}
                                   disabled={loading}
                                   sx={{ color: '#00830e' }}
@@ -1309,9 +1389,9 @@ const Configuracion = () => {
                                   <EditIcon fontSize="small" />
                                 </IconButton>
                                 <IconButton
-                                  aria-label={`Eliminar ${usuario.nombre} ${usuario.apellidos}`}
-                                  onClick={() => abrirEliminarUsuario(usuario)}
-                                  disabled={loading}
+                                  aria-label={`Eliminar ${usuario.nombre}`}
+                                  onClick={() => { setUsuarioAEliminar(usuario); setUsuarioEliminarAbierto(true); }}
+                                  disabled={!isAdmin || loading}
                                   sx={{ color: '#dc2626', '&.Mui-disabled': { color: 'rgba(220, 38, 38, 0.35)' } }}
                                 >
                                   <DeleteOutlineIcon fontSize="small" />
@@ -1323,159 +1403,11 @@ const Configuracion = () => {
                       </Box>
                     </Box>
                   </Box>
-                </Collapse>
+                  </Collapse>
                 </AdminModuleCard>
 
-                <Dialog open={usuarioEdicionAbierta} onClose={cerrarEdicionUsuario} fullWidth maxWidth="md">
-                  <DialogTitle sx={{ fontWeight: 700 }}>Editar usuario</DialogTitle>
-                  <DialogContent sx={{ pt: 1 }}>
-                    <DialogContentText sx={{ mb: 2 }}>
-                      Usa este modal para actualizar los datos del usuario.
-                    </DialogContentText>
-
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Nombre"
-                          name="nombre"
-                          value={formData.nombre}
-                          onChange={handleFormChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Apellidos"
-                          name="apellidos"
-                          value={formData.apellidos}
-                          onChange={handleFormChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          label="Correo Electrónico"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleFormChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Cargo</InputLabel>
-                          <StyledSelect
-                            name="cargo"
-                            value={formData.cargo}
-                            onChange={handleFormChange}
-                            label="Cargo"
-                            disabled={loadingCargos}
-                            startAdornment={
-                              <InputAdornment position="start">
-                                <WorkIcon sx={{ color: '#64748b' }} />
-                              </InputAdornment>
-                            }
-                          >
-                            {cargoOptions.length === 0 ? (
-                              <MenuItem value="" disabled>
-                                No hay cargos disponibles
-                              </MenuItem>
-                            ) : (
-                              cargoOptions.map((cargo) => (
-                                <MenuItem key={cargo} value={cargo}>
-                                  {cargo}
-                                </MenuItem>
-                              ))
-                            )}
-                          </StyledSelect>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Departamento</InputLabel>
-                          <StyledSelect
-                            name="departamento"
-                            value={formData.departamento}
-                            onChange={handleFormChange}
-                            label="Departamento"
-                          >
-                            {departamentosActivos.map((depto) => (
-                              <MenuItem key={depto} value={depto}>{depto}</MenuItem>
-                            ))}
-                          </StyledSelect>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Tipo de Contrato</InputLabel>
-                          <StyledSelect
-                            name="tipoContrato"
-                            value={formData.tipoContrato}
-                            onChange={handleFormChange}
-                            label="Tipo de Contrato"
-                            disabled={!puedeModificarTipoContrato(userData)}
-                          >
-                            <MenuItem value="Operativo">Operativo (48h)</MenuItem>
-                            <MenuItem value="Confianza">Confianza (72h)</MenuItem>
-                          </StyledSelect>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Rol</InputLabel>
-                          <StyledSelect
-                            name="rol"
-                            value={formData.rol || 'Sin rol'}
-                            onChange={handleFormChange}
-                            label="Rol"
-                            disabled={!puedeAsignarRoles(userData)}
-                          >
-                            {rolesDisponibles.map((rol) => (
-                              <MenuItem key={rol.value || 'Sin rol'} value={rol.value || 'Sin rol'}>
-                                {rol.label}
-                              </MenuItem>
-                            ))}
-                          </StyledSelect>
-                        </FormControl>
-                      </Grid>
-                    </Grid>
-                  </DialogContent>
-                  <DialogActions sx={{ px: 3, pb: 3 }}>
-                    <Button onClick={cerrarEdicionUsuario} sx={{ textTransform: 'none' }}>
-                      Cancelar
-                    </Button>
-                    <PrimaryButton
-                      startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                      onClick={guardarPerfil}
-                      disabled={loading}
-                    >
-                      Guardar Cambios
-                    </PrimaryButton>
-                  </DialogActions>
-                </Dialog>
-
-                <Dialog open={Boolean(usuarioAEliminar)} onClose={cerrarEliminarUsuario} fullWidth maxWidth="xs">
-                  <DialogTitle sx={{ fontWeight: 700 }}>Eliminar usuario</DialogTitle>
-                  <DialogContent sx={{ pt: 1 }}>
-                    <DialogContentText>
-                      {usuarioAEliminar
-                        ? `¿Deseas eliminar a ${usuarioAEliminar.nombre} ${usuarioAEliminar.apellidos}?`
-                        : '¿Deseas eliminar este usuario?'}
-                    </DialogContentText>
-                  </DialogContent>
-                  <DialogActions sx={{ px: 3, pb: 3 }}>
-                    <Button onClick={cerrarEliminarUsuario} sx={{ textTransform: 'none' }}>
-                      Cancelar
-                    </Button>
-                    <Button onClick={eliminarUsuario} variant="contained" color="error" sx={{ textTransform: 'none' }}>
-                      Eliminar
-                    </Button>
-                  </DialogActions>
-                </Dialog>
-
                 <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
-                  <AdminModuleHeader type="button" onClick={() => setCatalogModuleOpen((current) => !current)}>
+                  <AdminModuleHeader type="button" onClick={() => toggleModule('catalog')}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                       <Avatar sx={{ width: 44, height: 44, bgcolor: '#00830e', color: '#ffffff', fontWeight: 700 }}>
                         {departamentos.length}
@@ -1685,8 +1617,110 @@ const Configuracion = () => {
                   </DialogActions>
                 </Dialog>
 
+                <Dialog open={usuarioEdicionAbierto} onClose={cerrarEdicionUsuario} fullWidth maxWidth="sm">
+                  <DialogTitle sx={{ fontWeight: 700 }}>Editar usuario</DialogTitle>
+                  <DialogContent sx={{ pt: 1 }}>
+                    <DialogContentText sx={{ mb: 2 }}>
+                      Modifica los datos del usuario. Los cambios se guardarán en su registro.
+                    </DialogContentText>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <StyledTextField
+                          fullWidth
+                          label="Nombre"
+                          name="nombre"
+                          value={usuarioEdicionForm.nombre}
+                          onChange={handleUsuarioEdicionChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <StyledTextField
+                          fullWidth
+                          label="Apellidos"
+                          name="apellidos"
+                          value={usuarioEdicionForm.apellidos}
+                          onChange={handleUsuarioEdicionChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <StyledTextField
+                          fullWidth
+                          label="Correo Electrónico"
+                          name="email"
+                          type="email"
+                          value={usuarioEdicionForm.email}
+                          onChange={handleUsuarioEdicionChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Cargo</InputLabel>
+                          <StyledSelect
+                            name="cargo"
+                            value={usuarioEdicionForm.cargo}
+                            onChange={handleUsuarioEdicionChange}
+                            label="Cargo"
+                            disabled={loadingCargos}
+                          >
+                            {cargoOptions.length === 0 ? (
+                              <MenuItem value="" disabled>
+                                No hay cargos disponibles
+                              </MenuItem>
+                            ) : (
+                              cargoOptions.map((cargo) => (
+                                <MenuItem key={cargo} value={cargo}>
+                                  {cargo}
+                                </MenuItem>
+                              ))
+                            )}
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Departamento</InputLabel>
+                          <StyledSelect
+                            name="departamento"
+                            value={usuarioEdicionForm.departamento}
+                            onChange={handleUsuarioEdicionChange}
+                            label="Departamento"
+                          >
+                            {departamentosActivos.map((depto) => (
+                              <MenuItem key={depto} value={depto}>{depto}</MenuItem>
+                            ))}
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Tipo de Contrato</InputLabel>
+                          <StyledSelect
+                            name="tipoContrato"
+                            value={usuarioEdicionForm.tipoContrato}
+                            onChange={handleUsuarioEdicionChange}
+                            label="Tipo de Contrato"
+                            disabled={!puedeModificarTipoContrato(userData)}
+                          >
+                            <MenuItem value="Operativo">Operativo (48h)</MenuItem>
+                            <MenuItem value="Confianza">Confianza (72h)</MenuItem>
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+                  </DialogContent>
+                  <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button onClick={cerrarEdicionUsuario} sx={{ textTransform: 'none' }}>
+                      Cancelar
+                    </Button>
+                    <PrimaryButton onClick={handleGuardarEdicionUsuario} disabled={loading} startIcon={<EditIcon />}>
+                      Guardar cambios
+                    </PrimaryButton>
+                  </DialogActions>
+                </Dialog>
+
                 <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
-                  <AdminModuleHeader type="button" onClick={() => setCargoModuleOpen((current) => !current)}>
+                  <AdminModuleHeader type="button" onClick={() => toggleModule('cargo')}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                       <Avatar sx={{ width: 44, height: 44, bgcolor: '#00830e', color: '#ffffff', fontWeight: 700 }}>
                         {cargos.length}
@@ -1922,23 +1956,45 @@ const Configuracion = () => {
                       sx={{ mb: 2 }}
                     />
 
-                    <FormControl fullWidth>
-                      <InputLabel>Departamento</InputLabel>
-                      <StyledSelect
-                        name="departamentoId"
-                        value={cargoEdicionForm.departamentoId}
-                        onChange={handleCargoEdicionChange}
-                        label="Departamento"
-                        disabled={loadingDepartamentos}
-                      >
-                        <MenuItem value="">Sin departamento</MenuItem>
-                        {departamentos.map((departamento) => (
-                          <MenuItem key={departamento.id} value={departamento.id}>
-                            {departamento.label}
-                          </MenuItem>
-                        ))}
-                      </StyledSelect>
-                    </FormControl>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <InputLabel>Departamento</InputLabel>
+                          <StyledSelect
+                            name="departamentoId"
+                            value={cargoEdicionForm.departamentoId}
+                            onChange={handleCargoEdicionChange}
+                            label="Departamento"
+                            disabled={loadingDepartamentos}
+                          >
+                            <MenuItem value="">Sin departamento</MenuItem>
+                            {departamentos.map((departamento) => (
+                              <MenuItem key={departamento.id} value={departamento.id}>
+                                {departamento.label}
+                              </MenuItem>
+                            ))}
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Rol</InputLabel>
+                          <StyledSelect
+                            name="roleId"
+                            value={cargoEdicionForm.roleId || ''}
+                            onChange={handleCargoEdicionChange}
+                            label="Rol"
+                            disabled={loadingRoles}
+                          >
+                            <MenuItem value="">Sin rol</MenuItem>
+                            {roles.map((role) => (
+                              <MenuItem key={role.id} value={role.id}>{role.label}</MenuItem>
+                            ))}
+                          </StyledSelect>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
                   </DialogContent>
                   <DialogActions sx={{ px: 3, pb: 3 }}>
                     <Button onClick={cerrarEdicionCargo} sx={{ textTransform: 'none' }}>
@@ -1951,7 +2007,7 @@ const Configuracion = () => {
                 </Dialog>
 
                 <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
-                  <AdminModuleHeader type="button" onClick={() => setPermisosModuleOpen((current) => !current)}>
+                  <AdminModuleHeader type="button" onClick={() => toggleModule('permisos')}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                       <Avatar sx={{ width: 44, height: 44, bgcolor: '#0f766e', color: '#ffffff', fontWeight: 700 }}>
                         {cargos.length}
@@ -1982,22 +2038,22 @@ const Configuracion = () => {
                       </Typography>
 
                       <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel>Cargo a administrar</InputLabel>
+                        <InputLabel>Rol a administrar</InputLabel>
                         <StyledSelect
-                          value={cargoPermisoSeleccionado}
-                          onChange={(event) => setCargoPermisoSeleccionado(event.target.value)}
-                          label="Cargo a administrar"
-                          disabled={loadingCargos || cargosOrdenados.length === 0}
+                          value={roleSeleccionadoId}
+                          onChange={(event) => setRoleSeleccionadoId(event.target.value)}
+                          label="Rol a administrar"
+                          disabled={loadingRoles || roles.length === 0}
                         >
-                          {cargosOrdenados.map((cargo) => (
-                            <MenuItem key={cargo.id} value={cargo.id}>
-                              {cargo.label}
+                          {roles.map((role) => (
+                            <MenuItem key={role.id} value={role.id}>
+                              {role.label}
                             </MenuItem>
                           ))}
                         </StyledSelect>
                       </FormControl>
 
-                      {cargoSeleccionadoPermisos ? (
+                      {rolSeleccionado ? (
                         <>
                           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5, mb: 3 }}>
                             {PERMISOS_CARGO.map((permiso) => (
@@ -2018,14 +2074,14 @@ const Configuracion = () => {
                                   {permiso.label}
                                 </Typography>
                                 <Switch
-                                  checked={Boolean(permisosCargoForm[permiso.key])}
+                                  checked={Boolean(permisosRolForm[permiso.key])}
                                   onChange={(event) =>
-                                    setPermisosCargoForm((current) => ({
+                                    setPermisosRolForm((current) => ({
                                       ...current,
                                       [permiso.key]: event.target.checked,
                                     }))
                                   }
-                                  disabled={loading || loadingCargos}
+                                  disabled={loading || loadingRoles}
                                 />
                               </Paper>
                             ))}
@@ -2034,16 +2090,16 @@ const Configuracion = () => {
                           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <PrimaryButton
                               onClick={handleGuardarPermisosCargo}
-                              disabled={loading || loadingCargos}
+                              disabled={loading || loadingRoles}
                               sx={{ minWidth: { xs: '100%', sm: 260 } }}
                             >
-                              Guardar permisos del cargo
+                              Guardar permisos del rol
                             </PrimaryButton>
                           </Box>
                         </>
                       ) : (
                         <Alert severity="info" sx={{ borderRadius: 3 }}>
-                          No hay cargos disponibles para administrar permisos.
+                          No hay roles disponibles para administrar permisos.
                         </Alert>
                       )}
                     </Box>
@@ -2096,6 +2152,39 @@ const Configuracion = () => {
           >
             {loading ? <CircularProgress size={20} color="inherit" /> : 'Verificar'}
           </PrimaryButton>
+        </DialogActions>
+      </Dialog>
+      {/* Confirmación eliminación de usuario */}
+      <Dialog
+        open={usuarioEliminarAbierto}
+        onClose={() => { setUsuarioEliminarAbierto(false); setUsuarioAEliminar(null); }}
+        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600, color: '#ef4444' }}>
+          ⚠️ Confirmar eliminación de usuario
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Estás seguro de que deseas eliminar al usuario <strong>{usuarioAEliminar?.nombre} {usuarioAEliminar?.apellidos}</strong>? Esta acción no se puede deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => { setUsuarioEliminarAbierto(false); setUsuarioAEliminar(null); }} sx={{ color: '#64748b', borderRadius: 2 }}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!usuarioAEliminar) return;
+              await handleEliminarUsuario(usuarioAEliminar);
+              setUsuarioEliminarAbierto(false);
+              setUsuarioAEliminar(null);
+            }}
+            variant="contained"
+            color="error"
+            sx={{ borderRadius: 2 }}
+          >
+            Eliminar
+          </Button>
         </DialogActions>
       </Dialog>
     </PageContainer>
