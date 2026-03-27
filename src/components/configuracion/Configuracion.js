@@ -12,6 +12,7 @@ import {
   Typography,
   Box,
   Button,
+  ButtonBase,
   CircularProgress,
   TextField,
   FormControl,
@@ -28,6 +29,7 @@ import {
   Divider,
   Alert,
   Avatar,
+  Collapse,
   Skeleton,
   InputAdornment,
   IconButton,
@@ -35,10 +37,10 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SaveIcon from '@mui/icons-material/Save';
 import LockIcon from '@mui/icons-material/Lock';
 import PersonIcon from '@mui/icons-material/Person';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EmailIcon from '@mui/icons-material/Email';
@@ -182,15 +184,25 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontWeight: 600,
-  color: '#1e293b',
-  marginBottom: theme.spacing(2),
+const AdminModuleCard = styled(Paper)(() => ({
+  borderRadius: 24,
+  border: '1px solid rgba(0, 131, 14, 0.10)',
+  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)',
+  overflow: 'hidden',
+}));
+
+const AdminModuleHeader = styled(ButtonBase)(() => ({
+  width: '100%',
   display: 'flex',
   alignItems: 'center',
-  gap: theme.spacing(1),
-  '& svg': {
-    color: '#00830e',
+  justifyContent: 'space-between',
+  gap: 16,
+  textAlign: 'left',
+  padding: '18px 20px',
+  background: 'linear-gradient(135deg, rgba(0, 131, 14, 0.08) 0%, rgba(0, 131, 14, 0.03) 100%)',
+  transition: 'background 180ms ease, transform 180ms ease',
+  '&:hover': {
+    background: 'linear-gradient(135deg, rgba(0, 131, 14, 0.12) 0%, rgba(0, 131, 14, 0.05) 100%)',
   },
 }));
 
@@ -215,6 +227,7 @@ const Configuracion = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [usuarios, setUsuarios] = useState([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
+  const [adminModuleOpen, setAdminModuleOpen] = useState(true);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -549,165 +562,187 @@ const Configuracion = () => {
               </Alert>
             )}
 
-            {/* Administración de Usuarios */}
             {isAdmin ? (
-              <Box>
-                <SectionTitle variant="h6">
-                  <AdminPanelSettingsIcon /> Administración de Usuarios
-                </SectionTitle>
-                
-                <FormControl fullWidth sx={{ mb: 3 }}>
-                  <InputLabel>Seleccionar Usuario</InputLabel>
-                  <StyledSelect
-                    value={usuarioSeleccionado ? usuarioSeleccionado.id : ''}
-                    onChange={handleUsuarioChange}
-                    label="Seleccionar Usuario"
-                  >
-                    {usuarios.map((usuario) => (
-                      <MenuItem key={usuario.id} value={usuario.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: '#00830e' }}>
-                            {usuario.nombre?.charAt(0)}
+              <AdminModuleCard elevation={0}>
+                <AdminModuleHeader type="button" onClick={() => setAdminModuleOpen((current) => !current)}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                    <Avatar sx={{ width: 44, height: 44, bgcolor: '#00830e', color: '#ffffff', fontWeight: 700 }}>
+                      {usuarios.length}
+                    </Avatar>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }} noWrap>
+                        Administración de Usuarios
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748b' }} noWrap>
+                        Gestiona usuarios desde esta tarjeta, sin abrir ventanas externas.
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <ExpandMoreIcon
+                    sx={{
+                      color: '#00830e',
+                      transition: 'transform 180ms ease',
+                      transform: adminModuleOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      flex: '0 0 auto',
+                    }}
+                  />
+                </AdminModuleHeader>
+
+                <Collapse in={adminModuleOpen} timeout="auto">
+                  <Box sx={{ p: { xs: 2, md: 4 }, pt: 3 }}>
+                    <FormControl fullWidth sx={{ mb: 3 }}>
+                      <InputLabel>Seleccionar Usuario</InputLabel>
+                      <StyledSelect
+                        value={usuarioSeleccionado ? usuarioSeleccionado.id : ''}
+                        onChange={handleUsuarioChange}
+                        label="Seleccionar Usuario"
+                      >
+                        {usuarios.map((usuario) => (
+                          <MenuItem key={usuario.id} value={usuario.id}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                              <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: '#00830e' }}>
+                                {usuario.nombre?.charAt(0)}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {usuario.nombre} {usuario.apellidos}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {usuario.email}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </StyledSelect>
+                    </FormControl>
+
+                    {usuarioSeleccionado && (
+                      <>
+                        <Divider sx={{ my: 3 }} />
+                        <Box sx={{ 
+                          p: 2, 
+                          bgcolor: alpha('#00830e', 0.05), 
+                          borderRadius: 3, 
+                          mb: 3,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                        }}>
+                          <Avatar sx={{ bgcolor: '#00830e' }}>
+                            {usuarioSeleccionado.nombre?.charAt(0)}
                           </Avatar>
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {usuario.nombre} {usuario.apellidos}
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              Editando: {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellidos}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {usuario.email}
+                              {usuarioSeleccionado.email}
                             </Typography>
                           </Box>
                         </Box>
-                      </MenuItem>
-                    ))}
-                  </StyledSelect>
-                </FormControl>
-
-                {usuarioSeleccionado && (
-                  <>
-                    <Divider sx={{ my: 3 }} />
-                    <Box sx={{ 
-                      p: 2, 
-                      bgcolor: alpha('#00830e', 0.05), 
-                      borderRadius: 3, 
-                      mb: 3,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                    }}>
-                      <Avatar sx={{ bgcolor: '#00830e' }}>
-                        {usuarioSeleccionado.nombre?.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          Editando: {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellidos}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {usuarioSeleccionado.email}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Nombre"
-                          name="nombre"
-                          value={formData.nombre}
-                          onChange={handleFormChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Apellidos"
-                          name="apellidos"
-                          value={formData.apellidos}
-                          onChange={handleFormChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          label="Correo Electrónico"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleFormChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Cargo"
-                          name="cargo"
-                          value={formData.cargo}
-                          onChange={handleFormChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Departamento</InputLabel>
-                          <StyledSelect
-                            name="departamento"
-                            value={formData.departamento}
-                            onChange={handleFormChange}
-                            label="Departamento"
-                          >
-                            {departamentos.map((depto) => (
-                              <MenuItem key={depto} value={depto}>{depto}</MenuItem>
-                            ))}
-                          </StyledSelect>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Tipo de Contrato</InputLabel>
-                          <StyledSelect
-                            name="tipoContrato"
-                            value={formData.tipoContrato}
-                            onChange={handleFormChange}
-                            label="Tipo de Contrato"
-                            disabled={!puedeModificarTipoContrato(userData)}
-                          >
-                            <MenuItem value="Operativo">Operativo (48h)</MenuItem>
-                            <MenuItem value="Confianza">Confianza (72h)</MenuItem>
-                          </StyledSelect>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Rol</InputLabel>
-                          <StyledSelect
-                            name="rol"
-                            value={formData.rol || 'Sin rol'}
-                            onChange={handleFormChange}
-                            label="Rol"
-                            disabled={!puedeAsignarRoles(userData)}
-                          >
-                            {rolesDisponibles.map((rol) => (
-                              <MenuItem key={rol.value || 'Sin rol'} value={rol.value || 'Sin rol'}>
-                                {rol.label}
-                              </MenuItem>
-                            ))}
-                          </StyledSelect>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <PrimaryButton
-                          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                          onClick={guardarPerfil}
-                          disabled={loading}
-                        >
-                          Guardar Cambios
-                        </PrimaryButton>
-                      </Grid>
-                    </Grid>
-                  </>
-                )}
-
-              </Box>
+                        
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <StyledTextField
+                              fullWidth
+                              label="Nombre"
+                              name="nombre"
+                              value={formData.nombre}
+                              onChange={handleFormChange}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <StyledTextField
+                              fullWidth
+                              label="Apellidos"
+                              name="apellidos"
+                              value={formData.apellidos}
+                              onChange={handleFormChange}
+                            />
+                          </Grid>
+                          <Grid item xs={12}>
+                            <StyledTextField
+                              fullWidth
+                              label="Correo Electrónico"
+                              name="email"
+                              type="email"
+                              value={formData.email}
+                              onChange={handleFormChange}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <StyledTextField
+                              fullWidth
+                              label="Cargo"
+                              name="cargo"
+                              value={formData.cargo}
+                              onChange={handleFormChange}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth>
+                              <InputLabel>Departamento</InputLabel>
+                              <StyledSelect
+                                name="departamento"
+                                value={formData.departamento}
+                                onChange={handleFormChange}
+                                label="Departamento"
+                              >
+                                {departamentos.map((depto) => (
+                                  <MenuItem key={depto} value={depto}>{depto}</MenuItem>
+                                ))}
+                              </StyledSelect>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth>
+                              <InputLabel>Tipo de Contrato</InputLabel>
+                              <StyledSelect
+                                name="tipoContrato"
+                                value={formData.tipoContrato}
+                                onChange={handleFormChange}
+                                label="Tipo de Contrato"
+                                disabled={!puedeModificarTipoContrato(userData)}
+                              >
+                                <MenuItem value="Operativo">Operativo (48h)</MenuItem>
+                                <MenuItem value="Confianza">Confianza (72h)</MenuItem>
+                              </StyledSelect>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth>
+                              <InputLabel>Rol</InputLabel>
+                              <StyledSelect
+                                name="rol"
+                                value={formData.rol || 'Sin rol'}
+                                onChange={handleFormChange}
+                                label="Rol"
+                                disabled={!puedeAsignarRoles(userData)}
+                              >
+                                {rolesDisponibles.map((rol) => (
+                                  <MenuItem key={rol.value || 'Sin rol'} value={rol.value || 'Sin rol'}>
+                                    {rol.label}
+                                  </MenuItem>
+                                ))}
+                              </StyledSelect>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <PrimaryButton
+                              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                              onClick={guardarPerfil}
+                              disabled={loading}
+                            >
+                              Guardar Cambios
+                            </PrimaryButton>
+                          </Grid>
+                        </Grid>
+                      </>
+                    )}
+                  </Box>
+                </Collapse>
+              </AdminModuleCard>
             ) : (
               <Alert severity="info" sx={{ borderRadius: 3 }}>
                 No tienes permisos para administrar usuarios.
