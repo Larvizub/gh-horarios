@@ -278,6 +278,7 @@ const Configuracion = () => {
   const [cargoModuleOpen, setCargoModuleOpen] = useState(false);
   const [nuevoDepartamento, setNuevoDepartamento] = useState('');
   const [nuevoCargo, setNuevoCargo] = useState('');
+  const [nuevoRolLabel, setNuevoRolLabel] = useState('');
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -2075,6 +2076,48 @@ const Configuracion = () => {
                       </Typography>
 
                       <FormControl fullWidth sx={{ mb: 3 }}>
+                        <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
+                          <StyledTextField
+                            fullWidth
+                            label="Nuevo rol"
+                            value={nuevoRolLabel}
+                            onChange={(e) => setNuevoRolLabel(e.target.value)}
+                            placeholder="Ej. Aprobador"
+                            disabled={loading || loadingRoles}
+                          />
+                          <PrimaryButton
+                            onClick={async () => {
+                              const label = (nuevoRolLabel || '').trim();
+                              if (!label) {
+                                toast.error('Escribe el nombre del rol.');
+                                return;
+                              }
+
+                              try {
+                                setLoading(true);
+                                const nuevoId = label.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+                                const nuevoRol = {
+                                  id: nuevoId,
+                                  label,
+                                  permisos: normalizeCargoPermissions({}),
+                                  editable: true,
+                                  orden: roles.length + 1,
+                                };
+                                await saveRolesCatalogo([...roles, nuevoRol]);
+                                setNuevoRolLabel('');
+                                toast.success('Rol creado correctamente.');
+                              } catch (error) {
+                                console.error('Error al crear rol:', error);
+                                toast.error('No se pudo crear el rol: ' + error.message);
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                            disabled={loading || loadingRoles}
+                          >
+                            Agregar
+                          </PrimaryButton>
+                        </Box>
                         <InputLabel>Rol a administrar</InputLabel>
                         <StyledSelect
                           value={roleSeleccionadoId}
