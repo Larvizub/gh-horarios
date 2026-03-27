@@ -11,6 +11,7 @@ import {
   Paper,
   Typography,
   Box,
+  Checkbox,
   Button,
   ButtonBase,
   CircularProgress,
@@ -744,6 +745,27 @@ const Configuracion = () => {
     } catch (error) {
       console.error('Error al eliminar cargo:', error);
       toast.error('No se pudo eliminar el cargo: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleAprobador = async (cargo, value) => {
+    try {
+      setLoading(true);
+      const cargosActualizados = cargos.map((item) => {
+        if (item.id !== cargo.id) return item;
+        return {
+          ...item,
+          aprobador: !!value,
+        };
+      });
+
+      await saveCargosCatalogo(cargosActualizados);
+      toast.success('Estado de aprobador actualizado.');
+    } catch (error) {
+      console.error('Error al actualizar aprobador:', error);
+      toast.error('No se pudo actualizar el estado de aprobador: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -1803,7 +1825,7 @@ const Configuracion = () => {
                         <Box
                           sx={{
                             display: { xs: 'none', md: 'grid' },
-                            gridTemplateColumns: '1.3fr 1.5fr 0.9fr auto',
+                            gridTemplateColumns: '1.3fr 1.3fr 0.9fr 0.9fr auto',
                             gap: 2,
                             px: 2.5,
                             py: 1.5,
@@ -1816,6 +1838,9 @@ const Configuracion = () => {
                           </Typography>
                           <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 }}>
                             Cargo
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4, textAlign: 'center' }}>
+                            Aprobador
                           </Typography>
                           <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 }}>
                             Usuarios
@@ -1849,7 +1874,7 @@ const Configuracion = () => {
                                 key={cargo.id}
                                 sx={{
                                   display: 'grid',
-                                  gridTemplateColumns: { xs: '1fr', md: '1.3fr 1.5fr 0.9fr auto' },
+                                  gridTemplateColumns: { xs: '1fr', md: '1.3fr 1.3fr 0.9fr 0.9fr auto' },
                                   gap: { xs: 1.1, md: 2 },
                                   px: 2.5,
                                   py: 1.75,
@@ -1875,6 +1900,18 @@ const Configuracion = () => {
                                     {cargo.label}
                                   </Typography>
                                 </Box>
+
+                                  <Box sx={{ display: 'grid', gap: 0.4, justifyItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+                                      Aprobador
+                                    </Typography>
+                                    <Checkbox
+                                      checked={Boolean(cargo.aprobador)}
+                                      onChange={(e) => toggleAprobador(cargo, e.target.checked)}
+                                      disabled={loading || loadingCargos}
+                                      inputProps={{ 'aria-label': `Aprobador ${cargo.label}` }}
+                                    />
+                                  </Box>
 
                                 <Box sx={{ display: 'grid', gap: 0.4, justifyItems: 'center' }}>
                                   <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>

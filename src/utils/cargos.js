@@ -50,6 +50,7 @@ export const cargosArrayToFirebaseObject = (cargos = []) => {
       editable: Boolean(cargo.editable),
       orden: Number.isFinite(cargo.orden) ? cargo.orden : index + 1,
       permisos: normalizeCargoPermissions(cargo.permisos),
+      aprobador: Boolean(cargo.aprobador),
       roleId: cargo.roleId || null,
       departamentoId: normalizeCargoDepartamentoId(cargo.departamentoId || cargo.departamento || ''),
     };
@@ -65,6 +66,7 @@ export const cargosObjectToArray = (catalogo = {}) => {
     editable: Boolean(value?.editable),
     orden: Number.isFinite(value?.orden) ? value.orden : index + 1,
     permisos: normalizeCargoPermissions(value?.permisos),
+    aprobador: Boolean(value?.aprobador),
     roleId: value?.roleId || null,
     departamentoId: normalizeCargoDepartamentoId(value?.departamentoId || value?.departamento || ''),
   }));
