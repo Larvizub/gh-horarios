@@ -15,6 +15,7 @@ import {
   Toolbar,
   Tooltip,
   Typography,
+  ButtonBase,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -33,6 +34,7 @@ import { database } from '../../firebase/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { notify as toast } from '../../services/notify';
 import { puedeAccederPersonal, puedeVerHorarios } from '../../utils/contratoUtils';
+import UserAccountDialog from './UserAccountDialog';
 
 const HEADER_HEIGHT = { xs: 56, md: 64 };
 const SIDEBAR_COLLAPSED_WIDTH = 84;
@@ -153,6 +155,7 @@ const Navbar = memo(({ user }) => {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [userAccountOpen, setUserAccountOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const mountedRef = useRef(true);
 
@@ -246,6 +249,14 @@ const Navbar = memo(({ user }) => {
     setDrawerOpen((current) => !current);
   }, []);
 
+  const openUserAccount = useCallback(() => {
+    setUserAccountOpen(true);
+  }, []);
+
+  const closeUserAccount = useCallback(() => {
+    setUserAccountOpen(false);
+  }, []);
+
   const renderNavigationItems = (collapsed = false, onSelect = null) => (
     <List sx={{ px: 0, py: 1 }}>
       {menuItemsFiltrados.map((item) => {
@@ -302,15 +313,19 @@ const Navbar = memo(({ user }) => {
         </SidebarItemButton>
 
         {collapsed ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}>
+          <ButtonBase
+            onClick={openUserAccount}
+            sx={{ display: 'flex', justifyContent: 'center', py: 0.5, width: '100%', borderRadius: 999 }}
+          >
             <Tooltip title={getUserDisplayName()} placement="right" arrow>
               <UserAvatar sx={{ width: 42, height: 42 }}>
                 {getUserInitials()}
               </UserAvatar>
             </Tooltip>
-          </Box>
+          </ButtonBase>
         ) : (
-          <Box
+          <ButtonBase
+            onClick={openUserAccount}
             sx={{
               my: 0.75,
               p: 1.6,
@@ -320,6 +335,13 @@ const Navbar = memo(({ user }) => {
               display: 'flex',
               alignItems: 'center',
               gap: 1.2,
+              width: '100%',
+              textAlign: 'left',
+              transition: 'background 180ms ease, transform 180ms ease, box-shadow 180ms ease',
+              '&:hover': {
+                background: 'linear-gradient(180deg, rgba(0,131,14,0.09), rgba(0,131,14,0.03))',
+                transform: 'translateY(-1px)',
+              },
             }}
           >
             <UserAvatar sx={{ width: 40, height: 40 }}>
@@ -333,7 +355,7 @@ const Navbar = memo(({ user }) => {
                 {userData?.cargo || user?.email || 'Acceso'}
               </Typography>
             </Box>
-          </Box>
+          </ButtonBase>
         )}
 
         <SidebarItemButton
@@ -360,11 +382,9 @@ const Navbar = memo(({ user }) => {
     <>
       <HeaderBar position="fixed" elevation={0}>
         <Toolbar
-          disableGutters
           sx={{
             minHeight: HEADER_HEIGHT,
             px: { xs: 1.5, md: 3 },
-            display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 2,
@@ -508,6 +528,13 @@ const Navbar = memo(({ user }) => {
           </Box>
         </Box>
       </MobileDrawer>
+
+      <UserAccountDialog
+        open={userAccountOpen}
+        onClose={closeUserAccount}
+        user={user}
+        userData={userData}
+      />
     </>
   );
 });
