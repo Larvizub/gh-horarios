@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { get, ref } from 'firebase/database';
 import { database } from '../firebase/config';
-import { buildDefaultCargosCatalog, resolveCargoRecord, cargosToLabels, mergeCargosCatalog } from '../utils/cargos';
+import { buildDefaultCargosCatalog, resolveCargoRecord, cargosToLabels, mergeCargosCatalog, normalizeCargoDepartamentoId } from '../utils/cargos';
 import { subscribeCargosCatalogo } from '../services/cargosService';
+import { sanitizeDepartamentoKey } from '../utils/departamentos';
 
 export const useCargos = () => {
   const [cargos, setCargos] = useState(buildDefaultCargosCatalog());
@@ -22,7 +23,7 @@ export const useCargos = () => {
       merged.push(cargo);
     });
 
-    return merged.sort((a, b) => a.orden - b.orden || a.label.localeCompare(b.label));
+    return merged.sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
   };
 
   const buildCargosFromUsuarios = (usuariosData = {}) => {
@@ -34,12 +35,15 @@ export const useCargos = () => {
         return;
       }
 
+      const departamentoId = normalizeCargoDepartamentoId(sanitizeDepartamentoKey(usuario?.departamento || ''));
+
       cargosVistos.set(cargoRecord.cargoId, {
         id: cargoRecord.cargoId,
         label: cargoRecord.cargo,
         activo: true,
         editable: false,
         orden: cargosVistos.size + 1,
+        departamentoId,
       });
     });
 

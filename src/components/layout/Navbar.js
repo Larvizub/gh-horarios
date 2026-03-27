@@ -151,7 +151,7 @@ const Navbar = memo(({ user }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, userData: authUserData } = useAuth();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -182,6 +182,19 @@ const Navbar = memo(({ user }) => {
 
     cargarDatosUsuario();
   }, [user]);
+
+  useEffect(() => {
+    if (!mountedRef.current) {
+      return;
+    }
+
+    if (authUserData) {
+      setUserData({
+        ...authUserData,
+        email: authUserData.email || user?.email,
+      });
+    }
+  }, [authUserData, user]);
 
   useEffect(() => {
     setDrawerOpen(false);

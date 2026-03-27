@@ -37,6 +37,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import WorkIcon from '@mui/icons-material/Work';
 import { database, auth } from '../../firebase/config';
+import { useAuth } from '../../contexts/AuthContext';
 import { notify as toast } from '../../services/notify';
 import { puedeModificarTipoContrato } from '../../utils/contratoUtils';
 import useDepartamentos from '../../hooks/useDepartamentos';
@@ -118,6 +119,7 @@ const UserAvatar = styled(Avatar)(() => ({
 }));
 
 const UserAccountDialog = ({ open, onClose, user, userData }) => {
+  const { refreshUserData } = useAuth();
   const { departamentosActivos } = useDepartamentos();
   const { cargosActivos, loadingCargos } = useCargos();
   const [tabIndex, setTabIndex] = useState(0);
@@ -205,6 +207,7 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
       }
 
       await update(userRef, updateData);
+      await refreshUserData();
 
       if (formData.email !== (userData?.email || user?.email)) {
         setAccionPendiente('email');
@@ -251,6 +254,7 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
       if (accionPendiente === 'email') {
         await updateEmail(auth.currentUser, formData.email);
         await update(ref(database, `usuarios/${user.uid}`), { email: formData.email });
+        await refreshUserData();
         toast.success('Email actualizado correctamente');
       } else if (accionPendiente === 'password') {
         await updatePassword(auth.currentUser, passwordData.newPassword);

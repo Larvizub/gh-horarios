@@ -1,5 +1,32 @@
 export const CARGOS_CATALOGO_PATH = 'catalogos/cargos';
 
+export const PERMISOS_CARGO = [
+  { key: 'puedeVerHorarios', label: 'Ver horarios' },
+  { key: 'puedeModificarHorarios', label: 'Modificar horarios' },
+  { key: 'puedeEliminarHorarios', label: 'Eliminar horarios' },
+  { key: 'puedeAccederPersonal', label: 'Acceder a personal' },
+  { key: 'puedeAsignarRoles', label: 'Asignar roles' },
+  { key: 'puedeModificarTipoContrato', label: 'Modificar tipo de contrato' },
+];
+
+export const buildDefaultCargoPermissions = () => {
+  return PERMISOS_CARGO.reduce((accumulator, permiso) => {
+    accumulator[permiso.key] = false;
+    return accumulator;
+  }, {});
+};
+
+export const normalizeCargoPermissions = (permisos = {}) => {
+  const defaults = buildDefaultCargoPermissions();
+
+  return PERMISOS_CARGO.reduce((accumulator, permiso) => {
+    accumulator[permiso.key] = Boolean(permisos?.[permiso.key]);
+    return accumulator;
+  }, defaults);
+};
+
+export const normalizeCargoDepartamentoId = (value = '') => sanitizeCargoKey(value);
+
 export const normalizeCargoLabel = (value = '') => value.trim();
 
 export const sanitizeCargoKey = (value = '') => {
@@ -22,6 +49,8 @@ export const cargosArrayToFirebaseObject = (cargos = []) => {
       activo: cargo.activo !== false,
       editable: Boolean(cargo.editable),
       orden: Number.isFinite(cargo.orden) ? cargo.orden : index + 1,
+      permisos: normalizeCargoPermissions(cargo.permisos),
+      departamentoId: normalizeCargoDepartamentoId(cargo.departamentoId || cargo.departamento || ''),
     };
     return accumulator;
   }, {});
@@ -34,12 +63,26 @@ export const cargosObjectToArray = (catalogo = {}) => {
     activo: value?.activo !== false,
     editable: Boolean(value?.editable),
     orden: Number.isFinite(value?.orden) ? value.orden : index + 1,
+    permisos: normalizeCargoPermissions(value?.permisos),
+    departamentoId: normalizeCargoDepartamentoId(value?.departamentoId || value?.departamento || ''),
   }));
 };
 
 export const mergeCargosCatalog = (remoteCatalogo = {}) => {
   const cargos = cargosObjectToArray(remoteCatalogo);
-  return cargos.sort((a, b) => a.orden - b.orden || a.label.localeCompare(b.label));
+  return cargos.sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+};
+
+export const groupCargosByDepartamento = (cargos = []) => {
+  return cargos.reduce((accumulator, cargo) => {
+    const key = cargo.departamentoId || 'sin-departamento';
+    if (!accumulator[key]) {
+      accumulator[key] = [];
+    }
+
+    accumulator[key].push(cargo);
+    return accumulator;
+  }, {});
 };
 
 export const cargosToLabels = (cargos = []) => {

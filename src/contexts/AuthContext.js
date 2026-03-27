@@ -23,20 +23,41 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // Función para obtener datos del usuario
-  const fetchUserData = useCallback(async (uid) => {
+  const fetchUserData = useCallback(async (userOrUid, userEmail = null) => {
     try {
+      const uid = typeof userOrUid === 'string' ? userOrUid : userOrUid?.uid;
+      const email = userEmail || (typeof userOrUid === 'object' ? userOrUid?.email : null);
+
+      if (!uid) {
+        return null;
+      }
+
       const userRef = ref(database, `usuarios/${uid}`);
       const snapshot = await get(userRef);
       if (snapshot.exists()) {
-        return snapshot.val();
+        return {
+          ...snapshot.val(),
+          ...(email ? { email } : {}),
+        };
       }
-      return null;
+      return email ? { email } : null;
     } catch (error) {
       console.error('Error al obtener datos del usuario:', error);
       setError('Error al cargar datos del usuario');
       return null;
     }
   }, []);
+
+  const refreshUserData = useCallback(async () => {
+    if (!currentUser) {
+      setUserData(null);
+      return null;
+    }
+
+    const freshUserData = await fetchUserData(currentUser, currentUser.email);
+    setUserData(freshUserData);
+    return freshUserData;
+  }, [currentUser, fetchUserData]);
 
   // Función para cerrar sesión por inactividad
   const checkInactivity = useCallback(async () => {
@@ -127,7 +148,7 @@ export const AuthProvider = ({ children }) => {
             }
           } else {
             setCurrentUser(user);
-            const userData = await fetchUserData(user.uid);
+            const userData = await fetchUserData(user, user.email);
             if (isMounted) {
               setUserData(userData);
               // Si no existía registro (login reciente), inicializarlo
@@ -163,6 +184,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     fetchUserData,
+    refreshUserData,
     logout
   };
 

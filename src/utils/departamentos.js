@@ -84,7 +84,9 @@ export const mergeDepartamentosCatalog = (remoteCatalogo = {}) => {
 
     return {
       ...departamento,
+      label: remoteDepartamento.label || departamento.label,
       activo: remoteDepartamento.activo !== false,
+      editable: Boolean(remoteDepartamento.editable),
       orden: Number.isFinite(remoteDepartamento.orden) ? remoteDepartamento.orden : departamento.orden,
     };
   });
