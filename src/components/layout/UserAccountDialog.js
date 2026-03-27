@@ -39,7 +39,7 @@ import WorkIcon from '@mui/icons-material/Work';
 import { database, auth } from '../../firebase/config';
 import { notify as toast } from '../../services/notify';
 import { puedeModificarTipoContrato } from '../../utils/contratoUtils';
-import { departamentos } from '../../utils/horariosConstants';
+import useDepartamentos from '../../hooks/useDepartamentos';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -116,6 +116,7 @@ const UserAvatar = styled(Avatar)(() => ({
 }));
 
 const UserAccountDialog = ({ open, onClose, user, userData }) => {
+  const { departamentosActivos } = useDepartamentos();
   const [tabIndex, setTabIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -375,7 +376,7 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
                 <FormControl fullWidth>
                   <InputLabel>Departamento</InputLabel>
                   <StyledSelect name="departamento" value={formData.departamento} onChange={handleFormChange} label="Departamento">
-                    {departamentos.map((depto) => (
+                    {departamentosActivos.map((depto) => (
                       <MenuItem key={depto} value={depto}>
                         {depto}
                       </MenuItem>

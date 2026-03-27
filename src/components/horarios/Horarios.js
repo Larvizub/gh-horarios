@@ -29,7 +29,6 @@ import {
 } from '../../utils/permissionsUtils';
 import { obtenerHorasMaximas } from '../../utils/contratoUtils';
 import { 
-  departamentos, 
   diasSemana, 
   NO_SUMAN_HORAS, 
   DIAS_LABELS 
@@ -40,6 +39,7 @@ import HorariosTable from './HorariosTable';
 import { guardarBatchHorarios, guardarHorariosUsuarioSemana, subscribeHorariosUsuarios, cargarHorariosUsuarios } from '../../services/firebaseHorarios';
 import { puedeVerHorarios } from '../../utils/contratoUtils';
 import { useUsuariosYHorarios } from '../../hooks/useUsuariosYHorarios';
+import useDepartamentos from '../../hooks/useDepartamentos';
 import { useSemana } from '../../hooks/useSemana';
 import { useModalConfirm } from '../../hooks/useModalConfirm';
 import useTiposHorario from '../../hooks/useTiposHorario';
@@ -190,6 +190,7 @@ const Horarios = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { tipos } = useTiposHorario();
+  const { departamentosActivos } = useDepartamentos();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -1434,7 +1435,7 @@ const Horarios = () => {
             </PageTitle>
 
             <HeaderSemana
-              departamentos={departamentos}
+                departamentos={departamentosActivos}
               departamentoSeleccionado={departamentoSeleccionado}
               setDepartamentoSeleccionado={setDepartamentoSeleccionado}
               loading={loading}

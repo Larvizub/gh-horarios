@@ -19,6 +19,8 @@ export const departamentos = [
   'UDEI'
 ];
 
+export const DEFAULT_DEPARTAMENTOS = [...departamentos];
+
 export const diasSemana = [
   'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
 ];

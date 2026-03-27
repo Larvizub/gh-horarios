@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ref, get, update } from 'firebase/database';
 import { updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { database, auth } from '../../firebase/config';
@@ -48,9 +48,10 @@ import BadgeIcon from '@mui/icons-material/Badge';
 import BusinessIcon from '@mui/icons-material/Business';
 import WorkIcon from '@mui/icons-material/Work';
 import SecurityIcon from '@mui/icons-material/Security';
-import { departamentos } from '../../utils/horariosConstants';
+import useDepartamentos from '../../hooks/useDepartamentos';
+import { saveDepartamentosCatalogo } from '../../services/departamentosService';
+import { DEFAULT_DEPARTAMENTOS, normalizeDepartamentoLabel } from '../../utils/departamentos';
 
-// Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   background: '#f8fafc',
@@ -216,8 +217,8 @@ const rolesDisponibles = [
 const Configuracion = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
-  // Flag para prevenir actualizaciones después de desmontar
+  const { departamentos, departamentosActivos, loadingDepartamentos } = useDepartamentos();
+
   const mountedRef = useRef(true);
   
   const [loading, setLoading] = useState(true);
@@ -227,7 +228,9 @@ const Configuracion = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [usuarios, setUsuarios] = useState([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
-  const [adminModuleOpen, setAdminModuleOpen] = useState(true);
+  const [adminModuleOpen, setAdminModuleOpen] = useState(false);
+  const [catalogModuleOpen, setCatalogModuleOpen] = useState(false);
+  const [nuevoDepartamento, setNuevoDepartamento] = useState('');
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -256,6 +259,85 @@ const Configuracion = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const userId = queryParams.get('userId');
+
+  const departamentosEnUso = useMemo(() => {
+    return usuarios.reduce((accumulator, usuario) => {
+      const label = normalizeDepartamentoLabel(usuario.departamento || '').toLowerCase();
+      if (!label) {
+        return accumulator;
+      }
+
+      accumulator[label] = (accumulator[label] || 0) + 1;
+      return accumulator;
+    }, {});
+  }, [usuarios]);
+
+  const esDepartamentoBase = (label) => {
+    const normalized = normalizeDepartamentoLabel(label).toLowerCase();
+    return DEFAULT_DEPARTAMENTOS.some((defaultLabel) => defaultLabel.toLowerCase() === normalized);
+  };
+
+  const handleAgregarDepartamento = async () => {
+    const label = normalizeDepartamentoLabel(nuevoDepartamento);
+
+    if (!label) {
+      toast.error('Escribe un nombre de departamento.');
+      return;
+    }
+
+    const existente = departamentos.some((item) => item.label.toLowerCase() === label.toLowerCase());
+    if (existente) {
+      toast.error('Ese departamento ya existe en el catálogo.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const nextOrden = departamentos.length > 0 ? Math.max(...departamentos.map((item) => item.orden || 0)) + 1 : 1;
+      await saveDepartamentosCatalogo([
+        ...departamentos,
+        {
+          id: label.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-'),
+          label,
+          activo: true,
+          editable: true,
+          orden: nextOrden,
+        },
+      ]);
+      setNuevoDepartamento('');
+      toast.success('Departamento creado correctamente.');
+    } catch (error) {
+      console.error('Error al crear departamento:', error);
+      toast.error('No se pudo crear el departamento: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEliminarDepartamento = async (departamento) => {
+    const usos = departamentosEnUso[normalizeDepartamentoLabel(departamento.label).toLowerCase()] || 0;
+
+    if (esDepartamentoBase(departamento.label)) {
+      toast.error('Los departamentos base no se pueden eliminar.');
+      return;
+    }
+
+    if (usos > 0) {
+      toast.error('No puedes eliminar un departamento que ya tiene usuarios asignados.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await saveDepartamentosCatalogo(departamentos.filter((item) => item.id !== departamento.id));
+      toast.success('Departamento eliminado correctamente.');
+    } catch (error) {
+      console.error('Error al eliminar departamento:', error);
+      toast.error('No se pudo eliminar el departamento: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -563,7 +645,8 @@ const Configuracion = () => {
             )}
 
             {isAdmin ? (
-              <AdminModuleCard elevation={0}>
+              <>
+                <AdminModuleCard elevation={0}>
                 <AdminModuleHeader type="button" onClick={() => setAdminModuleOpen((current) => !current)}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                     <Avatar sx={{ width: 44, height: 44, bgcolor: '#00830e', color: '#ffffff', fontWeight: 700 }}>
@@ -689,7 +772,7 @@ const Configuracion = () => {
                                 onChange={handleFormChange}
                                 label="Departamento"
                               >
-                                {departamentos.map((depto) => (
+                                {departamentosActivos.map((depto) => (
                                   <MenuItem key={depto} value={depto}>{depto}</MenuItem>
                                 ))}
                               </StyledSelect>
@@ -742,7 +825,120 @@ const Configuracion = () => {
                     )}
                   </Box>
                 </Collapse>
-              </AdminModuleCard>
+                </AdminModuleCard>
+
+                <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
+                  <AdminModuleHeader type="button" onClick={() => setCatalogModuleOpen((current) => !current)}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Avatar sx={{ width: 44, height: 44, bgcolor: '#00830e', color: '#ffffff', fontWeight: 700 }}>
+                        {departamentos.length}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }} noWrap>
+                          Catálogo de Departamentos
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b' }} noWrap>
+                          Agrega nuevos departamentos sin alterar los ya asignados.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <ExpandMoreIcon
+                      sx={{
+                        color: '#00830e',
+                        transition: 'transform 180ms ease',
+                        transform: catalogModuleOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        flex: '0 0 auto',
+                      }}
+                    />
+                  </AdminModuleHeader>
+
+                  <Collapse in={catalogModuleOpen} timeout="auto">
+                    <Box sx={{ p: { xs: 2, md: 3 } }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
+                        Los departamentos base y los que tienen usuarios quedan protegidos.
+                      </Typography>
+
+                      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' }, mb: 3 }}>
+                        <TextField
+                          fullWidth
+                          label="Nuevo departamento"
+                          value={nuevoDepartamento}
+                          onChange={(event) => setNuevoDepartamento(event.target.value)}
+                          placeholder="Ej. Experiencia del Cliente"
+                          disabled={loading || loadingDepartamentos}
+                        />
+                        <PrimaryButton
+                          onClick={handleAgregarDepartamento}
+                          disabled={loading || loadingDepartamentos}
+                          sx={{ minWidth: { xs: '100%', sm: 220 } }}
+                        >
+                          Agregar departamento
+                        </PrimaryButton>
+                      </Box>
+
+                      <Grid container spacing={2}>
+                        {departamentos.map((departamento) => {
+                          const usos = departamentosEnUso[normalizeDepartamentoLabel(departamento.label).toLowerCase()] || 0;
+                          const esBase = esDepartamentoBase(departamento.label);
+                          const protegido = esBase || usos > 0;
+
+                          return (
+                            <Grid item xs={12} sm={6} md={4} key={departamento.id}>
+                              <Paper
+                                elevation={0}
+                                sx={{
+                                  height: '100%',
+                                  p: 2,
+                                  borderRadius: 3,
+                                  border: '1px solid rgba(15, 23, 42, 0.08)',
+                                  background: protegido ? 'rgba(248, 250, 252, 0.9)' : '#ffffff',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 1.25,
+                                }}
+                              >
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                                  <Box sx={{ minWidth: 0 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b' }} noWrap>
+                                      {departamento.label}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                      {esBase ? 'Departamento base' : 'Departamento adicional'}
+                                    </Typography>
+                                  </Box>
+                                  <Avatar sx={{ width: 34, height: 34, bgcolor: '#00830e', fontSize: '0.85rem', fontWeight: 700 }}>
+                                    {usos}
+                                  </Avatar>
+                                </Box>
+
+                                <Typography variant="body2" sx={{ color: '#64748b', minHeight: 40 }}>
+                                  {usos > 0
+                                    ? `Asignado a ${usos} usuario${usos === 1 ? '' : 's'}.`
+                                    : 'Disponible para nuevas asignaciones.'}
+                                </Typography>
+
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => handleEliminarDepartamento(departamento)}
+                                  disabled={protegido || loading || loadingDepartamentos}
+                                  sx={{
+                                    textTransform: 'none',
+                                    borderRadius: 2,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  Eliminar
+                                </Button>
+                              </Paper>
+                            </Grid>
+                          );
+                        })}
+                      </Grid>
+                    </Box>
+                  </Collapse>
+                </AdminModuleCard>
+              </>
             ) : (
               <Alert severity="info" sx={{ borderRadius: 3 }}>
                 No tienes permisos para administrar usuarios.

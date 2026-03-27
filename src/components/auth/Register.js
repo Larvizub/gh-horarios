@@ -32,7 +32,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import BadgeIcon from '@mui/icons-material/Badge';
 import { ref, get } from 'firebase/database';
 import { puedeAsignarRoles, ROLES } from '../../utils/contratoUtils';
-import { departamentos } from '../../utils/horariosConstants';
+import useDepartamentos from '../../hooks/useDepartamentos';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -191,6 +191,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentUserData, setCurrentUserData] = useState(null);
+  const { departamentosActivos, loadingDepartamentos } = useDepartamentos();
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -597,7 +598,7 @@ const Register = () => {
                         </InputAdornment>
                       }
                     >
-                      {departamentos.map((depto) => (
+                      {departamentosActivos.map((depto) => (
                         <MenuItem key={depto} value={depto}>
                           {depto}
                         </MenuItem>

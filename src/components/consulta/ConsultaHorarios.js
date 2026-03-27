@@ -59,8 +59,8 @@ import GetAppIcon from '@mui/icons-material/GetApp';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import { departamentos } from '../../utils/horariosConstants';
 import useTiposHorario from '../../hooks/useTiposHorario';
+import useDepartamentos from '../../hooks/useDepartamentos';
 import * as XLSX from 'xlsx';
 
 // Styled Components modernos
@@ -260,6 +260,7 @@ const ConsultaHorarios = () => {
   const [yearSelected, setYearSelected] = useState(getYear(new Date()));
   const [monthSelected, setMonthSelected] = useState(new Date().getMonth());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const { departamentosActivos } = useDepartamentos();
   
   // Nuevos estados para el modal de sugerencias
   const [sugerenciasModalOpen, setSugerenciasModalOpen] = useState(false);
@@ -903,7 +904,7 @@ const ConsultaHorarios = () => {
                         sx={{ borderRadius: 2 }}
                       >
                         <MenuItem value="">Todos</MenuItem>
-                        {departamentos.map((depto) => (
+                        {departamentosActivos.map((depto) => (
                           <MenuItem key={depto} value={depto}>{depto}</MenuItem>
                         ))}
                       </Select>

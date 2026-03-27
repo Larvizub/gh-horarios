@@ -3,7 +3,7 @@ import { database } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import { ref, get, query, orderByChild, equalTo } from 'firebase/database';
 import { notify as toast } from '../services/notify';
-import { departamentos } from '../utils/horariosConstants';
+import useDepartamentos from './useDepartamentos';
 
 /**
  * Hook para cargar usuarios y gestionar departamento seleccionado y usuario actual.
@@ -15,26 +15,45 @@ export function useUsuariosYHorarios() {
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState('');
   const [userData, setUserData] = useState(null);
   const { currentUser: authUser, loading: authLoading } = useAuth();
+  const { departamentosActivos, loadingDepartamentos } = useDepartamentos();
 
   // Cargar datos del usuario logueado para permisos y depto inicial
   useEffect(() => {
     async function cargarMiPerfil() {
-      if (authLoading || !authUser) return;
+      if (authLoading || loadingDepartamentos || !authUser) return;
       try {
         const snapshot = await get(ref(database, `usuarios/${authUser.uid}`));
         if (snapshot.exists()) {
           const myData = { id: authUser.uid, ...snapshot.val() };
           setUserData(myData);
-          setDepartamentoSeleccionado(myData.departamento || (departamentos.length > 0 ? departamentos[0] : ''));
-        } else if (departamentos.length > 0) {
-          setDepartamentoSeleccionado(departamentos[0]);
+          setDepartamentoSeleccionado(
+            myData.departamento || departamentosActivos[0] || ''
+          );
+        } else if (departamentosActivos.length > 0) {
+          setDepartamentoSeleccionado(departamentosActivos[0]);
         }
       } catch (error) {
         console.error('Error al cargar perfil:', error);
       }
     }
     cargarMiPerfil();
-  }, [authUser, authLoading]);
+  }, [authUser, authLoading, loadingDepartamentos, departamentosActivos]);
+
+  useEffect(() => {
+    if (loadingDepartamentos) return;
+
+    setDepartamentoSeleccionado((current) => {
+      if (current && departamentosActivos.includes(current)) {
+        return current;
+      }
+
+      if (userData?.departamento && departamentosActivos.includes(userData.departamento)) {
+        return userData.departamento;
+      }
+
+      return departamentosActivos[0] || '';
+    });
+  }, [departamentosActivos, loadingDepartamentos, userData]);
 
   // Cargar usuarios del departamento seleccionado únicamente
   useEffect(() => {
