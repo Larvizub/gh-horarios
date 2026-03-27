@@ -57,7 +57,12 @@ export const obtenerMensajeRestriccionHoras = (tipoContrato) => {
  * @returns {boolean} true si puede modificar tipos de contrato
  */
 export const puedeModificarTipoContrato = (usuario) => {
-  return usuario?.departamento === 'Talento Humano';
+  return (
+    usuario?.rol === ROLES.ADMINISTRADOR ||
+    usuario?.departamento === 'Talento Humano' ||
+    usuario?.email === 'admin@costaricacc.com' ||
+    Boolean(usuario?.permisos?.puedeAsignarTipoContrato)
+  );
 };
 
 /**

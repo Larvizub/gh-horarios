@@ -59,6 +59,7 @@ import { saveDepartamentosCatalogo } from '../../services/departamentosService';
 import { DEFAULT_DEPARTAMENTOS, normalizeDepartamentoLabel } from '../../utils/departamentos';
 import useCargos from '../../hooks/useCargos';
 import useRoles from '../../hooks/useRoles';
+import TiposHorarioManager from './TiposHorarioManager';
 import { saveCargosCatalogo } from '../../services/cargosService';
 import { saveRolesCatalogo } from '../../services/rolesService';
 import { buildCargoIdFromLabel, buildDefaultCargoPermissions, groupCargosByDepartamento, normalizeCargoDepartamentoId, normalizeCargoLabel, normalizeCargoPermissions, PERMISOS_CARGO, resolveCargoRecord } from '../../utils/cargos';
@@ -277,6 +278,7 @@ const Configuracion = () => {
   const [adminModuleOpen, setAdminModuleOpen] = useState(false);
   const [catalogModuleOpen, setCatalogModuleOpen] = useState(false);
   const [cargoModuleOpen, setCargoModuleOpen] = useState(false);
+  const [tiposModuleOpen, setTiposModuleOpen] = useState(false);
   const [nuevoDepartamento, setNuevoDepartamento] = useState('');
   const [nuevoCargo, setNuevoCargo] = useState('');
   const [nuevoRolLabel, setNuevoRolLabel] = useState('');
@@ -887,6 +889,7 @@ const Configuracion = () => {
       catalog: catalogModuleOpen,
       cargo: cargoModuleOpen,
       permisos: permisosModuleOpen,
+      tipos: tiposModuleOpen,
     };
 
     const isCurrentlyOpen = currentStates[module];
@@ -896,6 +899,7 @@ const Configuracion = () => {
     setCatalogModuleOpen(false);
     setCargoModuleOpen(false);
     setPermisosModuleOpen(false);
+    setTiposModuleOpen(false);
 
     // If the requested module was closed, open it; otherwise leave closed
     if (!isCurrentlyOpen) {
@@ -903,6 +907,7 @@ const Configuracion = () => {
       if (module === 'catalog') setCatalogModuleOpen(true);
       if (module === 'cargo') setCargoModuleOpen(true);
       if (module === 'permisos') setPermisosModuleOpen(true);
+      if (module === 'tipos') setTiposModuleOpen(true);
     }
   };
 
@@ -1430,6 +1435,38 @@ const Configuracion = () => {
                       </Box>
                     </Box>
                   </Box>
+                  </Collapse>
+                </AdminModuleCard>
+
+                <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
+                  <AdminModuleHeader type="button" onClick={() => toggleModule('tipos')}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Avatar sx={{ width: 44, height: 44, bgcolor: '#7c3aed', color: '#ffffff', fontWeight: 700 }}>
+                        { /* icon count */ }
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }} noWrap>
+                          Tipos de Horario
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b' }} noWrap>
+                          Administra el catálogo de tipos de horario.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <ExpandMoreIcon
+                      sx={{
+                        color: '#7c3aed',
+                        transition: 'transform 180ms ease',
+                        transform: tiposModuleOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        flex: '0 0 auto',
+                      }}
+                    />
+                  </AdminModuleHeader>
+
+                  <Collapse in={tiposModuleOpen} timeout="auto">
+                    <Box sx={{ p: { xs: 2, md: 3 } }}>
+                      <TiposHorarioManager />
+                    </Box>
                   </Collapse>
                 </AdminModuleCard>
 

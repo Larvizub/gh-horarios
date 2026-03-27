@@ -7,6 +7,7 @@ export const PERMISOS_CARGO = [
   { key: 'puedeAccederPersonal', label: 'Acceder a personal' },
   { key: 'puedeAsignarRoles', label: 'Asignar roles' },
   { key: 'puedeModificarTipoContrato', label: 'Modificar tipo de contrato' },
+  { key: 'puedeAsignarTipoContrato', label: 'Asignar tipo de contrato' },
 ];
 
 export const buildDefaultCargoPermissions = () => {

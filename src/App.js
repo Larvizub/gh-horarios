@@ -15,7 +15,7 @@ const Horarios = lazy(() => import('./components/horarios/Horarios'));
 const Personal = lazy(() => import('./components/personal/Personal'));
 const Configuracion = lazy(() => import('./components/configuracion/Configuracion'));
 const ConsultaHorarios = lazy(() => import('./components/consulta/ConsultaHorarios'));
-const TiposHorarioPage = lazy(() => import('./components/tiposHorario/TiposHorarioPage'));
+// TiposHorarioPage removed — managed inside Configuracion
 
 // Crear tema personalizado moderno para Material-UI
 const theme = createTheme({
@@ -497,11 +497,7 @@ function AppContent() {
                 <Configuracion />
               </ProtectedRoute>
             } />
-            <Route path="/tipos-horario" element={
-              <ProtectedRoute>
-                <TiposHorarioPage />
-              </ProtectedRoute>
-            } />
+            {/* Tipos de horario now managed within Configuración; external route removed */}
             
             {/* Ruta por defecto */}
             <Route path="*" element={<Navigate to="/" />} />

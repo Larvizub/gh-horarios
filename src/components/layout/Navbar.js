@@ -143,7 +143,7 @@ const menuItems = [
   { label: 'Horarios', icon: <EventNoteIcon />, path: '/horarios' },
   { label: 'Consulta', icon: <HistoryIcon />, path: '/consulta-horarios' },
   { label: 'Personal', icon: <PersonIcon />, path: '/personal' },
-  { label: 'Tipos', icon: <CategoryIcon />, path: '/tipos-horario', onlyAdmin: true },
+  // Tipos moved into Configuración — removed external menu item
 ];
 
 const Navbar = memo(({ user }) => {
