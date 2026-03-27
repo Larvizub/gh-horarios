@@ -51,6 +51,9 @@ import SecurityIcon from '@mui/icons-material/Security';
 import useDepartamentos from '../../hooks/useDepartamentos';
 import { saveDepartamentosCatalogo } from '../../services/departamentosService';
 import { DEFAULT_DEPARTAMENTOS, normalizeDepartamentoLabel } from '../../utils/departamentos';
+import useCargos from '../../hooks/useCargos';
+import { saveCargosCatalogo } from '../../services/cargosService';
+import { buildCargoIdFromLabel, normalizeCargoLabel, resolveCargoRecord } from '../../utils/cargos';
 
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
@@ -218,6 +221,10 @@ const Configuracion = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { departamentos, departamentosActivos, loadingDepartamentos } = useDepartamentos();
+  const { cargos, loadingCargos } = useCargos();
+  const [busquedaCargo, setBusquedaCargo] = useState('');
+  const [busquedaUsuarios, setBusquedaUsuarios] = useState('');
+  const [busquedaDepartamentos, setBusquedaDepartamentos] = useState('');
 
   const mountedRef = useRef(true);
   
@@ -230,7 +237,9 @@ const Configuracion = () => {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
   const [adminModuleOpen, setAdminModuleOpen] = useState(false);
   const [catalogModuleOpen, setCatalogModuleOpen] = useState(false);
+  const [cargoModuleOpen, setCargoModuleOpen] = useState(false);
   const [nuevoDepartamento, setNuevoDepartamento] = useState('');
+  const [nuevoCargo, setNuevoCargo] = useState('');
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -270,6 +279,99 @@ const Configuracion = () => {
       accumulator[label] = (accumulator[label] || 0) + 1;
       return accumulator;
     }, {});
+  }, [usuarios]);
+
+  const cargosEnUso = useMemo(() => {
+    return usuarios.reduce((accumulator, usuario) => {
+      const id = usuario.cargoId || buildCargoIdFromLabel(usuario.cargo || '');
+      if (!id) {
+        return accumulator;
+      }
+
+      accumulator[id] = (accumulator[id] || 0) + 1;
+      return accumulator;
+    }, {});
+  }, [usuarios]);
+
+  const cargosOrdenados = useMemo(() => {
+    return [...cargos].sort((a, b) => a.orden - b.orden || a.label.localeCompare(b.label));
+  }, [cargos]);
+
+  const cargoOptions = useMemo(() => cargosOrdenados.filter((cargo) => cargo.activo !== false).map((cargo) => cargo.label), [cargosOrdenados]);
+
+  const usuariosFiltrados = useMemo(() => {
+    const termino = normalizeCargoLabel(busquedaUsuarios).toLowerCase();
+    if (!termino) {
+      return usuarios;
+    }
+
+    return usuarios.filter((usuario) => {
+      const campos = [
+        usuario.nombre,
+        usuario.apellidos,
+        usuario.email,
+        usuario.cargo,
+        usuario.departamento,
+        usuario.rol,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return campos.includes(termino);
+    });
+  }, [busquedaUsuarios, usuarios]);
+
+  const usuariosFiltradosConSeleccion = useMemo(() => {
+    if (!usuarioSeleccionado) {
+      return usuariosFiltrados;
+    }
+
+    const existeSeleccionado = usuariosFiltrados.some((usuario) => usuario.id === usuarioSeleccionado.id);
+    if (existeSeleccionado) {
+      return usuariosFiltrados;
+    }
+
+    return [usuarioSeleccionado, ...usuariosFiltrados];
+  }, [usuarioSeleccionado, usuariosFiltrados]);
+
+  const departamentosFiltrados = useMemo(() => {
+    const termino = normalizeCargoLabel(busquedaDepartamentos).toLowerCase();
+    if (!termino) {
+      return departamentos;
+    }
+
+    return departamentos.filter((departamento) => departamento.label.toLowerCase().includes(termino));
+  }, [busquedaDepartamentos, departamentos]);
+
+  const cargosFiltrados = useMemo(() => {
+    const termino = normalizeCargoLabel(busquedaCargo).toLowerCase();
+    if (!termino) {
+      return cargosOrdenados;
+    }
+
+    return cargosOrdenados.filter((cargo) => cargo.label.toLowerCase().includes(termino));
+  }, [busquedaCargo, cargosOrdenados]);
+
+  const cargosSugeridosDesdeUsuarios = useMemo(() => {
+    const vistos = new Map();
+
+    usuarios.forEach((usuario) => {
+      const cargoRecord = resolveCargoRecord(usuario.cargo || '');
+      if (!cargoRecord.cargo || vistos.has(cargoRecord.cargoId)) {
+        return;
+      }
+
+      vistos.set(cargoRecord.cargoId, {
+        id: cargoRecord.cargoId,
+        label: cargoRecord.cargo,
+        activo: true,
+        editable: false,
+        orden: vistos.size + 1,
+      });
+    });
+
+    return Array.from(vistos.values());
   }, [usuarios]);
 
   const esDepartamentoBase = (label) => {
@@ -338,6 +440,91 @@ const Configuracion = () => {
       setLoading(false);
     }
   };
+
+  const handleAgregarCargo = async () => {
+    const label = normalizeCargoLabel(nuevoCargo);
+
+    if (!label) {
+      toast.error('Escribe un nombre de cargo.');
+      return;
+    }
+
+    const existente = cargos.some((item) => item.label.toLowerCase() === label.toLowerCase());
+    if (existente) {
+      toast.error('Ese cargo ya existe en el catálogo.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const nextOrden = cargos.length > 0 ? Math.max(...cargos.map((item) => item.orden || 0)) + 1 : 1;
+      const cargoRecord = resolveCargoRecord(label);
+      await saveCargosCatalogo([
+        ...cargos,
+        {
+          id: cargoRecord.cargoId,
+          label: cargoRecord.cargo,
+          activo: true,
+          editable: true,
+          orden: nextOrden,
+        },
+      ]);
+      setNuevoCargo('');
+      toast.success('Cargo creado correctamente.');
+    } catch (error) {
+      console.error('Error al crear cargo:', error);
+      toast.error('No se pudo crear el cargo: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEliminarCargo = async (cargo) => {
+    const usos = cargosEnUso[cargo.id] || 0;
+
+    if (usos > 0) {
+      toast.error('No puedes eliminar un cargo que ya tiene usuarios asignados.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await saveCargosCatalogo(cargos.filter((item) => item.id !== cargo.id));
+      toast.success('Cargo eliminado correctamente.');
+    } catch (error) {
+      console.error('Error al eliminar cargo:', error);
+      toast.error('No se pudo eliminar el cargo: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAdmin || loading || loadingCargos || cargosSugeridosDesdeUsuarios.length === 0) {
+      return;
+    }
+
+    const cargosExistentes = new Set(cargos.map((item) => item.id));
+    const cargosFaltantes = cargosSugeridosDesdeUsuarios.filter((item) => !cargosExistentes.has(item.id));
+
+    if (cargosFaltantes.length === 0) {
+      return;
+    }
+
+    const siguienteOrden = cargos.length > 0 ? Math.max(...cargos.map((item) => item.orden || 0)) : 0;
+    const cargosNormalizados = [
+      ...cargos,
+      ...cargosFaltantes.map((item, index) => ({
+        ...item,
+        orden: siguienteOrden + index + 1,
+      })),
+    ];
+
+    saveCargosCatalogo(cargosNormalizados).catch((error) => {
+      console.error('Error al sembrar cargos desde usuarios:', error);
+      toast.error('No se pudo actualizar el catálogo de cargos: ' + error.message);
+    });
+  }, [isAdmin, loading, loadingCargos, cargos, cargosSugeridosDesdeUsuarios]);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -487,12 +674,14 @@ const Configuracion = () => {
       
       const targetUserId = userId || (usuarioSeleccionado ? usuarioSeleccionado.id : currentUser.uid);
       const userRef = ref(database, `usuarios/${targetUserId}`);
+      const cargoRecord = resolveCargoRecord(formData.cargo);
       
       // Actualizar datos en la base de datos
       const updateData = {
         nombre: formData.nombre,
         apellidos: formData.apellidos,
-        cargo: formData.cargo,
+        cargo: cargoRecord.cargo,
+        cargoId: cargoRecord.cargoId,
         departamento: formData.departamento,
         ...(puedeAsignarRoles(userData) && { rol: formData.rol }) // Solo usuarios con permisos pueden cambiar roles
       };
@@ -523,16 +712,18 @@ const Configuracion = () => {
       if (targetUserId === currentUser.uid) {
         setUserData({
           ...userData,
-          ...formData
+          ...formData,
+          cargoId: cargoRecord.cargoId,
         });
       } else if (usuarioSeleccionado) {
         // Actualizar en la lista de usuarios
         setUsuarios(usuarios.map(u => 
-          u.id === usuarioSeleccionado.id ? { ...u, ...formData } : u
+          u.id === usuarioSeleccionado.id ? { ...u, ...formData, cargoId: cargoRecord.cargoId } : u
         ));
         setUsuarioSeleccionado({
           ...usuarioSeleccionado,
-          ...formData
+          ...formData,
+          cargoId: cargoRecord.cargoId,
         });
       }
     } catch (error) {
@@ -673,6 +864,15 @@ const Configuracion = () => {
 
                 <Collapse in={adminModuleOpen} timeout="auto">
                   <Box sx={{ p: { xs: 2, md: 4 }, pt: 3 }}>
+                    <TextField
+                      fullWidth
+                      label="Buscar usuario"
+                      value={busquedaUsuarios}
+                      onChange={(event) => setBusquedaUsuarios(event.target.value)}
+                      placeholder="Nombre, correo, cargo o departamento"
+                      sx={{ mb: 3 }}
+                    />
+
                     <FormControl fullWidth sx={{ mb: 3 }}>
                       <InputLabel>Seleccionar Usuario</InputLabel>
                       <StyledSelect
@@ -680,7 +880,7 @@ const Configuracion = () => {
                         onChange={handleUsuarioChange}
                         label="Seleccionar Usuario"
                       >
-                        {usuarios.map((usuario) => (
+                        {usuariosFiltradosConSeleccion.map((usuario) => (
                           <MenuItem key={usuario.id} value={usuario.id}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                               <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: '#00830e' }}>
@@ -699,6 +899,12 @@ const Configuracion = () => {
                         ))}
                       </StyledSelect>
                     </FormControl>
+
+                    {busquedaUsuarios && usuariosFiltrados.length === 0 && (
+                      <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
+                        No hay usuarios que coincidan con la búsqueda.
+                      </Alert>
+                    )}
 
                     {usuarioSeleccionado && (
                       <>
@@ -755,13 +961,33 @@ const Configuracion = () => {
                             />
                           </Grid>
                           <Grid item xs={12} sm={6}>
-                            <StyledTextField
-                              fullWidth
-                              label="Cargo"
-                              name="cargo"
-                              value={formData.cargo}
-                              onChange={handleFormChange}
-                            />
+                            <FormControl fullWidth>
+                              <InputLabel>Cargo</InputLabel>
+                              <StyledSelect
+                                name="cargo"
+                                value={formData.cargo}
+                                onChange={handleFormChange}
+                                label="Cargo"
+                                disabled={loadingCargos}
+                                startAdornment={
+                                  <InputAdornment position="start">
+                                    <WorkIcon sx={{ color: '#64748b' }} />
+                                  </InputAdornment>
+                                }
+                              >
+                                {cargoOptions.length === 0 ? (
+                                  <MenuItem value="" disabled>
+                                    No hay cargos disponibles
+                                  </MenuItem>
+                                ) : (
+                                  cargoOptions.map((cargo) => (
+                                    <MenuItem key={cargo} value={cargo}>
+                                      {cargo}
+                                    </MenuItem>
+                                  ))
+                                )}
+                              </StyledSelect>
+                            </FormControl>
                           </Grid>
                           <Grid item xs={12} sm={6}>
                             <FormControl fullWidth>
@@ -858,6 +1084,15 @@ const Configuracion = () => {
                         Los departamentos base y los que tienen usuarios quedan protegidos.
                       </Typography>
 
+                      <TextField
+                        fullWidth
+                        label="Buscar departamento"
+                        value={busquedaDepartamentos}
+                        onChange={(event) => setBusquedaDepartamentos(event.target.value)}
+                        placeholder="Filtra por nombre de departamento"
+                        sx={{ mb: 2.5 }}
+                      />
+
                       <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' }, mb: 3 }}>
                         <TextField
                           fullWidth
@@ -877,7 +1112,14 @@ const Configuracion = () => {
                       </Box>
 
                       <Grid container spacing={2}>
-                        {departamentos.map((departamento) => {
+                        {departamentosFiltrados.length === 0 ? (
+                          <Grid item xs={12}>
+                            <Alert severity="info" sx={{ borderRadius: 3 }}>
+                              No hay departamentos que coincidan con la búsqueda.
+                            </Alert>
+                          </Grid>
+                        ) : (
+                          departamentosFiltrados.map((departamento) => {
                           const usos = departamentosEnUso[normalizeDepartamentoLabel(departamento.label).toLowerCase()] || 0;
                           const esBase = esDepartamentoBase(departamento.label);
                           const protegido = esBase || usos > 0;
@@ -933,7 +1175,142 @@ const Configuracion = () => {
                               </Paper>
                             </Grid>
                           );
-                        })}
+                          })
+                        )}
+                      </Grid>
+                    </Box>
+                  </Collapse>
+                </AdminModuleCard>
+
+                <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
+                  <AdminModuleHeader type="button" onClick={() => setCargoModuleOpen((current) => !current)}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Avatar sx={{ width: 44, height: 44, bgcolor: '#00830e', color: '#ffffff', fontWeight: 700 }}>
+                        {cargos.length}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }} noWrap>
+                          Catálogo de Cargos
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b' }} noWrap>
+                          Agrega cargos sin afectar los ya asignados.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <ExpandMoreIcon
+                      sx={{
+                        color: '#00830e',
+                        transition: 'transform 180ms ease',
+                        transform: cargoModuleOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        flex: '0 0 auto',
+                      }}
+                    />
+                  </AdminModuleHeader>
+
+                  <Collapse in={cargoModuleOpen} timeout="auto">
+                    <Box sx={{ p: { xs: 2, md: 3 } }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
+                        Los cargos asignados a usuarios quedan protegidos.
+                      </Typography>
+
+                      <TextField
+                        fullWidth
+                        label="Buscar cargo"
+                        value={busquedaCargo}
+                        onChange={(event) => setBusquedaCargo(event.target.value)}
+                        placeholder="Filtra por nombre de cargo"
+                        sx={{ mb: 2.5 }}
+                      />
+
+                      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' }, mb: 3 }}>
+                        <TextField
+                          fullWidth
+                          label="Nuevo cargo"
+                          value={nuevoCargo}
+                          onChange={(event) => setNuevoCargo(event.target.value)}
+                          placeholder="Ej. Coordinador de Operaciones"
+                          disabled={loading || loadingCargos}
+                        />
+                        <PrimaryButton
+                          onClick={handleAgregarCargo}
+                          disabled={loading || loadingCargos}
+                          sx={{ minWidth: { xs: '100%', sm: 220 } }}
+                        >
+                          Agregar cargo
+                        </PrimaryButton>
+                      </Box>
+
+                      <Grid container spacing={2}>
+                        {cargosOrdenados.length === 0 ? (
+                          <Grid item xs={12}>
+                            <Alert severity="info" sx={{ borderRadius: 3 }}>
+                              Todavía no hay cargos creados.
+                            </Alert>
+                          </Grid>
+                        ) : cargosFiltrados.length === 0 ? (
+                          <Grid item xs={12}>
+                            <Alert severity="info" sx={{ borderRadius: 3 }}>
+                              No hay cargos que coincidan con la búsqueda.
+                            </Alert>
+                          </Grid>
+                        ) : (
+                          cargosFiltrados.map((cargo) => {
+                            const usos = cargosEnUso[cargo.id] || 0;
+                            const protegido = usos > 0;
+
+                            return (
+                              <Grid item xs={12} sm={6} md={4} key={cargo.id}>
+                                <Paper
+                                  elevation={0}
+                                  sx={{
+                                    height: '100%',
+                                    p: 2,
+                                    borderRadius: 3,
+                                    border: '1px solid rgba(15, 23, 42, 0.08)',
+                                    background: protegido ? 'rgba(248, 250, 252, 0.9)' : '#ffffff',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 1.25,
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                                    <Box sx={{ minWidth: 0 }}>
+                                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b' }} noWrap>
+                                        {cargo.label}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                        Cargo disponible
+                                      </Typography>
+                                    </Box>
+                                    <Avatar sx={{ width: 34, height: 34, bgcolor: '#00830e', fontSize: '0.85rem', fontWeight: 700 }}>
+                                      {usos}
+                                    </Avatar>
+                                  </Box>
+
+                                  <Typography variant="body2" sx={{ color: '#64748b', minHeight: 40 }}>
+                                    {usos > 0
+                                      ? `Asignado a ${usos} usuario${usos === 1 ? '' : 's'}.`
+                                      : 'Disponible para nuevas asignaciones.'}
+                                  </Typography>
+
+                                  <Button
+                                    variant="outlined"
+                                    color="error"
+                                    onClick={() => handleEliminarCargo(cargo)}
+                                    disabled={protegido || loading || loadingCargos}
+                                    sx={{
+                                      textTransform: 'none',
+                                      borderRadius: 2,
+                                      alignSelf: 'flex-start',
+                                    }}
+                                  >
+                                    Eliminar
+                                  </Button>
+                                </Paper>
+                              </Grid>
+                            );
+                          })
+                        )}
                       </Grid>
                     </Box>
                   </Collapse>

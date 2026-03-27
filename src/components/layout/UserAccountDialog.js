@@ -40,6 +40,8 @@ import { database, auth } from '../../firebase/config';
 import { notify as toast } from '../../services/notify';
 import { puedeModificarTipoContrato } from '../../utils/contratoUtils';
 import useDepartamentos from '../../hooks/useDepartamentos';
+import { resolveCargoRecord } from '../../utils/cargos';
+import useCargos from '../../hooks/useCargos';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -117,6 +119,7 @@ const UserAvatar = styled(Avatar)(() => ({
 
 const UserAccountDialog = ({ open, onClose, user, userData }) => {
   const { departamentosActivos } = useDepartamentos();
+  const { cargosActivos, loadingCargos } = useCargos();
   const [tabIndex, setTabIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -172,6 +175,8 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
     }));
   };
 
+  const cargoOptions = cargosActivos.filter(Boolean);
+
   const handlePasswordChange = (event) => {
     const { name, value } = event.target;
     setPasswordData((current) => ({
@@ -186,10 +191,12 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
       setError('');
 
       const userRef = ref(database, `usuarios/${user.uid}`);
+      const cargoRecord = resolveCargoRecord(formData.cargo);
       const updateData = {
         nombre: formData.nombre,
         apellidos: formData.apellidos,
-        cargo: formData.cargo,
+        cargo: cargoRecord.cargo,
+        cargoId: cargoRecord.cargoId,
         departamento: formData.departamento,
       };
 
@@ -357,20 +364,33 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <StyledTextField
-                  fullWidth
-                  label="Cargo"
-                  name="cargo"
-                  value={formData.cargo}
-                  onChange={handleFormChange}
-                  InputProps={{
-                    startAdornment: (
+                <FormControl fullWidth>
+                  <InputLabel>Cargo</InputLabel>
+                  <StyledSelect
+                    name="cargo"
+                    value={formData.cargo}
+                    onChange={handleFormChange}
+                    label="Cargo"
+                    disabled={loadingCargos}
+                    startAdornment={
                       <InputAdornment position="start">
                         <WorkIcon sx={{ color: '#64748b' }} />
                       </InputAdornment>
-                    ),
-                  }}
-                />
+                    }
+                  >
+                    {cargoOptions.length === 0 ? (
+                      <MenuItem value="" disabled>
+                        No hay cargos disponibles
+                      </MenuItem>
+                    ) : (
+                      cargoOptions.map((cargo) => (
+                        <MenuItem key={cargo} value={cargo}>
+                          {cargo}
+                        </MenuItem>
+                      ))
+                    )}
+                  </StyledSelect>
+                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>

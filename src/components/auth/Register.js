@@ -33,6 +33,8 @@ import BadgeIcon from '@mui/icons-material/Badge';
 import { ref, get } from 'firebase/database';
 import { puedeAsignarRoles, ROLES } from '../../utils/contratoUtils';
 import useDepartamentos from '../../hooks/useDepartamentos';
+import { resolveCargoRecord } from '../../utils/cargos';
+import useCargos from '../../hooks/useCargos';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -192,6 +194,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentUserData, setCurrentUserData] = useState(null);
   const { departamentosActivos, loadingDepartamentos } = useDepartamentos();
+  const { cargosActivos, loadingCargos } = useCargos();
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -243,11 +246,14 @@ const Register = () => {
     }
   };
 
+  const cargoOptions = cargosActivos.filter(Boolean);
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     let { nombre, apellidos, email, cargo, departamento, tipoContrato, rol, password, confirmPassword } = formData;
+    const cargoRecord = resolveCargoRecord(cargo);
 
     // Validaciones básicas
     if (!nombre || !apellidos || !email || !cargo || !departamento || !password || !confirmPassword) {
@@ -356,7 +362,8 @@ const Register = () => {
                 nombre,
                 apellidos,
                 email,
-                cargo,
+                cargo: cargoRecord.cargo,
+                cargoId: cargoRecord.cargoId,
                 departamento,
                 tipoContrato,
                 rol: rol || null,
@@ -405,7 +412,8 @@ const Register = () => {
                 nombre,
                 apellidos,
                 email,
-                cargo,
+                cargo: cargoRecord.cargo,
+                cargoId: cargoRecord.cargoId,
                 departamento,
                 tipoContrato,
                 rol: rol || null,
@@ -567,21 +575,33 @@ const Register = () => {
 
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <StyledTextField
-                    name="cargo"
-                    required
-                    fullWidth
-                    label="Cargo"
-                    value={formData.cargo}
-                    onChange={handleChange}
-                    InputProps={{
-                      startAdornment: (
+                  <StyledFormControl fullWidth required>
+                    <InputLabel>Cargo</InputLabel>
+                    <Select
+                      name="cargo"
+                      value={formData.cargo}
+                      onChange={handleChange}
+                      label="Cargo"
+                      disabled={loadingCargos}
+                      startAdornment={
                         <InputAdornment position="start">
                           <WorkIcon sx={{ color: 'text.secondary' }} />
                         </InputAdornment>
-                      ),
-                    }}
-                  />
+                      }
+                    >
+                      {cargoOptions.length === 0 ? (
+                        <MenuItem value="" disabled>
+                          No hay cargos disponibles
+                        </MenuItem>
+                      ) : (
+                        cargoOptions.map((cargo) => (
+                          <MenuItem key={cargo} value={cargo}>
+                            {cargo}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                  </StyledFormControl>
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
