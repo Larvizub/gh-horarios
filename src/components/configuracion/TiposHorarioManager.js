@@ -518,15 +518,6 @@ const TiposHorarioManager = () => {
                 >
                   <EditIcon fontSize="small" />
                 </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  disabled={!tipo.editable}
-                  onClick={() => handleDelete(tipo)}
-                  aria-label={`Eliminar ${tipo.label}`}
-                >
-                  <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
               </Stack>
             </Paper>
           );
