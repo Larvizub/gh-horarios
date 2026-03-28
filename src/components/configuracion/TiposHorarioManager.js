@@ -24,7 +24,6 @@ import {
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import { alpha } from '@mui/material/styles';
@@ -71,6 +70,14 @@ const TiposHorarioManager = () => {
   const sortedTipos = useMemo(() => {
     return [...tipos].sort((a, b) => a.orden - b.orden);
   }, [tipos]);
+
+  const tiposQueSuman = useMemo(() => {
+    return sortedTipos.filter((tipo) => !tipo.noSumaHoras);
+  }, [sortedTipos]);
+
+  const tiposQueNoSuman = useMemo(() => {
+    return sortedTipos.filter((tipo) => Boolean(tipo.noSumaHoras));
+  }, [sortedTipos]);
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
@@ -203,27 +210,6 @@ const TiposHorarioManager = () => {
     } catch (error) {
       setFeedback({ type: 'error', text: `No se pudo guardar el tipo: ${error.message}` });
       toast.error(`No se pudo guardar el tipo: ${error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (tipo) => {
-    if (!tipo.editable) {
-      toast.error('Los tipos predeterminados no se pueden eliminar.');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const nextTipos = sortedTipos.filter((item) => item.key !== tipo.key);
-      await saveTiposHorario(nextTipos);
-      toast.success('Tipo eliminado correctamente.');
-      if (editingKey === tipo.key) {
-        resetForm();
-      }
-    } catch (error) {
-      toast.error(`No se pudo eliminar el tipo: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -476,8 +462,13 @@ const TiposHorarioManager = () => {
       <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>
         Catálogo actual ({sortedTipos.length})
       </Typography>
-      <Stack spacing={1.25}>
-        {sortedTipos.map((tipo) => {
+      <Stack spacing={2}>
+        <Box>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 700, color: 'text.secondary' }}>
+            Suman horas ({tiposQueSuman.length})
+          </Typography>
+          <Stack spacing={1.25}>
+            {tiposQueSuman.map((tipo) => {
           const Icon = getTipoIconComponent(tipo.icon);
           return (
             <Paper
@@ -521,7 +512,60 @@ const TiposHorarioManager = () => {
               </Stack>
             </Paper>
           );
-        })}
+            })}
+          </Stack>
+        </Box>
+
+        <Box>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 700, color: 'text.secondary' }}>
+            No suman horas ({tiposQueNoSuman.length})
+          </Typography>
+          <Stack spacing={1.25}>
+            {tiposQueNoSuman.map((tipo) => {
+          const Icon = getTipoIconComponent(tipo.icon);
+          return (
+            <Paper
+              key={tipo.key}
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                borderColor: alpha(tipo.color || '#00830e', 0.3),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1
+              }}
+            >
+              <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                <Icon sx={{ color: tipo.color || '#00830e' }} />
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                    {tipo.label}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {tipo.key}
+                  </Typography>
+                </Box>
+                <Chip size="small" label="No suma horas" color="default" />
+                {!tipo.editable && (
+                  <Chip size="small" label="Base" color="success" variant="outlined" />
+                )}
+              </Stack>
+              <Stack direction="row" spacing={0.5}>
+                <IconButton
+                  size="small"
+                  onClick={() => handleEdit(tipo)}
+                  aria-label={`Editar ${tipo.label}`}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+            </Paper>
+          );
+            })}
+          </Stack>
+        </Box>
       </Stack>
     </Paper>
   );
