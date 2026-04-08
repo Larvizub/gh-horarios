@@ -1,3 +1,10 @@
+import {
+  esHorasPermitidasTipoContrato,
+  getHorasMaximasTipoContrato,
+  getHorasMinimasTipoContrato,
+  getRangosHorasTipoContrato,
+} from './tiposContrato';
+
 // Colores y etiquetas de roles
 export const obtenerColorRol = (rol) => {
   switch (rol) {
@@ -78,6 +85,37 @@ const calcularHorasTurno = (turno) => {
   return calcularHorasRango(turno.horaInicio, turno.horaFin);
 };
 
+const calcularExcesoSobreRangos = (horasTotales, rangos = []) => {
+  const horasNumericas = Number(horasTotales) || 0;
+
+  if (!Array.isArray(rangos) || rangos.length === 0) {
+    return 0;
+  }
+
+  const rangosOrdenados = [...rangos]
+    .map((rango) => ({
+      min: Number(rango?.min),
+      max: Number(rango?.max),
+    }))
+    .filter((rango) => Number.isFinite(rango.min) && Number.isFinite(rango.max))
+    .sort((a, b) => a.min - b.min || a.max - b.max);
+
+  if (rangosOrdenados.length === 0) {
+    return 0;
+  }
+
+  if (rangosOrdenados.some((rango) => horasNumericas >= rango.min && horasNumericas <= rango.max)) {
+    return 0;
+  }
+
+  const rangoInferior = [...rangosOrdenados].reverse().find((rango) => horasNumericas > rango.max);
+  if (rangoInferior) {
+    return Math.max(horasNumericas - rangoInferior.max, 0);
+  }
+
+  return 0;
+};
+
 // Cálculo de horas totales
 export const calcularHorasTotales = (
   usuarioId,
@@ -120,8 +158,12 @@ export const calcularHorasTotales = (
   // Para la próxima semana, restamos las horas extras de la semana actual (si existen)
   const horasExtrasPrevias = horasExtras[usuarioId] || 0;
   const usuario = obtenerUsuario(usuarioId);
-  const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
-  const horasMinimas = Math.min(horasMaximas - 8, 40); // Mínimo 40 horas o 8 menos que las máximas
+  const tipoContrato = usuario?.tipoContrato || 'Operativo';
+  const rangosHoras = getRangosHorasTipoContrato(tipoContrato);
+  const horasMaximas = obtenerHorasMaximas(tipoContrato);
+  const horasMinimas = rangosHoras.length > 0
+    ? Math.min(...rangosHoras.map((rango) => rango.min))
+    : getHorasMinimasTipoContrato(tipoContrato);
   const horasDisponibles = Math.max(horasMaximas - horasExtrasPrevias, horasMinimas);
 
   return mostrarReal ? total : Math.min(total, horasDisponibles);
@@ -139,7 +181,19 @@ export const calcularHorasExcedentes = (
   // Llama directamente a calcularHorasTotales con los argumentos necesarios
   const horasTotales = calcularHorasTotales(usuarioId, editando, horariosEditados, horarios, null, null, {}, obtenerUsuario, obtenerHorasMaximas, true);
   const usuario = obtenerUsuario(usuarioId);
-  const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
+  const tipoContrato = usuario?.tipoContrato || 'Operativo';
+  const rangosHoras = getRangosHorasTipoContrato(tipoContrato);
+
+  if (esHorasPermitidasTipoContrato(tipoContrato, horasTotales)) {
+    return 0;
+  }
+
+  const exceso = calcularExcesoSobreRangos(horasTotales, rangosHoras);
+  if (exceso > 0) {
+    return exceso;
+  }
+
+  const horasMaximas = obtenerHorasMaximas(tipoContrato);
   return Math.max(horasTotales - horasMaximas, 0);
 };
 
@@ -164,8 +218,11 @@ export const encontrarPracticantesDisponibles = (
 
   const compañerosDisponibles = compañeros.map(compañero => {
     const horasTotales = calcularHorasTotalesFn(compañero.id, true) || 0;
-    const horasMaximas = obtenerHorasMaximas(compañero.tipoContrato || 'Operativo') || 0;
-    const horasDisponibles = horasMaximas - horasTotales;
+    const tipoContrato = compañero.tipoContrato || 'Operativo';
+    const horasMaximas = obtenerHorasMaximas(tipoContrato) || 0;
+    const horasDisponibles = esHorasPermitidasTipoContrato(tipoContrato, horasTotales)
+      ? horasMaximas - horasTotales
+      : 0;
     return {
       usuario: compañero,
       horasDisponibles: Number(horasDisponibles.toFixed(1)),
@@ -182,8 +239,11 @@ export const encontrarPracticantesDisponibles = (
 
   const practicantesDisponibles = practicantes.map(practicante => {
     const horasTotales = calcularHorasTotalesFn(practicante.id, true) || 0;
-    const horasMaximas = obtenerHorasMaximas(practicante.tipoContrato || 'Operativo') || 0;
-    const horasDisponibles = horasMaximas - horasTotales;
+    const tipoContrato = practicante.tipoContrato || 'Operativo';
+    const horasMaximas = obtenerHorasMaximas(tipoContrato) || 0;
+    const horasDisponibles = esHorasPermitidasTipoContrato(tipoContrato, horasTotales)
+      ? horasMaximas - horasTotales
+      : 0;
     return {
       usuario: practicante,
       horasDisponibles: Number(horasDisponibles.toFixed(1)),

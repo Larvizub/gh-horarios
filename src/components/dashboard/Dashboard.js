@@ -202,7 +202,7 @@ const Dashboard = () => {
   const [usuariosTeletrabajo, setUsuariosTeletrabajo] = useState([]);
   const [modalUsuarios, setModalUsuarios] = useState({ open: false, tipo: '', usuarios: [] });
   const { getTipoLabel, tipos } = useTiposHorario();
-  const { getHorasMaximasTipoContrato } = useTiposContrato();
+  const { getHorasMaximasTipoContrato, formatTipoContratoHoras } = useTiposContrato();
   const navigate = useNavigate();
   const tiposNoSumaHoras = useMemo(() => {
     const merged = new Set(NO_SUMAN_HORAS);
@@ -417,8 +417,12 @@ const Dashboard = () => {
           setHorasExtras(horasExtrasUsuario);
           
           const horasMaximas = getHorasMaximasTipoContrato(userData?.tipoContrato || 'Operativo');
-          const horasMinimas = Math.max(horasMaximas * 0.8, 30);
-          setHorasDisponibles(Math.max(horasMaximas - horasExtrasUsuario, horasMinimas));
+          if (!Number.isFinite(horasMaximas)) {
+            setHorasDisponibles(0);
+          } else {
+            const horasMinimas = Math.max(horasMaximas * 0.8, 30);
+            setHorasDisponibles(Math.max(horasMaximas - horasExtrasUsuario, horasMinimas));
+          }
           setEstadisticas(stats);
         }
 
@@ -474,6 +478,7 @@ const Dashboard = () => {
   }
 
   const horasMaximas = getHorasMaximasTipoContrato(userData?.tipoContrato || 'Operativo');
+  const contratoSinLimite = !Number.isFinite(horasMaximas);
   const horasPlanificadas = estadisticas.semanaActual.horasPlanificadas || 0;
   const progresoHoras = horasPlanificadas > 0 
     ? ((estadisticas.semanaActual.horasTotales || 0) / horasPlanificadas * 100)
@@ -610,7 +615,7 @@ const Dashboard = () => {
                   Tienes {horasExtras.toFixed(1)} horas extras acumuladas
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#a16207' }}>
-                  Horas disponibles próxima semana: {horasDisponibles.toFixed(1)}h de {horasMaximas}h
+                  Horas permitidas para este contrato: {contratoSinLimite ? 'Sin límite' : formatTipoContratoHoras(userData?.tipoContrato || 'Operativo')}
                 </Typography>
               </Box>
             </Box>

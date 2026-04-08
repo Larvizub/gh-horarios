@@ -4,6 +4,38 @@ import {
   calcularHorasExcedentes,
   encontrarPracticantesDisponibles
 } from './horariosUtils';
+import { DEFAULT_TIPOS_CONTRATO, setTiposContratoCatalog } from './tiposContrato';
+
+const TIPOS_MULTIRANGO = [
+  {
+    key: 'operativo',
+    label: 'Operativo',
+    horasMinimas: 36,
+    horasMaximas: 48,
+    rangosHoras: [{ min: 36, max: 42 }, { min: 48, max: 48 }],
+    aplicaHoras: true,
+    orden: 1,
+    editable: false,
+  },
+  {
+    key: 'confianza',
+    label: 'Confianza',
+    horasMinimas: 72,
+    horasMaximas: 72,
+    rangosHoras: [{ min: 72, max: 72 }],
+    aplicaHoras: true,
+    orden: 2,
+    editable: false,
+  },
+];
+
+beforeEach(() => {
+  setTiposContratoCatalog(TIPOS_MULTIRANGO);
+});
+
+afterEach(() => {
+  setTiposContratoCatalog(DEFAULT_TIPOS_CONTRATO);
+});
 
 describe('horariosUtils', () => {
   it('convierte hora string a objeto 24h', () => {
@@ -84,6 +116,49 @@ describe('horariosUtils', () => {
     );
 
     expect(excedente).toBe(2);
+  });
+
+  it('calcula exceso en huecos entre rangos permitidos', () => {
+    const horarios = {
+      u1: {
+        l1: { tipo: 'normal', horaInicio: '08:00', horaFin: '17:00' },
+        l2: { tipo: 'normal', horaInicio: '08:00', horaFin: '17:00' },
+        l3: { tipo: 'normal', horaInicio: '08:00', horaFin: '17:00' },
+        l4: { tipo: 'normal', horaInicio: '08:00', horaFin: '17:00' },
+        l5: { tipo: 'normal', horaInicio: '08:00', horaFin: '15:00' }
+      }
+    };
+
+    const excedente = calcularHorasExcedentes(
+      'u1',
+      false,
+      {},
+      horarios,
+      () => ({ tipoContrato: 'Operativo' }),
+      () => 48
+    );
+
+    expect(excedente).toBe(1);
+  });
+
+  it('no sugiere disponibilidad para horas fuera del rango permitido', () => {
+    const usuarios = [
+      { id: 'u2', nombre: 'Ana', apellidos: 'A', departamento: 'Ventas', tipoContrato: 'Operativo' },
+    ];
+
+    const calcularHorasTotalesFn = () => 43;
+    const obtenerHorasMaximas = () => 48;
+
+    const resultado = encontrarPracticantesDisponibles(
+      1,
+      usuarios,
+      calcularHorasTotalesFn,
+      obtenerHorasMaximas,
+      'Ventas',
+      'u1'
+    );
+
+    expect(resultado).toHaveLength(0);
   });
 
   it('sugiere primero companeros y luego practicantes con horas suficientes', () => {

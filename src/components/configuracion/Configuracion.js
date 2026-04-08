@@ -43,6 +43,7 @@ import { DEFAULT_DEPARTAMENTOS, normalizeDepartamentoLabel } from '../../utils/d
 import useCargos from '../../hooks/useCargos';
 import useRoles from '../../hooks/useRoles';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import { formatTipoContratoHoras } from '../../utils/tiposContrato';
 import TiposHorarioManager from './TiposHorarioManager';
 import TiposContratoManager from './TiposContratoManager';
 import { saveCargosCatalogo } from '../../services/cargosService';
@@ -162,7 +163,7 @@ const Configuracion = () => {
   const { departamentos, departamentosActivos, loadingDepartamentos } = useDepartamentos();
   const { cargos, loadingCargos } = useCargos();
   const { roles, loadingRoles } = useRoles();
-  const { tipos: tiposContrato } = useTiposContrato();
+  const { tipos: tiposContrato, tiposMap: tiposContratoMap } = useTiposContrato();
   const [busquedaCargo, setBusquedaCargo] = useState('');
   const [permisosModuleOpen, setPermisosModuleOpen] = useState(false);
   const [roleSeleccionadoId, setRoleSeleccionadoId] = useState('');
@@ -1560,7 +1561,7 @@ const Configuracion = () => {
                           >
                             {tiposContratoOrdenados.map((tipoContrato) => (
                               <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                                {tipoContrato.label} ({tipoContrato.horasMaximas}h)
+                                {tipoContrato.label} ({formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)})
                               </MenuItem>
                             ))}
                           </StyledSelect>

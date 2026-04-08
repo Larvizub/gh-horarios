@@ -36,6 +36,7 @@ import useDepartamentos from '../../hooks/useDepartamentos';
 import { resolveCargoRecord } from '../../utils/cargos';
 import useCargos from '../../hooks/useCargos';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import { formatTipoContratoHoras } from '../../utils/tiposContrato';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -196,7 +197,7 @@ const Register = () => {
   const [currentUserData, setCurrentUserData] = useState(null);
   const { departamentosActivos, loadingDepartamentos } = useDepartamentos();
   const { cargosActivos, loadingCargos } = useCargos();
-  const { tipos: tiposContrato } = useTiposContrato();
+  const { tipos: tiposContrato, tiposMap: tiposContratoMap } = useTiposContrato();
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -640,7 +641,7 @@ const Register = () => {
                     >
                       {tiposContrato.map((tipoContrato) => (
                         <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                          {tipoContrato.label} ({tipoContrato.horasMaximas}h)
+                          {tipoContrato.label} ({formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)})
                         </MenuItem>
                       ))}
                     </Select>

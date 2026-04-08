@@ -2,7 +2,7 @@
  * Utilidades para manejo de tipos de contrato, roles y restricciones de horas
  */
 
-import { getHorasMaximasTipoContrato } from './tiposContrato';
+import { esHorasPermitidasTipoContrato, formatTipoContratoHoras, getHorasMaximasTipoContrato } from './tiposContrato';
 
 // Tipos de contrato disponibles
 export const TIPOS_CONTRATO = {
@@ -39,8 +39,7 @@ export const obtenerHorasMaximas = (tipoContrato) => {
  * @returns {boolean} true si excede el límite, false en caso contrario
  */
 export const excedeHorasMaximas = (horasTrabajadas, tipoContrato) => {
-  const horasMaximas = obtenerHorasMaximas(tipoContrato);
-  return horasTrabajadas > horasMaximas;
+  return !esHorasPermitidasTipoContrato(tipoContrato, horasTrabajadas);
 };
 
 /**
@@ -49,8 +48,7 @@ export const excedeHorasMaximas = (horasTrabajadas, tipoContrato) => {
  * @returns {string} Mensaje descriptivo de las restricciones
  */
 export const obtenerMensajeRestriccionHoras = (tipoContrato) => {
-  const horasMaximas = obtenerHorasMaximas(tipoContrato);
-  return `Los empleados de tipo ${tipoContrato} tienen un límite de ${horasMaximas} horas semanales.`;
+  return `Los empleados de tipo ${tipoContrato} tienen permitido ${formatTipoContratoHoras(tipoContrato)}.`;
 };
 
 /**

@@ -36,6 +36,6 @@ export const subscribeTiposContrato = (onChange) => {
 };
 
 export const saveTiposContrato = async (tipos) => {
-  const payload = tiposArrayToFirebaseObject(tipos);
+  const payload = tiposContratoArrayToFirebaseObject(tipos);
   await set(ref(database, TIPOS_CONTRATO_PATH), payload);
 };

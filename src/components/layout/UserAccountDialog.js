@@ -44,6 +44,7 @@ import useDepartamentos from '../../hooks/useDepartamentos';
 import { resolveCargoRecord } from '../../utils/cargos';
 import useCargos from '../../hooks/useCargos';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import { formatTipoContratoHoras } from '../../utils/tiposContrato';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -123,7 +124,7 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
   const { refreshUserData } = useAuth();
   const { departamentosActivos } = useDepartamentos();
   const { cargosActivos, loadingCargos } = useCargos();
-  const { tipos: tiposContrato } = useTiposContrato();
+  const { tipos: tiposContrato, tiposMap: tiposContratoMap } = useTiposContrato();
   const [tabIndex, setTabIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -422,7 +423,7 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
                   >
                     {tiposContrato.map((tipoContrato) => (
                       <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                        {tipoContrato.label} ({tipoContrato.horasMaximas} horas semanales)
+                        {tipoContrato.label} ({formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)})
                       </MenuItem>
                     ))}
                   </StyledSelect>

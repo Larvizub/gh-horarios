@@ -5,6 +5,8 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { format, addDays } from 'date-fns';
 import TurnoUsuario from './TurnoUsuario';
 import { obtenerEtiquetaRol, obtenerColorRol } from '../../utils/horariosUtils';
+import useTiposContrato from '../../hooks/useTiposContrato';
+import { formatTipoContratoHoras } from '../../utils/tiposContrato';
 
 // Styled Components
 const TableContainer = styled(Box)(({ theme }) => ({
@@ -128,15 +130,21 @@ const CopyButton = styled(IconButton)(({ theme }) => ({
 }));
 
 const RolChip = styled(Chip)(({ theme }) => ({
-  fontSize: '0.65rem',
-  height: 20,
+  fontSize: '0.72rem',
+  height: 24,
   fontWeight: 600,
-  borderRadius: 6,
+  borderRadius: 8,
+  '& .MuiChip-label': {
+    paddingLeft: theme.spacing(0.75),
+    paddingRight: theme.spacing(0.75),
+  },
 }));
 
 // Componente de fila móvil memoizado
 const MobileUserRow = memo(({ 
   usuario, 
+  tipoContratoLabel,
+  tipoContratoHoras,
   isCurrentUser, 
   exceso, 
   horasTotales, 
@@ -169,10 +177,20 @@ const MobileUserRow = memo(({
               {usuario.nombre} {usuario.apellidos.split(' ')[0]}
             </Typography>
             <RolChip 
-              label={obtenerEtiquetaRol(usuario.rol)} 
-              color={obtenerColorRol(usuario.rol)} 
+              label={`${tipoContratoLabel}${tipoContratoHoras ? ` · ${tipoContratoHoras}` : ''}`}
+              sx={{
+                mt: 0.5,
+                bgcolor: alpha('#00830e', 0.1),
+                color: '#065f46',
+                border: '1px solid rgba(0, 131, 14, 0.18)',
+                maxWidth: '100%',
+                '& .MuiChip-label': {
+                  whiteSpace: 'normal',
+                  textAlign: 'center',
+                  lineHeight: 1.1,
+                },
+              }}
               size="small" 
-              sx={{ mt: 0.5 }} 
             />
           </Box>
         </Grid>
@@ -250,6 +268,8 @@ const MobileUserRow = memo(({
 // Componente de fila desktop memoizado
 const DesktopUserRow = memo(({
   usuario,
+  tipoContratoLabel,
+  tipoContratoHoras,
   isCurrentUser,
   exceso,
   horasTotales,
@@ -281,10 +301,20 @@ const DesktopUserRow = memo(({
               {usuario.nombre} {usuario.apellidos}
             </Typography>
             <RolChip 
-              label={obtenerEtiquetaRol(usuario.rol)} 
-              color={obtenerColorRol(usuario.rol)} 
+              label={`${tipoContratoLabel}${tipoContratoHoras ? ` · ${tipoContratoHoras}` : ''}`}
+              sx={{
+                mt: 0.5,
+                bgcolor: alpha('#00830e', 0.1),
+                color: '#065f46',
+                border: '1px solid rgba(0, 131, 14, 0.18)',
+                maxWidth: '100%',
+                '& .MuiChip-label': {
+                  whiteSpace: 'normal',
+                  textAlign: 'center',
+                  lineHeight: 1.1,
+                },
+              }}
               size="small" 
-              sx={{ mt: 0.5 }} 
             />
           </Box>
         </Grid>
@@ -360,6 +390,7 @@ const HorariosTable = memo(({
   diasSemana
 }) => {
   const [selectedTargets, setSelectedTargets] = useState(new Set());
+  const { getTipoContratoLabel } = useTiposContrato();
   
   const toggleTarget = useCallback((usuarioId, diaKey) => {
     const key = `${usuarioId}|${diaKey}`;
@@ -428,6 +459,8 @@ const HorariosTable = memo(({
           {usuariosFiltrados.map(usuario => {
             const isCurrentUser = usuario.id === currentUser?.uid;
             const exceso = calcularExceso(usuario.id);
+            const tipoContratoLabel = getTipoContratoLabel(usuario.tipoContrato);
+            const tipoContratoHoras = formatTipoContratoHoras(usuario.tipoContrato);
             // Optimización: pasar el usuario directamente para evitar .find()
             const horasTotales = calcularHorasTotales(
               usuario.id, 
@@ -446,6 +479,8 @@ const HorariosTable = memo(({
               <MobileUserRow
                 key={usuario.id}
                 usuario={usuario}
+                tipoContratoLabel={tipoContratoLabel}
+                tipoContratoHoras={tipoContratoHoras}
                 isCurrentUser={isCurrentUser}
                 exceso={exceso}
                 horasTotales={horasTotales}
@@ -511,6 +546,8 @@ const HorariosTable = memo(({
           {usuariosFiltrados.map(usuario => {
             const isCurrentUser = usuario.id === currentUser?.uid;
             const exceso = calcularExceso(usuario.id);
+            const tipoContratoLabel = getTipoContratoLabel(usuario.tipoContrato);
+            const tipoContratoHoras = formatTipoContratoHoras(usuario.tipoContrato);
             // Optimización: pasar el usuario directamente para evitar .find()
             const horasTotales = calcularHorasTotales(
               usuario.id, 
@@ -529,6 +566,8 @@ const HorariosTable = memo(({
               <DesktopUserRow
                 key={usuario.id}
                 usuario={usuario}
+                tipoContratoLabel={tipoContratoLabel}
+                tipoContratoHoras={tipoContratoHoras}
                 isCurrentUser={isCurrentUser}
                 exceso={exceso}
                 horasTotales={horasTotales}

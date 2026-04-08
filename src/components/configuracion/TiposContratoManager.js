@@ -4,12 +4,14 @@ import {
   Box,
   Button,
   Chip,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
   IconButton,
+  FormControlLabel,
   Paper,
   Stack,
   TextField,
@@ -23,20 +25,66 @@ import SaveIcon from '@mui/icons-material/Save';
 import useTiposContrato from '../../hooks/useTiposContrato';
 import { notify as toast } from '../../services/notify';
 import { saveTiposContrato } from '../../services/tiposContratoService';
-import { sanitizeTipoContratoKey } from '../../utils/tiposContrato';
+import { sanitizeTipoContratoKey, formatTipoContratoHoras } from '../../utils/tiposContrato';
 
 const HIGHLIGHT_BLUE = '#dbeafe';
+const MAX_RANGOS = 3;
 
-const EMPTY_FORM = {
+const createEmptyRango = () => ({
+  min: '',
+  max: '',
+});
+
+const createEmptyForm = () => ({
   label: '',
-  horasMaximas: '',
+  aplicaHoras: true,
+  rangosHoras: Array.from({ length: MAX_RANGOS }, () => createEmptyRango()),
+});
+
+const EMPTY_FORM = createEmptyForm();
+
+const formatPreviewRango = (rango) => {
+  if (rango.min === rango.max) {
+    return `${rango.max} horas exactas`;
+  }
+
+  return `${rango.min} a ${rango.max}h`;
+};
+
+const getHorasPreview = (form) => {
+  if (form.aplicaHoras === false) {
+    return 'Sin límite';
+  }
+
+  const rangos = (form.rangosHoras || [])
+    .map((rango) => {
+      const min = Number(rango.min);
+      const max = Number(rango.max);
+
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        return null;
+      }
+
+      return {
+        min: Math.min(min, max),
+        max: Math.max(min, max),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.min - b.min || a.max - b.max);
+
+  if (rangos.length === 0) {
+    return '';
+  }
+
+  return rangos.map((rango) => formatPreviewRango(rango)).join(' o ');
 };
 
 const TiposContratoManager = () => {
   const { tipos, loadingTipos } = useTiposContrato();
   const [saving, setSaving] = useState(false);
   const [editingKey, setEditingKey] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(createEmptyForm());
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -46,7 +94,7 @@ const TiposContratoManager = () => {
   }, [tipos]);
 
   const resetForm = () => {
-    setForm(EMPTY_FORM);
+    setForm(createEmptyForm());
     setEditingKey(null);
   };
 
@@ -67,25 +115,76 @@ const TiposContratoManager = () => {
 
   const handleEdit = (tipo) => {
     setEditingKey(tipo.key);
+    const sourceRangos = Array.isArray(tipo.rangosHoras) && tipo.rangosHoras.length > 0
+      ? tipo.rangosHoras
+      : (tipo.aplicaHoras === false ? [] : [{ min: tipo.horasMinimas, max: tipo.horasMaximas }]);
+    const rangosHoras = Array.from({ length: MAX_RANGOS }, () => createEmptyRango());
+
+    sourceRangos.slice(0, MAX_RANGOS).forEach((rango, index) => {
+      rangosHoras[index] = {
+        min: String(rango.min ?? ''),
+        max: String(rango.max ?? ''),
+      };
+    });
+
     setForm({
       label: tipo.label || '',
-      horasMaximas: String(tipo.horasMaximas ?? ''),
+      aplicaHoras: tipo.aplicaHoras !== false,
+      rangosHoras,
     });
     setEditModalOpen(true);
   };
 
   const handleSave = async () => {
     const label = form.label.trim();
-    const horasMaximas = Number(form.horasMaximas);
+    const aplicaHoras = form.aplicaHoras !== false;
+    const rangosHoras = [];
 
     if (!label) {
       toast.error('El nombre del tipo es obligatorio.');
       return;
     }
 
-    if (!Number.isFinite(horasMaximas) || horasMaximas <= 0) {
-      toast.error('Las horas máximas deben ser un número mayor que cero.');
-      return;
+    if (aplicaHoras) {
+      for (let index = 0; index < MAX_RANGOS; index += 1) {
+        const rango = form.rangosHoras?.[index] || {};
+        const tieneMin = String(rango.min ?? '').trim() !== '';
+        const tieneMax = String(rango.max ?? '').trim() !== '';
+
+        if (!tieneMin && !tieneMax) {
+          continue;
+        }
+
+        if (!tieneMin || !tieneMax) {
+          toast.error(`Completa ambos valores del rango ${index + 1}.`);
+          return;
+        }
+
+        const min = Number(rango.min);
+        const max = Number(rango.max);
+
+        if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0) {
+          toast.error(`El rango ${index + 1} debe usar números mayores que cero.`);
+          return;
+        }
+
+        rangosHoras.push({ min: Math.min(min, max), max: Math.max(min, max) });
+      }
+
+      if (rangosHoras.length === 0) {
+        toast.error('Agrega al menos un rango de horas.');
+        return;
+      }
+
+      const rangosOrdenados = [...rangosHoras].sort((a, b) => a.min - b.min || a.max - b.max);
+      for (let index = 1; index < rangosOrdenados.length; index += 1) {
+        if (rangosOrdenados[index].min <= rangosOrdenados[index - 1].max) {
+          toast.error('Los rangos de horas no pueden superponerse.');
+          return;
+        }
+      }
+
+      rangosHoras.splice(0, rangosHoras.length, ...rangosOrdenados);
     }
 
     const key = sanitizeTipoContratoKey(label);
@@ -117,21 +216,32 @@ const TiposContratoManager = () => {
               return tipo;
             }
 
+            const horasMinimas = aplicaHoras ? rangosHoras[0].min : 0;
+            const horasMaximas = aplicaHoras ? rangosHoras[rangosHoras.length - 1].max : 0;
+
             return {
               ...tipo,
+              horasMinimas,
               horasMaximas,
+              rangosHoras: aplicaHoras ? rangosHoras : [],
+              aplicaHoras,
             };
           });
         }
 
         const nextOrder = sortedTipos.length > 0 ? Math.max(...sortedTipos.map((tipo) => tipo.orden || 0)) + 1 : 1;
+        const horasMinimas = aplicaHoras ? rangosHoras[0].min : 0;
+        const horasMaximas = aplicaHoras ? rangosHoras[rangosHoras.length - 1].max : 0;
 
         return [
           ...sortedTipos,
           {
             key,
             label,
+            horasMinimas,
             horasMaximas,
+            rangosHoras: aplicaHoras ? rangosHoras : [],
+            aplicaHoras,
             orden: nextOrder,
             editable: true,
           },
@@ -140,9 +250,10 @@ const TiposContratoManager = () => {
 
       await saveTiposContrato(nextTipos);
 
+      const rangoDescripcion = getHorasPreview({ aplicaHoras, rangosHoras }) || 'Sin límite de horas';
       const detail = editingKey
-        ? `Se actualizó "${label}" con ${horasMaximas} horas máximas.`
-        : `Se creó "${label}" con ${horasMaximas} horas máximas.`;
+        ? `Se actualizó "${label}" con ${rangoDescripcion}.`
+        : `Se creó "${label}" con ${rangoDescripcion}.`;
 
       toast.success({
         title: editingKey ? 'Tipo de contrato actualizado' : 'Tipo de contrato creado',
@@ -189,7 +300,7 @@ const TiposContratoManager = () => {
         Tipos de Contrato
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Crea tipos nuevos o ajusta las horas máximas para cada contrato.
+        Crea tipos nuevos o ajusta los rangos de horas semanales para cada contrato. Los rangos no pueden traslaparse; por ejemplo, el operativo puede quedar como 36 a 42 y 48 horas exactas.
       </Typography>
 
       <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
@@ -238,17 +349,50 @@ const TiposContratoManager = () => {
               onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))}
               helperText="Ejemplo: Jornada parcial"
             />
-            <TextField
-              fullWidth
-              label="Horas máximas semanales"
-              type="number"
-              value={form.horasMaximas}
-              onChange={(event) => setForm((current) => ({ ...current, horasMaximas: event.target.value }))}
-              inputProps={{ min: 1, step: 1 }}
-              helperText="Ejemplo: 30"
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={form.aplicaHoras === false}
+                  onChange={(event) => setForm((current) => ({ ...current, aplicaHoras: !event.target.checked }))}
+                />
+              }
+              label="No aplican horas dentro del rango"
             />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: -1, mb: 0.5 }}>
+              Ejemplo operativo: primer rango 36 a 42, segundo rango 48 horas exactas.
+            </Typography>
+            {form.aplicaHoras !== false && form.rangosHoras.map((rango, index) => (
+              <Stack key={`rango-${index}`} direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                <TextField
+                  fullWidth
+                  label={`Rango ${index + 1} - horas mínimas`}
+                  type="number"
+                  value={rango.min}
+                  onChange={(event) => setForm((current) => {
+                    const rangosHorasActualizados = [...current.rangosHoras];
+                    rangosHorasActualizados[index] = { ...rangosHorasActualizados[index], min: event.target.value };
+                    return { ...current, rangosHoras: rangosHorasActualizados };
+                  })}
+                  inputProps={{ min: 1, step: 1 }}
+                  helperText={index === 0 ? 'Ejemplo: 36' : 'Opcional'}
+                />
+                <TextField
+                  fullWidth
+                  label={`Rango ${index + 1} - horas máximas`}
+                  type="number"
+                  value={rango.max}
+                  onChange={(event) => setForm((current) => {
+                    const rangosHorasActualizados = [...current.rangosHoras];
+                    rangosHorasActualizados[index] = { ...rangosHorasActualizados[index], max: event.target.value };
+                    return { ...current, rangosHoras: rangosHorasActualizados };
+                  })}
+                  inputProps={{ min: 1, step: 1 }}
+                  helperText={index === 0 ? 'Ejemplo: 42' : 'Opcional'}
+                />
+              </Stack>
+            ))}
             <Chip
-              label={`${form.label || 'Vista previa'}${form.horasMaximas ? ` · ${form.horasMaximas} horas` : ''}`}
+              label={`${form.label || 'Vista previa'}${getHorasPreview(form) ? ` · ${getHorasPreview(form)}` : ''}`}
               sx={{ border: '1px solid rgba(37, 99, 235, 0.24)', fontWeight: 600, alignSelf: 'flex-start' }}
             />
           </Stack>
@@ -283,17 +427,50 @@ const TiposContratoManager = () => {
               disabled
               helperText="La etiqueta no se modifica desde aquí"
             />
-            <TextField
-              fullWidth
-              label="Horas máximas semanales"
-              type="number"
-              value={form.horasMaximas}
-              onChange={(event) => setForm((current) => ({ ...current, horasMaximas: event.target.value }))}
-              inputProps={{ min: 1, step: 1 }}
-              helperText="Modifica el límite de horas para este tipo"
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={form.aplicaHoras === false}
+                  onChange={(event) => setForm((current) => ({ ...current, aplicaHoras: !event.target.checked }))}
+                />
+              }
+              label="No aplican horas dentro del rango"
             />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: -1, mb: 0.5 }}>
+              Ejemplo operativo: primer rango 36 a 42, segundo rango 48 horas exactas.
+            </Typography>
+            {form.aplicaHoras !== false && form.rangosHoras.map((rango, index) => (
+              <Stack key={`edit-rango-${index}`} direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                <TextField
+                  fullWidth
+                  label={`Rango ${index + 1} - horas mínimas`}
+                  type="number"
+                  value={rango.min}
+                  onChange={(event) => setForm((current) => {
+                    const rangosHorasActualizados = [...current.rangosHoras];
+                    rangosHorasActualizados[index] = { ...rangosHorasActualizados[index], min: event.target.value };
+                    return { ...current, rangosHoras: rangosHorasActualizados };
+                  })}
+                  inputProps={{ min: 1, step: 1 }}
+                  helperText={index === 0 ? 'Ejemplo: 36' : 'Opcional'}
+                />
+                <TextField
+                  fullWidth
+                  label={`Rango ${index + 1} - horas máximas`}
+                  type="number"
+                  value={rango.max}
+                  onChange={(event) => setForm((current) => {
+                    const rangosHorasActualizados = [...current.rangosHoras];
+                    rangosHorasActualizados[index] = { ...rangosHorasActualizados[index], max: event.target.value };
+                    return { ...current, rangosHoras: rangosHorasActualizados };
+                  })}
+                  inputProps={{ min: 1, step: 1 }}
+                  helperText={index === 0 ? 'Ejemplo: 42' : 'Opcional'}
+                />
+              </Stack>
+            ))}
             <Chip
-              label={`${form.label || 'Vista previa'}${form.horasMaximas ? ` · ${form.horasMaximas} horas` : ''}`}
+              label={`${form.label || 'Vista previa'}${getHorasPreview(form) ? ` · ${getHorasPreview(form)}` : ''}`}
               sx={{ border: '1px solid rgba(37, 99, 235, 0.24)', fontWeight: 600, alignSelf: 'flex-start' }}
             />
           </Stack>
@@ -344,7 +521,7 @@ const TiposContratoManager = () => {
               </Box>
 
               <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-                <Chip size="small" label={`${tipo.horasMaximas} horas`} color="primary" variant="outlined" />
+                <Chip size="small" label={formatTipoContratoHoras(tipo.key, undefined)} color="primary" variant="outlined" />
                 {!tipo.editable && <Chip size="small" label="Base" color="success" variant="outlined" />}
                 <IconButton size="small" onClick={() => handleEdit(tipo)} aria-label={`Editar ${tipo.label}`}>
                   <EditIcon fontSize="small" />
