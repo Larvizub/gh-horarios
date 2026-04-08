@@ -11,6 +11,7 @@ import {
   TIPOS_CONTRATO,
   ROLES 
 } from '../../utils/contratoUtils';
+import useTiposContrato from '../../hooks/useTiposContrato';
 import { ref as dbRef, update } from 'firebase/database';
 import {
   Container,
@@ -202,6 +203,7 @@ const puedeEliminarUsuarios = (usuario) => {
 const Personal = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { tipos: tiposContrato } = useTiposContrato();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -621,8 +623,11 @@ const Personal = () => {
                         '& .MuiSelect-select': { py: 0.75, fontSize: '0.8rem' }
                       }}
                     >
-                      <MenuItem value={TIPOS_CONTRATO.OPERATIVO}>Operativo</MenuItem>
-                      <MenuItem value={TIPOS_CONTRATO.CONFIANZA}>Confianza</MenuItem>
+                        {tiposContrato.map((tipoContrato) => (
+                          <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
+                            {tipoContrato.label}
+                          </MenuItem>
+                        ))}
                     </Select>
                   </FormControl>
                 ) : (

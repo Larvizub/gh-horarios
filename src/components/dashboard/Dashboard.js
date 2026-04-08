@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ref, get } from 'firebase/database';
 import { database, auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
-import { obtenerHorasMaximas } from '../../utils/contratoUtils';
 import {
   Container,
   Grid,
@@ -58,6 +57,7 @@ import { format, subWeeks, startOfWeek, getISOWeek, getYear } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { NO_SUMAN_HORAS } from '../../utils/horariosConstants';
 import useTiposHorario from '../../hooks/useTiposHorario';
+import useTiposContrato from '../../hooks/useTiposContrato';
 
 // Styled Components para diseño moderno
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -202,6 +202,7 @@ const Dashboard = () => {
   const [usuariosTeletrabajo, setUsuariosTeletrabajo] = useState([]);
   const [modalUsuarios, setModalUsuarios] = useState({ open: false, tipo: '', usuarios: [] });
   const { getTipoLabel, tipos } = useTiposHorario();
+  const { getHorasMaximasTipoContrato } = useTiposContrato();
   const navigate = useNavigate();
   const tiposNoSumaHoras = useMemo(() => {
     const merged = new Set(NO_SUMAN_HORAS);
@@ -415,7 +416,7 @@ const Dashboard = () => {
           
           setHorasExtras(horasExtrasUsuario);
           
-          const horasMaximas = obtenerHorasMaximas(userData?.tipoContrato || 'Operativo');
+          const horasMaximas = getHorasMaximasTipoContrato(userData?.tipoContrato || 'Operativo');
           const horasMinimas = Math.max(horasMaximas * 0.8, 30);
           setHorasDisponibles(Math.max(horasMaximas - horasExtrasUsuario, horasMinimas));
           setEstadisticas(stats);
@@ -472,7 +473,7 @@ const Dashboard = () => {
     );
   }
 
-  const horasMaximas = obtenerHorasMaximas(userData?.tipoContrato || 'Operativo');
+  const horasMaximas = getHorasMaximasTipoContrato(userData?.tipoContrato || 'Operativo');
   const horasPlanificadas = estadisticas.semanaActual.horasPlanificadas || 0;
   const progresoHoras = horasPlanificadas > 0 
     ? ((estadisticas.semanaActual.horasTotales || 0) / horasPlanificadas * 100)

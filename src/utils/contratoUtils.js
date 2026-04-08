@@ -2,6 +2,8 @@
  * Utilidades para manejo de tipos de contrato, roles y restricciones de horas
  */
 
+import { getHorasMaximasTipoContrato } from './tiposContrato';
+
 // Tipos de contrato disponibles
 export const TIPOS_CONTRATO = {
   OPERATIVO: 'Operativo',
@@ -27,7 +29,7 @@ export const HORAS_MAXIMAS_POR_TIPO = {
  * @returns {number} Las horas máximas permitidas
  */
 export const obtenerHorasMaximas = (tipoContrato) => {
-  return HORAS_MAXIMAS_POR_TIPO[tipoContrato] || HORAS_MAXIMAS_POR_TIPO[TIPOS_CONTRATO.OPERATIVO];
+  return getHorasMaximasTipoContrato(tipoContrato);
 };
 
 /**

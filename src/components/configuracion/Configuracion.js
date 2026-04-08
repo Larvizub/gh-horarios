@@ -20,49 +20,34 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  ListSubheader,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Tabs,
-  Tab,
-  Divider,
   Alert,
   Avatar,
   Collapse,
   Skeleton,
-  InputAdornment,
   IconButton,
   Switch,
   FormControlLabel,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
-import { styled, alpha } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import SaveIcon from '@mui/icons-material/Save';
-import LockIcon from '@mui/icons-material/Lock';
-import PersonIcon from '@mui/icons-material/Person';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import EmailIcon from '@mui/icons-material/Email';
-import BadgeIcon from '@mui/icons-material/Badge';
-import BusinessIcon from '@mui/icons-material/Business';
-import WorkIcon from '@mui/icons-material/Work';
-import SecurityIcon from '@mui/icons-material/Security';
 import useDepartamentos from '../../hooks/useDepartamentos';
 import { saveDepartamentosCatalogo } from '../../services/departamentosService';
 import { DEFAULT_DEPARTAMENTOS, normalizeDepartamentoLabel } from '../../utils/departamentos';
 import useCargos from '../../hooks/useCargos';
 import useRoles from '../../hooks/useRoles';
+import useTiposContrato from '../../hooks/useTiposContrato';
 import TiposHorarioManager from './TiposHorarioManager';
+import TiposContratoManager from './TiposContratoManager';
 import { saveCargosCatalogo } from '../../services/cargosService';
 import { saveRolesCatalogo } from '../../services/rolesService';
-import { buildCargoIdFromLabel, buildDefaultCargoPermissions, groupCargosByDepartamento, normalizeCargoDepartamentoId, normalizeCargoLabel, normalizeCargoPermissions, PERMISOS_CARGO, resolveCargoRecord } from '../../utils/cargos';
+import { buildCargoIdFromLabel, buildDefaultCargoPermissions, normalizeCargoDepartamentoId, normalizeCargoLabel, normalizeCargoPermissions, PERMISOS_CARGO, resolveCargoRecord } from '../../utils/cargos';
 
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
@@ -73,57 +58,11 @@ const PageContainer = styled(Box)(({ theme }) => ({
   },
 }));
 
-const ProfileHeader = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(135deg, #00830e 0%, #006c0b 50%, #005a09 100%)',
-  borderRadius: 24,
-  padding: theme.spacing(4),
-  marginBottom: theme.spacing(3),
-  position: 'relative',
-  overflow: 'hidden',
-  boxShadow: '0 10px 40px rgba(0, 131, 14, 0.3)',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: '-50%',
-    right: '-20%',
-    width: '60%',
-    height: '150%',
-    background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
-    borderRadius: '50%',
-  },
-  [theme.breakpoints.down('sm')]: {
-    borderRadius: 0,
-    marginLeft: theme.spacing(-2),
-    marginRight: theme.spacing(-2),
-    marginTop: theme.spacing(-2),
-    padding: theme.spacing(3),
-  },
-}));
-
 const StyledCard = styled(Paper)(({ theme }) => ({
   borderRadius: 20,
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
   border: '1px solid rgba(0, 0, 0, 0.04)',
   overflow: 'hidden',
-}));
-
-const StyledTabs = styled(Tabs)(({ theme }) => ({
-  borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-  '& .MuiTabs-indicator': {
-    height: 3,
-    borderRadius: '3px 3px 0 0',
-    backgroundColor: '#00830e',
-  },
-  '& .MuiTab-root': {
-    textTransform: 'none',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-    minHeight: 56,
-    '&.Mui-selected': {
-      color: '#00830e',
-      fontWeight: 600,
-    },
-  },
 }));
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -219,19 +158,11 @@ const AdminModuleHeader = styled(ButtonBase)(() => ({
   },
 }));
 
-const rolesDisponibles = [
-  { value: null, label: 'Sin rol' },
-  { value: ROLES.ADMINISTRADOR, label: 'Administrador' },
-  { value: ROLES.MODIFICADOR, label: 'Gestor' }, 
-  { value: ROLES.VISOR, label: 'Visor' }
-];
-
 const Configuracion = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { departamentos, departamentosActivos, loadingDepartamentos } = useDepartamentos();
   const { cargos, loadingCargos } = useCargos();
   const { roles, loadingRoles } = useRoles();
+  const { tipos: tiposContrato } = useTiposContrato();
   const [busquedaCargo, setBusquedaCargo] = useState('');
   const [permisosModuleOpen, setPermisosModuleOpen] = useState(false);
   const [roleSeleccionadoId, setRoleSeleccionadoId] = useState('');
@@ -255,7 +186,7 @@ const Configuracion = () => {
   const mountedRef = useRef(true);
   
   const [loading, setLoading] = useState(true);
-  const [tabIndex, setTabIndex] = useState(0);
+  const [, setTabIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -279,14 +210,10 @@ const Configuracion = () => {
   const [catalogModuleOpen, setCatalogModuleOpen] = useState(false);
   const [cargoModuleOpen, setCargoModuleOpen] = useState(false);
   const [tiposModuleOpen, setTiposModuleOpen] = useState(false);
+  const [tiposContratoModuleOpen, setTiposContratoModuleOpen] = useState(false);
   const [nuevoDepartamento, setNuevoDepartamento] = useState('');
   const [nuevoCargo, setNuevoCargo] = useState('');
   const [nuevoRolLabel, setNuevoRolLabel] = useState('');
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -341,6 +268,10 @@ const Configuracion = () => {
     });
   }, [cargos]);
 
+  const tiposContratoOrdenados = useMemo(() => {
+    return [...tiposContrato].sort((a, b) => a.orden - b.orden);
+  }, [tiposContrato]);
+
   const cargoOptions = useMemo(() => cargosOrdenados.filter((cargo) => cargo.activo !== false).map((cargo) => cargo.label), [cargosOrdenados]);
 
   const departamentosPorId = useMemo(() => {
@@ -349,18 +280,6 @@ const Configuracion = () => {
       return accumulator;
     }, {});
   }, [departamentos]);
-
-  const cargosAgrupadosPorDepartamento = useMemo(() => {
-    return groupCargosByDepartamento(cargosOrdenados.filter((cargo) => cargo.activo !== false));
-  }, [cargosOrdenados]);
-
-  const cargosParaSelectAgrupados = useMemo(() => {
-    return Object.entries(cargosAgrupadosPorDepartamento).map(([departamentoId, items]) => ({
-      departamentoId,
-      label: departamentosPorId[departamentoId] || 'Sin departamento',
-      items,
-    }));
-  }, [cargosAgrupadosPorDepartamento, departamentosPorId]);
 
   const usuariosFiltrados = useMemo(() => {
     const termino = normalizeCargoLabel(busquedaUsuarios).toLowerCase();
@@ -384,19 +303,6 @@ const Configuracion = () => {
       return campos.includes(termino);
     });
   }, [busquedaUsuarios, usuarios]);
-
-  const usuariosFiltradosConSeleccion = useMemo(() => {
-    if (!usuarioSeleccionado) {
-      return usuariosFiltrados;
-    }
-
-    const existeSeleccionado = usuariosFiltrados.some((usuario) => usuario.id === usuarioSeleccionado.id);
-    if (existeSeleccionado) {
-      return usuariosFiltrados;
-    }
-
-    return [usuarioSeleccionado, ...usuariosFiltrados];
-  }, [usuarioSeleccionado, usuariosFiltrados]);
 
   const departamentosFiltrados = useMemo(() => {
     const termino = normalizeCargoLabel(busquedaDepartamentos).toLowerCase();
@@ -890,6 +796,7 @@ const Configuracion = () => {
       cargo: cargoModuleOpen,
       permisos: permisosModuleOpen,
       tipos: tiposModuleOpen,
+      contratos: tiposContratoModuleOpen,
     };
 
     const isCurrentlyOpen = currentStates[module];
@@ -900,6 +807,7 @@ const Configuracion = () => {
     setCargoModuleOpen(false);
     setPermisosModuleOpen(false);
     setTiposModuleOpen(false);
+    setTiposContratoModuleOpen(false);
 
     // If the requested module was closed, open it; otherwise leave closed
     if (!isCurrentlyOpen) {
@@ -908,6 +816,7 @@ const Configuracion = () => {
       if (module === 'cargo') setCargoModuleOpen(true);
       if (module === 'permisos') setPermisosModuleOpen(true);
       if (module === 'tipos') setTiposModuleOpen(true);
+      if (module === 'contratos') setTiposContratoModuleOpen(true);
     }
   };
 
@@ -1038,155 +947,6 @@ const Configuracion = () => {
       mountedRef.current = false;
     };
   }, [navigate, userId]);
-
-  const handleChangeTab = (event, newValue) => {
-    setTabIndex(newValue);
-    if (newValue !== 2 && userData) {
-      setUsuarioSeleccionado(null);
-      setFormData({
-        nombre: userData.nombre || '',
-        apellidos: userData.apellidos || '',
-        email: userData.email || '',
-        cargo: userData.cargo || '',
-        departamento: userData.departamento || '',
-        tipoContrato: userData.tipoContrato || 'Operativo',
-        rol: userData.rol || null
-      });
-      navigate('/configuracion');
-    }
-  };
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    if (name && value !== undefined) {
-      // Manejar el caso especial del rol "Sin rol"
-      const finalValue = name === 'rol' && value === 'Sin rol' ? null : value;
-      setFormData(prev => ({
-        ...prev,
-        [name]: finalValue
-      }));
-    }
-  };
-
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordData({
-      ...passwordData,
-      [name]: value
-    });
-  };
-
-  const handleUsuarioChange = (e) => {
-    const usuarioId = e.target.value;
-    const usuarioEncontrado = usuarios.find(u => u.id === usuarioId);
-    setUsuarioSeleccionado(usuarioEncontrado);
-    setFormData({
-      nombre: usuarioEncontrado.nombre || '',
-      apellidos: usuarioEncontrado.apellidos || '',
-      email: usuarioEncontrado.email || '',
-      cargo: usuarioEncontrado.cargo || '',
-      departamento: usuarioEncontrado.departamento || '',
-      tipoContrato: usuarioEncontrado.tipoContrato || 'Operativo',
-      rol: usuarioEncontrado.rol || null
-    });
-  };
-
-  const guardarPerfil = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      const targetUserId = userId || (usuarioSeleccionado ? usuarioSeleccionado.id : currentUser.uid);
-      const userRef = ref(database, `usuarios/${targetUserId}`);
-      const cargoRecord = resolveCargoRecord(formData.cargo);
-      
-      // Actualizar datos en la base de datos
-      const updateData = {
-        nombre: formData.nombre,
-        apellidos: formData.apellidos,
-        cargo: cargoRecord.cargo,
-        cargoId: cargoRecord.cargoId,
-        departamento: formData.departamento,
-        ...(puedeAsignarRoles(userData) && { rol: formData.rol }) // Solo usuarios con permisos pueden cambiar roles
-      };
-
-      // Solo Talento Humano puede cambiar el tipo de contrato
-      if (puedeModificarTipoContrato(userData)) {
-        updateData.tipoContrato = formData.tipoContrato;
-      }
-
-      await update(userRef, updateData);
-
-      // Si se cambió el email y es el usuario actual o un admin
-      if (formData.email !== (usuarioSeleccionado ? usuarioSeleccionado.email : userData.email)) {
-        if (targetUserId === currentUser.uid) {
-          // Si es el usuario actual, necesitamos reautenticar
-          setAccionPendiente('email');
-          setDialogoReautenticacion(true);
-          return;
-        } else if (isAdmin) {
-          // Si es admin cambiando el email de otro usuario, actualizar en la base de datos
-          await update(userRef, { email: formData.email });
-        }
-      }
-
-      toast.success('Perfil actualizado correctamente');
-      
-      // Actualizar datos locales
-      if (targetUserId === currentUser.uid) {
-        setUserData({
-          ...userData,
-          ...formData,
-          cargoId: cargoRecord.cargoId,
-        });
-      } else if (usuarioSeleccionado) {
-        // Actualizar en la lista de usuarios
-        setUsuarios(usuarios.map(u => 
-          u.id === usuarioSeleccionado.id ? { ...u, ...formData, cargoId: cargoRecord.cargoId } : u
-        ));
-        setUsuarioSeleccionado({
-          ...usuarioSeleccionado,
-          ...formData,
-          cargoId: cargoRecord.cargoId,
-        });
-      }
-    } catch (error) {
-      console.error('Error al actualizar perfil:', error);
-      setError('Error al actualizar perfil: ' + error.message);
-      toast.error('Error al actualizar perfil: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const cambiarContrasena = async () => {
-    const { newPassword, confirmPassword } = passwordData; // Removemos currentPassword ya que no se usa
-    
-    if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Reautenticar al usuario
-      setAccionPendiente('password');
-      setDialogoReautenticacion(true);
-    } catch (error) {
-      console.error('Error al cambiar contraseña:', error);
-      setError('Error al cambiar contraseña: ' + error.message);
-      toast.error('Error al cambiar contraseña: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleReautenticacion = async () => {
     try {
@@ -1466,6 +1226,38 @@ const Configuracion = () => {
                   <Collapse in={tiposModuleOpen} timeout="auto">
                     <Box sx={{ p: { xs: 2, md: 3 } }}>
                       <TiposHorarioManager />
+                    </Box>
+                  </Collapse>
+                </AdminModuleCard>
+
+                <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
+                  <AdminModuleHeader type="button" onClick={() => toggleModule('contratos')}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Avatar sx={{ width: 44, height: 44, bgcolor: '#2563eb', color: '#ffffff', fontWeight: 700 }}>
+                        {tiposContrato.length}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }} noWrap>
+                          Tipos de Contrato
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b' }} noWrap>
+                          Administra los tipos de contrato y sus horas máximas.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <ExpandMoreIcon
+                      sx={{
+                        color: '#2563eb',
+                        transition: 'transform 180ms ease',
+                        transform: tiposContratoModuleOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        flex: '0 0 auto',
+                      }}
+                    />
+                  </AdminModuleHeader>
+
+                  <Collapse in={tiposContratoModuleOpen} timeout="auto">
+                    <Box sx={{ p: { xs: 2, md: 3 } }}>
+                      <TiposContratoManager />
                     </Box>
                   </Collapse>
                 </AdminModuleCard>
@@ -1764,10 +1556,13 @@ const Configuracion = () => {
                             value={usuarioEdicionForm.tipoContrato}
                             onChange={handleUsuarioEdicionChange}
                             label="Tipo de Contrato"
-                            disabled={!puedeModificarTipoContrato(userData)}
+                            disabled={!puedeModificarTipoContrato(userData) || tiposContratoOrdenados.length === 0}
                           >
-                            <MenuItem value="Operativo">Operativo (48h)</MenuItem>
-                            <MenuItem value="Confianza">Confianza (72h)</MenuItem>
+                            {tiposContratoOrdenados.map((tipoContrato) => (
+                              <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
+                                {tipoContrato.label} ({tipoContrato.horasMaximas}h)
+                              </MenuItem>
+                            ))}
                           </StyledSelect>
                         </FormControl>
                       </Grid>

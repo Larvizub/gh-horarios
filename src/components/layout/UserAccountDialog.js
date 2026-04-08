@@ -43,6 +43,7 @@ import { puedeModificarTipoContrato } from '../../utils/contratoUtils';
 import useDepartamentos from '../../hooks/useDepartamentos';
 import { resolveCargoRecord } from '../../utils/cargos';
 import useCargos from '../../hooks/useCargos';
+import useTiposContrato from '../../hooks/useTiposContrato';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -122,6 +123,7 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
   const { refreshUserData } = useAuth();
   const { departamentosActivos } = useDepartamentos();
   const { cargosActivos, loadingCargos } = useCargos();
+  const { tipos: tiposContrato } = useTiposContrato();
   const [tabIndex, setTabIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -418,8 +420,11 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
                     label="Tipo de Contrato"
                     disabled={!puedeModificarTipoContrato(userData)}
                   >
-                    <MenuItem value="Operativo">Operativo (48 horas semanales)</MenuItem>
-                    <MenuItem value="Confianza">Confianza (72 horas semanales)</MenuItem>
+                    {tiposContrato.map((tipoContrato) => (
+                      <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
+                        {tipoContrato.label} ({tipoContrato.horasMaximas} horas semanales)
+                      </MenuItem>
+                    ))}
                   </StyledSelect>
                 </FormControl>
                 {!puedeModificarTipoContrato(userData) && (

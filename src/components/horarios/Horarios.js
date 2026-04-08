@@ -27,7 +27,6 @@ import {
   puedeEliminarHorarios, 
   puedeModificarHorarios 
 } from '../../utils/permissionsUtils';
-import { obtenerHorasMaximas } from '../../utils/contratoUtils';
 import { 
   diasSemana, 
   NO_SUMAN_HORAS, 
@@ -43,6 +42,7 @@ import useDepartamentos from '../../hooks/useDepartamentos';
 import { useSemana } from '../../hooks/useSemana';
 import { useModalConfirm } from '../../hooks/useModalConfirm';
 import useTiposHorario from '../../hooks/useTiposHorario';
+import useTiposContrato from '../../hooks/useTiposContrato';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -190,6 +190,8 @@ const Horarios = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { tipos } = useTiposHorario();
+  const { getHorasMaximasTipoContrato } = useTiposContrato();
+  const obtenerHorasMaximas = getHorasMaximasTipoContrato;
   const { departamentosActivos } = useDepartamentos();
   
   // Flag para prevenir actualizaciones después de desmontar

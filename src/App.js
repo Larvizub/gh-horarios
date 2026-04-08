@@ -5,6 +5,7 @@ import { Box, CircularProgress, ThemeProvider, createTheme, CssBaseline } from '
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/layout/Navbar';
+import useTiposContrato from './hooks/useTiposContrato';
 
 // Importación perezosa de componentes
 const Login = lazy(() => import('./components/auth/Login'));
@@ -435,10 +436,16 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
+        <TiposContratoBootstrap />
         <AppContent />
       </AuthProvider>
     </ThemeProvider>
   );
+}
+
+function TiposContratoBootstrap() {
+  useTiposContrato();
+  return null;
 }
 
 function AppContent() {

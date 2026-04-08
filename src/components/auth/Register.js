@@ -35,6 +35,7 @@ import { puedeAsignarRoles, ROLES } from '../../utils/contratoUtils';
 import useDepartamentos from '../../hooks/useDepartamentos';
 import { resolveCargoRecord } from '../../utils/cargos';
 import useCargos from '../../hooks/useCargos';
+import useTiposContrato from '../../hooks/useTiposContrato';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -195,6 +196,7 @@ const Register = () => {
   const [currentUserData, setCurrentUserData] = useState(null);
   const { departamentosActivos, loadingDepartamentos } = useDepartamentos();
   const { cargosActivos, loadingCargos } = useCargos();
+  const { tipos: tiposContrato } = useTiposContrato();
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -636,8 +638,11 @@ const Register = () => {
                       onChange={handleChange}
                       label="Tipo de Contrato"
                     >
-                      <MenuItem value="Operativo">Operativo</MenuItem>
-                      <MenuItem value="Confianza">Confianza</MenuItem>
+                      {tiposContrato.map((tipoContrato) => (
+                        <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
+                          {tipoContrato.label} ({tipoContrato.horasMaximas}h)
+                        </MenuItem>
+                      ))}
                     </Select>
                   </StyledFormControl>
                 </Grid>

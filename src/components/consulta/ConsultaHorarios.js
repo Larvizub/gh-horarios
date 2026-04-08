@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ref, get } from 'firebase/database';
 import { database, auth } from '../../firebase/config';
 import { notify as toast } from '../../services/notify';
-import { obtenerHorasMaximas } from '../../utils/contratoUtils';
 import {
   Container,
   Grid,
@@ -61,6 +60,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import useDepartamentos from '../../hooks/useDepartamentos';
+import useTiposContrato from '../../hooks/useTiposContrato';
 import * as XLSX from 'xlsx';
 
 // Styled Components modernos
@@ -245,6 +245,7 @@ const ConsultaHorarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { getTipoLabel } = useTiposHorario();
+  const { getHorasMaximasTipoContrato } = useTiposContrato();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -707,7 +708,7 @@ const ConsultaHorarios = () => {
   const verificarInfracciones = (usuarioId) => {
     // Obtener datos del usuario para saber su tipo de contrato
     const usuario = usuariosFiltrados.find(u => u.id === usuarioId);
-    const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
+    const horasMaximas = getHorasMaximasTipoContrato(usuario?.tipoContrato || 'Operativo');
     
     // Verificar horas máximas según el tipo de contrato
     const horasTotales = calcularHorasTotales(usuarioId);
@@ -742,7 +743,7 @@ const ConsultaHorarios = () => {
     const usuariosValidos = usuariosMismoDepartamento.filter(u => {
       const horasTotales = calcularHorasTotales(u.id);
       const resultadoDescanso = verificarDescansoEntreTurnos(u.id);
-      const horasMaximas = obtenerHorasMaximas(u.tipoContrato || 'Operativo');
+      const horasMaximas = getHorasMaximasTipoContrato(u.tipoContrato || 'Operativo');
       return horasTotales < (horasMaximas - 8) && !resultadoDescanso.tieneInfraccion; // Dejar margen de 8 horas para el nuevo turno
     });
     
@@ -758,7 +759,7 @@ const ConsultaHorarios = () => {
       return practicantes.filter(u => {
         const horasTotales = calcularHorasTotales(u.id);
         const resultadoDescanso = verificarDescansoEntreTurnos(u.id);
-        const horasMaximas = obtenerHorasMaximas(u.tipoContrato || 'Operativo');
+        const horasMaximas = getHorasMaximasTipoContrato(u.tipoContrato || 'Operativo');
         return horasTotales < (horasMaximas - 8) && !resultadoDescanso.tieneInfraccion; // Dejar margen de 8 horas para el nuevo turno
       });
     }

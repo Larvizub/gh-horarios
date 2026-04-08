@@ -1,0 +1,18 @@
+{
+  "errorLens.enabled": true,
+  "errorLens.messageEnabled": true,
+  "errorLens.gutterIconsEnabled": true,
+  "errorLens.statusBarMessageEnabled": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact"
+  ],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  }
+}
