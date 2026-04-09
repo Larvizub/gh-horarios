@@ -202,7 +202,7 @@ const Dashboard = () => {
   const [usuariosTeletrabajo, setUsuariosTeletrabajo] = useState([]);
   const [modalUsuarios, setModalUsuarios] = useState({ open: false, tipo: '', usuarios: [] });
   const { getTipoLabel, tipos } = useTiposHorario();
-  const { getHorasMaximasTipoContrato, formatTipoContratoHoras } = useTiposContrato();
+  const { getHorasMaximasTipoContrato } = useTiposContrato();
   const navigate = useNavigate();
   const tiposNoSumaHoras = useMemo(() => {
     const merged = new Set(NO_SUMAN_HORAS);
@@ -615,7 +615,7 @@ const Dashboard = () => {
                   Tienes {horasExtras.toFixed(1)} horas extras acumuladas
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#a16207' }}>
-                  Horas permitidas para este contrato: {contratoSinLimite ? 'Sin límite' : formatTipoContratoHoras(userData?.tipoContrato || 'Operativo')}
+                  Horas disponibles próxima semana: {contratoSinLimite ? 'Sin límite' : `${horasDisponibles.toFixed(1)}h de ${horasMaximas}h`}
                 </Typography>
               </Box>
             </Box>

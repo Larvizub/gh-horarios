@@ -2,11 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   DEFAULT_TIPOS_CONTRATO,
   getHorasMaximasTipoContrato,
-  getHorasMinimasTipoContrato,
   getTipoContratoLabel,
-  getRangosHorasTipoContrato,
-  formatTipoContratoHoras,
-  esHorasPermitidasTipoContrato,
   tiposContratoArrayToMap,
 } from '../utils/tiposContrato';
 import { subscribeTiposContrato } from '../services/tiposContratoService';
@@ -32,10 +28,6 @@ export const useTiposContrato = () => {
     loadingTipos,
     getTipoContratoLabel: (tipo) => getTipoContratoLabel(tipo, tiposMap),
     getHorasMaximasTipoContrato: (tipo) => getHorasMaximasTipoContrato(tipo, tiposMap),
-    getHorasMinimasTipoContrato: (tipo) => getHorasMinimasTipoContrato(tipo, tiposMap),
-    getRangosHorasTipoContrato: (tipo) => getRangosHorasTipoContrato(tipo, tiposMap),
-    formatTipoContratoHoras: (tipo) => formatTipoContratoHoras(tipo, tiposMap),
-    esHorasPermitidasTipoContrato: (tipo, horas) => esHorasPermitidasTipoContrato(tipo, horas, tiposMap),
   };
 };
 

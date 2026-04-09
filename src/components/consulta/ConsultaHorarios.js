@@ -245,7 +245,7 @@ const ConsultaHorarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { getTipoLabel } = useTiposHorario();
-  const { getHorasMaximasTipoContrato, esHorasPermitidasTipoContrato, formatTipoContratoHoras } = useTiposContrato();
+  const { getHorasMaximasTipoContrato } = useTiposContrato();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -708,16 +708,15 @@ const ConsultaHorarios = () => {
   const verificarInfracciones = (usuarioId) => {
     // Obtener datos del usuario para saber su tipo de contrato
     const usuario = usuariosFiltrados.find(u => u.id === usuarioId);
-    const tipoContrato = usuario?.tipoContrato || 'Operativo';
-    const horasMaximas = getHorasMaximasTipoContrato(tipoContrato);
+    const horasMaximas = getHorasMaximasTipoContrato(usuario?.tipoContrato || 'Operativo');
     
     // Verificar horas máximas según el tipo de contrato
     const horasTotales = calcularHorasTotales(usuarioId);
-    if (!esHorasPermitidasTipoContrato(tipoContrato, horasTotales)) {
+    if (horasTotales > horasMaximas) {
       return {
         tieneInfraccion: true,
         tipo: 'horas',
-        detalle: `El colaborador no cumple el rango permitido de ${formatTipoContratoHoras(tipoContrato)} según su contrato ${tipoContrato} (${horasTotales.toFixed(1)} horas asignadas)`
+        detalle: `El colaborador excede el límite de ${horasMaximas} horas semanales según su contrato ${usuario?.tipoContrato || 'Operativo'} (${horasTotales.toFixed(1)} horas asignadas)`
       };
     }
     
@@ -1255,7 +1254,7 @@ const ModalSugerencias = ({
                             {usuario.cargo} - {usuario.departamento}
                           </Typography>
                           <br />
-                          {`Horas asignadas: ${calcularHorasTotales(usuario.id).toFixed(1)} de ${formatTipoContratoHoras(usuario.tipoContrato || 'Operativo')}`}
+                          {`Horas asignadas: ${calcularHorasTotales(usuario.id).toFixed(1)} de 48 horas`}
                         </>
                       }
                     />

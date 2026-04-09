@@ -190,7 +190,7 @@ const Horarios = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { tipos } = useTiposHorario();
-  const { getHorasMaximasTipoContrato, esHorasPermitidasTipoContrato, formatTipoContratoHoras } = useTiposContrato();
+  const { getHorasMaximasTipoContrato } = useTiposContrato();
   const obtenerHorasMaximas = getHorasMaximasTipoContrato;
   const { departamentosActivos } = useDepartamentos();
   
@@ -488,7 +488,7 @@ const Horarios = () => {
     } catch (error) {
       console.error('Error al recalcular horas extras:', error);
     }
-  }, [semanaSeleccionada, semanaActual, usuarios, horarios, tiposNoSumaHoras]);
+  }, [semanaSeleccionada, semanaActual, usuarios, horarios, tiposNoSumaHoras, obtenerHorasMaximas]);
 
   const handleGuardarHorarios = useCallback(async () => {
     try {
@@ -1039,12 +1039,10 @@ const Horarios = () => {
         obtenerHorasMaximas
       );
       const usuario = obtenerUsuario(usuarios, usuarioId);
-      const tipoContrato = usuario?.tipoContrato || 'Operativo';
-      const horasMaximas = obtenerHorasMaximas(tipoContrato);
-      const horasPermitidas = formatTipoContratoHoras(tipoContrato);
+      const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
 
-      if (!esHorasPermitidasTipoContrato(tipoContrato, horasActuales + horasTrabajadas)) {
-        const exceso = Math.max((horasActuales + horasTrabajadas) - horasMaximas, 0);
+      if (horasActuales + horasTrabajadas > horasMaximas) {
+        const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
         const recomendacion = generarRecomendacionPracticantes(
           usuario,
           exceso,
@@ -1071,7 +1069,7 @@ const Horarios = () => {
         mostrarModal({
           tipo: 'warning',
           titulo: '⚠️ Exceso de Horas Detectado',
-          mensaje: `${recomendacion}\n\nEl contrato permite ${horasPermitidas}. ¿Desea continuar asignando estas horas?`,
+          mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
           textoConfirmar: 'Continuar de todas formas',
           textoCancelar: 'Cancelar',
           onConfirmar: () => {
@@ -1152,12 +1150,10 @@ const Horarios = () => {
         obtenerHorasMaximas
       );
       const usuario = obtenerUsuario(usuarios, usuarioId);
-      const tipoContrato = usuario?.tipoContrato || 'Operativo';
-      const horasMaximas = obtenerHorasMaximas(tipoContrato);
-      const horasPermitidas = formatTipoContratoHoras(tipoContrato);
+      const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
 
-      if (!esHorasPermitidasTipoContrato(tipoContrato, horasActuales + horasTrabajadas)) {
-        const exceso = Math.max((horasActuales + horasTrabajadas) - horasMaximas, 0);
+      if (horasActuales + horasTrabajadas > horasMaximas) {
+        const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
         const recomendacion = generarRecomendacionPracticantes(
           usuario,
           exceso,
@@ -1184,7 +1180,7 @@ const Horarios = () => {
         mostrarModal({
           tipo: 'warning',
           titulo: '⚠️ Exceso de Horas Detectado',
-          mensaje: `${recomendacion}\n\nEl contrato permite ${horasPermitidas}. ¿Desea continuar asignando estas horas?`,
+          mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
           textoConfirmar: 'Continuar de todas formas',
           textoCancelar: 'Cancelar',
           onConfirmar: () => {
@@ -1269,12 +1265,10 @@ const Horarios = () => {
       obtenerHorasMaximas
     );
     const usuario = obtenerUsuario(usuarios, usuarioId);
-    const tipoContrato = usuario?.tipoContrato || 'Operativo';
-    const horasMaximas = obtenerHorasMaximas(tipoContrato);
-    const horasPermitidas = formatTipoContratoHoras(tipoContrato);
+    const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
 
-    if (!esHorasPermitidasTipoContrato(tipoContrato, horasActuales + horasTrabajadas)) {
-      const exceso = Math.max((horasActuales + horasTrabajadas) - horasMaximas, 0);
+    if (horasActuales + horasTrabajadas > horasMaximas) {
+      const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
       const recomendacion = generarRecomendacionPracticantes(
         usuario,
         exceso,
@@ -1301,7 +1295,7 @@ const Horarios = () => {
       mostrarModal({
         tipo: 'warning',
         titulo: '⚠️ Exceso de Horas Detectado',
-        mensaje: `${recomendacion}\n\nEl contrato permite ${horasPermitidas}. ¿Desea continuar asignando estas horas?`,
+        mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
         textoConfirmar: 'Continuar de todas formas',
         textoCancelar: 'Cancelar',
         onConfirmar: () => {
@@ -1374,7 +1368,7 @@ const Horarios = () => {
       cache.set(usuarioId, resultado);
       return resultado;
     };
-  }, [editando, horariosEditados, horarios, usuarios]);
+  }, [editando, horariosEditados, horarios, usuarios, obtenerHorasMaximas]);
 
   // Callback estable de practicantes con cache de resultados
   const handleEncontrarPracticantes = useMemo(() => {
@@ -1406,7 +1400,7 @@ const Horarios = () => {
       cache.set(cacheKey, resultado);
       return resultado;
     };
-  }, [usuarios, horariosEditados, horarios, semanaSeleccionada, semanaActual, departamentoSeleccionado]);
+  }, [usuarios, horariosEditados, horarios, semanaSeleccionada, semanaActual, departamentoSeleccionado, obtenerHorasMaximas]);
 
   // Control de acceso visual: solo usuarios con permiso pueden ver el módulo
   const usuarioActual = currentUserData;
