@@ -26,29 +26,138 @@ const StyledTimeField = styled(TextField)(({ theme }) => ({
   },
 }));
 
-const TimeInput = ({ label, value, onChange, isMobile }) => {
+const normalizeDigits = (value = '') => String(value).replace(/\D/g, '').slice(0, 4);
+
+const sanitizeRawTime = (value = '') => String(value).replace(/[^\d:]/g, '');
+
+export const parseMilitaryTimeValue = (value = '') => {
+  const raw = sanitizeRawTime(value);
+
+  if (!raw) return null;
+
+  if (raw.includes(':')) {
+    const [hoursPart = '', minutesPart = ''] = raw.split(':');
+    const hoursDigits = hoursPart.replace(/\D/g, '').slice(0, 2);
+    const minutesDigits = minutesPart.replace(/\D/g, '').slice(0, 2);
+
+    if (!hoursDigits && !minutesDigits) {
+      return null;
+    }
+
+    const hours = hoursDigits.padStart(2, '0');
+    const minutes = minutesDigits.padEnd(2, '0');
+    const hoursNumber = Number(hours);
+    const minutesNumber = Number(minutes);
+
+    if (hoursNumber > 23 || minutesNumber > 59) {
+      return null;
+    }
+
+    return { hours, minutes };
+  }
+
+  const digits = normalizeDigits(raw);
+  if (!digits) return null;
+
+  if (digits.length <= 2) {
+    const hoursNumber = Number(digits);
+    if (hoursNumber > 23) {
+      return null;
+    }
+
+    return {
+      hours: String(hoursNumber).padStart(2, '0'),
+      minutes: '00',
+    };
+  }
+
+  const padded = digits.length === 3 ? digits.padStart(4, '0') : digits.slice(0, 4);
+  const hours = padded.slice(0, 2);
+  const minutes = padded.slice(2, 4);
+  const hoursNumber = Number(hours);
+  const minutesNumber = Number(minutes);
+
+  if (hoursNumber > 23 || minutesNumber > 59) {
+    return null;
+  }
+
+  return { hours, minutes };
+};
+
+const formatMilitaryTime = (timeParts) => {
+  if (!timeParts) return '';
+  return `${timeParts.hours}:${timeParts.minutes}`;
+};
+
+const formatDisplayValue = (value = '') => {
+  const raw = sanitizeRawTime(value);
+
+  if (!raw) return '';
+
+  if (raw.includes(':')) {
+    const [hoursPart = '', minutesPart = ''] = raw.split(':');
+    const hours = hoursPart.replace(/\D/g, '').slice(0, 2);
+    const minutes = minutesPart.replace(/\D/g, '').slice(0, 2);
+
+    if (raw.endsWith(':') && minutes.length === 0) {
+      return `${hours}:`;
+    }
+
+    return `${hours}${hours ? ':' : ''}${minutes}`;
+  }
+
+  const digits = normalizeDigits(raw);
+  if (!digits) return '';
+
+  if (digits.length <= 2) {
+    const hoursNumber = Number(digits);
+    return hoursNumber <= 23 && digits.length === 2 ? `${digits}:` : digits;
+  }
+
+  const parsedTime = parseMilitaryTimeValue(raw);
+  if (parsedTime) {
+    return formatMilitaryTime(parsedTime);
+  }
+
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+};
+
+export const completeTimeValue = (value = '') => {
+  return formatMilitaryTime(parseMilitaryTimeValue(value));
+};
+
+const TimeInput = ({ label, value, onChange, isMobile, helperText = '' }) => {
   const [localValue, setLocalValue] = useState(value || '');
 
   useEffect(() => {
     setLocalValue(value || '');
   }, [value]);
 
-  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-
   const handleChange = (e) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue);
-    // Propaga cuando el valor es válido (soporta 4 o 5 caracteres: 8:30 o 08:30)
-    if (timeRegex.test(newValue)) {
-      onChange({ target: { value: newValue } });
+    const rawValue = e.target.value;
+    const displayValue = formatDisplayValue(rawValue);
+    setLocalValue(displayValue);
+
+    const digits = normalizeDigits(rawValue);
+    const hasManualColon = sanitizeRawTime(rawValue).includes(':');
+    const minuteDigits = hasManualColon ? sanitizeRawTime(rawValue).split(':')[1]?.replace(/\D/g, '').length || 0 : 0;
+    const parsedTime = parseMilitaryTimeValue(rawValue);
+
+    if ((digits.length === 3 || digits.length === 4 || (hasManualColon && minuteDigits >= 2)) && parsedTime) {
+      onChange({ target: { value: formatMilitaryTime(parsedTime) } });
     }
   };
 
   const handleBlur = () => {
-    // En blur, si es válido, asegura la propagación al padre
-    if (timeRegex.test(localValue)) {
-      onChange({ target: { value: localValue } });
+    const completeValue = completeTimeValue(localValue);
+
+    if (completeValue) {
+      setLocalValue(completeValue);
+      onChange({ target: { value: completeValue } });
+      return;
     }
+
+    setLocalValue(value || '');
   };
 
   return (
@@ -61,6 +170,7 @@ const TimeInput = ({ label, value, onChange, isMobile }) => {
       InputLabelProps={{ shrink: true }}
       fullWidth
       size={isMobile ? 'small' : 'medium'}
+      helperText={helperText}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">

@@ -1165,6 +1165,7 @@ const Horarios = () => {
           jornadaOrdinariaKey: jornadaDetectada.key,
           jornadaOrdinariaLabel: jornadaDetectada.label,
           jornadaOrdinariaLimiteDiario: jornadaDetectada.limiteDiario,
+          jornadaOrdinariaLimiteSemanal: jornadaDetectada.limiteSemanal,
           jornadaOrdinariaHoras: horasTrabajadas,
         };
       })();
@@ -1182,6 +1183,42 @@ const Horarios = () => {
           onCancelar: cerrarModal,
         });
         return;
+      }
+
+      if (jornadaConMetadata.jornadaOrdinariaKey && Number.isFinite(jornadaConMetadata.jornadaOrdinariaLimiteSemanal) && jornadaConMetadata.jornadaOrdinariaLimiteSemanal > 0) {
+        const horariosSemanaBase = {
+          ...(horariosRef.current?.[usuarioId] || {}),
+          ...(horariosEditadosRef.current?.[usuarioId] || {}),
+          [diaKey]: jornadaConMetadata,
+        };
+
+        const totalJornadaSemanal = Object.values(horariosSemanaBase).reduce((total, turno) => {
+          if (!turno) {
+            return total;
+          }
+
+          const jornadaTurno = turno.jornadaOrdinariaKey || obtenerJornadaOrdinariaDetectada(turno, jornadasOrdinariasMap)?.key;
+          if (jornadaTurno !== jornadaConMetadata.jornadaOrdinariaKey) {
+            return total;
+          }
+
+          const horasTurno = Number(turno.jornadaOrdinariaHoras ?? turno.horas ?? 0);
+          return total + (Number.isFinite(horasTurno) && horasTurno > 0 ? horasTurno : 0);
+        }, 0);
+
+        if (totalJornadaSemanal > jornadaConMetadata.jornadaOrdinariaLimiteSemanal) {
+          const excesoSemanal = Number((totalJornadaSemanal - jornadaConMetadata.jornadaOrdinariaLimiteSemanal).toFixed(1));
+          mostrarModal({
+            tipo: 'warning',
+            titulo: '⚠️ Límite semanal excedido',
+            mensaje: `La jornada ${jornadaConMetadata.jornadaOrdinariaLabel} queda en ${totalJornadaSemanal.toFixed(1)}h semanales y supera el límite de ${jornadaConMetadata.jornadaOrdinariaLimiteSemanal}h por ${excesoSemanal.toFixed(1)}h.\n\n¿Desea continuar guardándolo?`,
+            textoConfirmar: 'Continuar de todas formas',
+            textoCancelar: 'Cancelar',
+            onConfirmar: () => validarExcesoContratoYGuardar(jornadaConMetadata, horasTrabajadas),
+            onCancelar: cerrarModal,
+          });
+          return;
+        }
       }
 
       validarExcesoContratoYGuardar(jornadaConMetadata, horasTrabajadas);
@@ -1716,6 +1753,7 @@ const Horarios = () => {
         setHorarioPersonalizado={setHorarioPersonalizado}
         guardarHorarioPersonalizado={guardarHorarioPersonalizado}
         guardandoHorario={guardandoHorario}
+        jornadasOrdinariasMap={jornadasOrdinariasMap}
         isMobile={isMobile}
         isSmallMobile={isSmallMobile}
         currentUser={currentUserData || null}

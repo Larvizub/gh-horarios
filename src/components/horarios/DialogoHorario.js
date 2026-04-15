@@ -6,6 +6,7 @@ import {
   DialogActions, 
   Typography, 
   Button, 
+  Alert,
   FormControl, 
   InputLabel, 
   Select, 
@@ -28,6 +29,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import { getTipoIconComponent, TIPO_TEMPLATES } from '../../utils/tiposHorario';
+import { obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
 
 // Styled Components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -135,7 +137,8 @@ const DialogoHorario = ({
   horarios,
   setHorarios,
   semanaSeleccionada,
-  obtenerClaveSemana
+  obtenerClaveSemana,
+  jornadasOrdinariasMap = {},
 }) => {
   // Obtener usuario objetivo (el dueño del horario mostrado en el modal)
   const usuarioObjetivo = usuarios.find(u => u.id === horarioPersonalizado.usuarioId) || { id: horarioPersonalizado.usuarioId };
@@ -183,22 +186,71 @@ const DialogoHorario = ({
   }, [dialogoHorario, horarioPersonalizado.usuarioId, horarioPersonalizado.diaKey]);
 
   const handleTimeChange = (field, value) => {
-    setHorarioPersonalizado(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setHorarioPersonalizado((prev) => {
+      const next = {
+        ...prev,
+        [field]: value,
+      };
+
+      if (
+        field === 'horaInicio' &&
+        tipoTemplate === TIPO_TEMPLATES.SIMPLE &&
+        resumenJornadaLegal?.salidaSugerida
+      ) {
+        const puedeAutocompletarSalida = !prev.horaFin || prev.horaFin === ultimoFinSugeridoRef.current;
+        if (puedeAutocompletarSalida) {
+          next.horaFin = resumenJornadaLegal.salidaSugerida;
+          ultimoFinSugeridoRef.current = resumenJornadaLegal.salidaSugerida;
+        }
+      }
+
+      return next;
+    });
   };
 
   const tipo = horarioPersonalizado.tipo || 'personalizado';
   const tipoConfig = tiposMap[tipo] || {};
   const tipoTemplate = tipoConfig.template || TIPO_TEMPLATES.SIMPLE;
   const esBeneficio = Boolean(tipoConfig.esBeneficio);
+  const ultimoFinSugeridoRef = React.useRef('');
+  const resumenJornadaLegal = React.useMemo(() => {
+    if (!horarioPersonalizado.horaInicio) {
+      return null;
+    }
+
+    return obtenerResumenJornadaLegal(horarioPersonalizado.horaInicio, jornadasOrdinariasMap);
+  }, [horarioPersonalizado.horaInicio, jornadasOrdinariasMap]);
+
+  React.useEffect(() => {
+    if (tipoTemplate !== TIPO_TEMPLATES.SIMPLE || !resumenJornadaLegal?.salidaSugerida) {
+      return;
+    }
+
+    setHorarioPersonalizado((prev) => {
+      const puedeAutocompletar = !prev.horaFin || prev.horaFin === ultimoFinSugeridoRef.current;
+      if (!puedeAutocompletar || prev.horaInicio !== horarioPersonalizado.horaInicio) {
+        return prev;
+      }
+
+      ultimoFinSugeridoRef.current = resumenJornadaLegal.salidaSugerida;
+      return {
+        ...prev,
+        horaFin: resumenJornadaLegal.salidaSugerida,
+      };
+    });
+  }, [horarioPersonalizado.horaInicio, resumenJornadaLegal, setHorarioPersonalizado, tipoTemplate]);
   const horasLaboradas = (() => {
     if (!horarioPersonalizado.horaInicio || !horarioPersonalizado.horaFin) return 0;
     const [h1, m1] = horarioPersonalizado.horaInicio.split(':').map(Number);
     const [h2, m2] = horarioPersonalizado.horaFin.split(':').map(Number);
-    return ((h2 * 60 + m2) - (h1 * 60 + m1)) / 60;
+    const inicio = h1 * 60 + m1;
+    const fin = h2 * 60 + m2;
+    const minutos = fin >= inicio ? (fin - inicio) : ((24 * 60 - inicio) + fin);
+    return minutos / 60;
   })();
+  const horasExcedentesDiarias = resumenJornadaLegal
+    ? Math.max(horasLaboradas - resumenJornadaLegal.limiteDiario, 0)
+    : 0;
 
 
   // Eliminar horario: limpia los campos y elimina en la base de datos
@@ -359,6 +411,16 @@ const DialogoHorario = ({
                 <Typography variant="body2" color="text.secondary">Horas laboradas:</Typography>
                 <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
               </HoursDisplay>
+              {resumenJornadaLegal && (
+                <Alert
+                  severity={horarioPersonalizado.horaFin && horasExcedentesDiarias > 0 ? 'warning' : 'info'}
+                  sx={{ mt: 1.5, borderRadius: 2 }}
+                >
+                  {horarioPersonalizado.horaFin
+                    ? `Jornada ${resumenJornadaLegal.label}: límite diario ${resumenJornadaLegal.limiteDiario}h. ${horasExcedentesDiarias > 0 ? `Excede por ${horasExcedentesDiarias.toFixed(1)}h.` : 'Dentro del rango legal diario.'}`
+                    : `Si entras a las ${horarioPersonalizado.horaInicio}, la salida máxima sugerida es ${resumenJornadaLegal.salidaSugerida} para una jornada ${resumenJornadaLegal.label.toLowerCase()} de ${resumenJornadaLegal.limiteDiario}h.`}
+                </Alert>
+              )}
             </>
           ) : tipoTemplate === TIPO_TEMPLATES.TELE_MEDIA_LIBRE ? (
             <>
@@ -622,12 +684,23 @@ const DialogoHorario = ({
                 value={horarioPersonalizado.horaFin}
                 onChange={(e) => handleTimeChange('horaFin', e.target.value)}
                 isMobile={isMobile}
+                helperText={resumenJornadaLegal?.salidaSugerida ? `Salida sugerida: ${resumenJornadaLegal.salidaSugerida}` : ''}
               />
               <HoursDisplay>
                 <AccessTimeIcon color="primary" />
                 <Typography variant="body2" color="text.secondary">Horas laboradas:</Typography>
                 <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
               </HoursDisplay>
+              {resumenJornadaLegal && (
+                <Alert
+                  severity={horarioPersonalizado.horaFin && horasExcedentesDiarias > 0 ? 'warning' : 'info'}
+                  sx={{ mt: 1.5, borderRadius: 2 }}
+                >
+                  {horarioPersonalizado.horaFin
+                    ? `Jornada ${resumenJornadaLegal.label}: límite diario ${resumenJornadaLegal.limiteDiario}h. ${horasExcedentesDiarias > 0 ? `Excede por ${horasExcedentesDiarias.toFixed(1)}h.` : 'Dentro del rango legal diario.'}`
+                    : `Si entras a las ${horarioPersonalizado.horaInicio}, la salida máxima sugerida es ${resumenJornadaLegal.salidaSugerida} para una jornada ${resumenJornadaLegal.label.toLowerCase()} de ${resumenJornadaLegal.limiteDiario}h.`}
+                </Alert>
+              )}
             </>
           ) : esBeneficio ? (
             <>

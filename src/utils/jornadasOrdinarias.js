@@ -67,6 +67,57 @@ const calcularInterseccionMinutos = (inicio, fin, coberturaInicio, coberturaFin)
   return overlapAtEndOfDay + overlapAtStartOfDay;
 };
 
+const MINUTOS_POR_DIA = 24 * 60;
+const INICIO_DIURNO = 5 * 60;
+const INICIO_NOCTURNO = 19 * 60;
+
+const formatearHoraDesdeMinutos = (minutos) => {
+  const totalMinutos = ((minutos % MINUTOS_POR_DIA) + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
+  const horas = Math.floor(totalMinutos / 60);
+  const mins = totalMinutos % 60;
+  return `${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+};
+
+export const sumarHorasAHora = (hora, horas = 0) => {
+  const inicio = toMinutes(hora);
+  const horasNumericas = Number(horas);
+
+  if (inicio === null || !Number.isFinite(horasNumericas)) {
+    return '';
+  }
+
+  return formatearHoraDesdeMinutos(inicio + (horasNumericas * 60));
+};
+
+export const obtenerResumenJornadaLegal = (horaInicio, jornadasMap = {}) => {
+  const inicio = toMinutes(horaInicio);
+  if (inicio === null) {
+    return null;
+  }
+
+  const diurna = jornadasMap.diurna || DEFAULT_JORNADAS_ORDINARIAS[0];
+  const nocturna = jornadasMap.nocturna || DEFAULT_JORNADAS_ORDINARIAS[1];
+  const mixta = jornadasMap.mixta || DEFAULT_JORNADAS_ORDINARIAS[2];
+
+  let jornada = diurna;
+  if (inicio < INICIO_DIURNO || inicio >= INICIO_NOCTURNO) {
+    jornada = nocturna;
+  } else if (inicio + ((diurna?.limiteDiario || 8) * 60) > INICIO_NOCTURNO) {
+    jornada = mixta;
+  }
+
+  const limiteDiario = Number(jornada?.limiteDiario) || 0;
+  const limiteSemanal = Number(jornada?.limiteSemanal) || 0;
+
+  return {
+    key: jornada?.key || 'diurna',
+    label: jornada?.tipo || 'Diurna',
+    limiteDiario,
+    limiteSemanal,
+    salidaSugerida: limiteDiario > 0 ? sumarHorasAHora(horaInicio, limiteDiario) : '',
+  };
+};
+
 export const calcularHorasRangoJornadaOrdinaria = (inicio, fin) => {
   return Number((calcularMinutosIntervalo(inicio, fin) / 60).toFixed(2));
 };
