@@ -124,6 +124,7 @@ const DialogoHorario = ({
   horarioPersonalizado,
   setHorarioPersonalizado,
   guardarHorarioPersonalizado,
+  guardandoHorario = false,
   isMobile,
   isSmallMobile,
   currentUser,
@@ -171,6 +172,7 @@ const DialogoHorario = ({
           horaFinTele: horarioActual?.horaFinTele || '',
           horaInicioPres: horarioActual?.horaInicioPres || '',
           horaFinPres: horarioActual?.horaFinPres || '',
+          horas: horarioActual?.horas ?? '',
           nota: horarioActual?.nota || ''
         };
       }
@@ -190,6 +192,7 @@ const DialogoHorario = ({
   const tipo = horarioPersonalizado.tipo || 'personalizado';
   const tipoConfig = tiposMap[tipo] || {};
   const tipoTemplate = tipoConfig.template || TIPO_TEMPLATES.SIMPLE;
+  const esBeneficio = Boolean(tipoConfig.esBeneficio);
   const horasLaboradas = (() => {
     if (!horarioPersonalizado.horaInicio || !horarioPersonalizado.horaFin) return 0;
     const [h1, m1] = horarioPersonalizado.horaInicio.split(':').map(Number);
@@ -280,6 +283,7 @@ const DialogoHorario = ({
               onChange={(e) => {
                 const nuevoTipo = e.target.value;
                 const newTemplate = tiposMap[nuevoTipo]?.template || TIPO_TEMPLATES.SIMPLE;
+                const nuevoTipoConfig = tiposMap[nuevoTipo] || {};
                 // Para viaje-trabajo mantenemos los valores por defecto históricos.
                 if (newTemplate === TIPO_TEMPLATES.VIAJE_TRABAJO) {
                   setHorarioPersonalizado(prev => ({
@@ -288,6 +292,12 @@ const DialogoHorario = ({
                     horaInicio: '08:00',
                     horaFin: '18:00',
                     horas: 10
+                  }));
+                } else if (nuevoTipoConfig.esBeneficio && newTemplate === TIPO_TEMPLATES.SIN_HORAS) {
+                  setHorarioPersonalizado(prev => ({
+                    ...prev,
+                    tipo: nuevoTipo,
+                    horas: prev.horas || nuevoTipoConfig.horasCredito || 8
                   }));
                 } else {
                   handleTimeChange('tipo', nuevoTipo);
@@ -619,6 +629,25 @@ const DialogoHorario = ({
                 <span className="hours-value">{horasLaboradas.toFixed(1)}h</span>
               </HoursDisplay>
             </>
+          ) : esBeneficio ? (
+            <>
+              <StyledTextField
+                label="Horas acreditadas"
+                type="number"
+                value={horarioPersonalizado.horas ?? ''}
+                onChange={(e) => handleTimeChange('horas', e.target.value)}
+                fullWidth
+                inputProps={{ min: 0, step: 0.1 }}
+                sx={{ mt: 1 }}
+                size={isMobile ? 'small' : 'medium'}
+                helperText="Horas que sumará este beneficio"
+              />
+              <HoursDisplay>
+                <AccessTimeIcon color="primary" />
+                <Typography variant="body2" color="text.secondary">Horas acreditadas:</Typography>
+                <span className="hours-value">{Number(horarioPersonalizado.horas || 0).toFixed(1)}h</span>
+              </HoursDisplay>
+            </>
           ) : null}
 
           {/* Campo para nota */}
@@ -673,6 +702,7 @@ const DialogoHorario = ({
           fullWidth={isSmallMobile}
           size={isMobile ? 'medium' : 'large'}
           startIcon={<SaveIcon />}
+          disabled={guardandoHorario}
           sx={{
             background: 'linear-gradient(135deg, #00830e 0%, #4caf50 100%)',
             '&:hover': {
@@ -682,7 +712,7 @@ const DialogoHorario = ({
             },
           }}
         >
-          Guardar
+          {guardandoHorario ? 'Guardando...' : 'Guardar'}
         </ActionButton>
       </DialogActions>
     </StyledDialog>

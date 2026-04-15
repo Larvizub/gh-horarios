@@ -5,8 +5,10 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { format, addDays } from 'date-fns';
 import TurnoUsuario from './TurnoUsuario';
 import { obtenerEtiquetaRol, obtenerColorRol } from '../../utils/horariosUtils';
+import useTiposHorario from '../../hooks/useTiposHorario';
 import useTiposContrato from '../../hooks/useTiposContrato';
 import { formatTipoContratoHoras } from '../../utils/tiposContrato';
+import TipoContratoChip from '../common/TipoContratoChip';
 
 // Styled Components
 const TableContainer = styled(Box)(({ theme }) => ({
@@ -24,6 +26,20 @@ const HeaderRow = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(135deg, rgba(0, 131, 14, 0.08), rgba(76, 175, 80, 0.05))',
   borderRadius: 12,
   marginBottom: theme.spacing(1.5),
+}));
+
+const DayHeaderChip = styled(Chip)(({ theme }) => ({
+  height: 20,
+  fontSize: '0.66rem',
+  fontWeight: 700,
+  borderRadius: 999,
+  backgroundColor: '#fee2e2',
+  color: '#991b1b',
+  border: '1px solid rgba(220, 38, 38, 0.25)',
+  '& .MuiChip-label': {
+    paddingLeft: theme.spacing(0.8),
+    paddingRight: theme.spacing(0.8),
+  },
 }));
 
 const UserCard = styled(Paper, {
@@ -52,7 +68,7 @@ const UserCard = styled(Paper, {
 
 const DaySlot = styled(Box, {
   shouldForwardProp: (prop) =>
-    prop !== 'hasSchedule' && prop !== 'scheduleType' && prop !== 'isCurrentUser',
+    prop !== 'hasSchedule' && prop !== 'scheduleType' && prop !== 'isCurrentUser' && prop !== 'isFeriado',
 })(({ theme, hasSchedule, scheduleType, isCurrentUser }) => ({
   height: 36,
   display: 'flex',
@@ -95,21 +111,60 @@ const DaySlot = styled(Box, {
 }));
 
 const TotalBadge = styled(Paper, {
-  shouldForwardProp: (prop) => prop !== 'exceeded',
-})(({ theme, exceeded }) => ({
+  shouldForwardProp: (prop) => prop !== 'exceeded' && prop !== 'tone',
+})(({ theme, exceeded, tone }) => ({
   textAlign: 'center',
   padding: theme.spacing(0.75),
   borderRadius: 10,
-  background: exceeded 
-    ? 'linear-gradient(135deg, #ffebee, #ffcdd2)' 
-    : 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
-  border: exceeded 
-    ? '2px solid #f44336' 
-    : '2px solid #4caf50',
-  boxShadow: exceeded 
-    ? '0 2px 8px rgba(244, 67, 54, 0.25)' 
-    : '0 2px 8px rgba(76, 175, 80, 0.2)',
+  background: tone === 'neutral'
+    ? 'linear-gradient(135deg, #f5f5f5, #e5e7eb)'
+    : exceeded
+      ? 'linear-gradient(135deg, #ffebee, #ffcdd2)'
+      : 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+  border: tone === 'neutral'
+    ? '2px solid #bdbdbd'
+    : exceeded
+      ? '2px solid #f44336'
+      : '2px solid #4caf50',
+  boxShadow: tone === 'neutral'
+    ? '0 2px 8px rgba(0, 0, 0, 0.08)'
+    : exceeded
+      ? '0 2px 8px rgba(244, 67, 54, 0.25)'
+      : '0 2px 8px rgba(76, 175, 80, 0.2)',
 }));
+
+const SummaryMetric = ({ title, value, valueColor, exceeded = false, tone }) => (
+  <Tooltip title={title} arrow placement="top">
+    <TotalBadge elevation={0} exceeded={exceeded} tone={tone} sx={{ minWidth: 72 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          color: valueColor,
+        }}
+      >
+        {value}
+      </Typography>
+    </TotalBadge>
+  </Tooltip>
+);
+
+const calcularHorasBeneficioConfiguradas = (horariosUsuario = {}, tiposMap = {}) => {
+  return Object.values(horariosUsuario).reduce((total, turno) => {
+    if (!turno?.tipo) return total;
+
+    const tipoConfig = tiposMap[turno.tipo];
+    if (!tipoConfig?.esBeneficio) return total;
+
+    const horasTurno = Number(turno.horas);
+    const horasBeneficio = Number.isFinite(horasTurno) && horasTurno > 0
+      ? horasTurno
+      : Number(tipoConfig.horasCredito ?? 0);
+
+    return total + (Number.isFinite(horasBeneficio) && horasBeneficio > 0 ? horasBeneficio : 0);
+  }, 0);
+};
 
 const CopyButton = styled(IconButton)(({ theme }) => ({
   position: 'absolute',
@@ -148,6 +203,7 @@ const MobileUserRow = memo(({
   isCurrentUser, 
   exceso, 
   horasTotales, 
+  horasBeneficio,
   diasSemana, 
   semanaSeleccionada,
   editando, 
@@ -157,40 +213,46 @@ const MobileUserRow = memo(({
   toggleTarget, 
   handleCambiarTurno, 
   abrirInfoTurno, 
-  handleCopiarHorario 
+  handleCopiarHorario,
+  feriadosPorFecha,
+  feriadosMap
 }) => {
+  const horasSumaSemanal = horasTotales + horasBeneficio;
+
   return (
     <UserCard elevation={0} isCurrentUser={isCurrentUser}>
       <Grid container spacing={0.5} alignItems="center">
         <Grid item xs={3}>
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35, minWidth: 0 }}>
             <Typography 
               variant="caption" 
               sx={{ 
                 fontWeight: isCurrentUser ? 700 : 500, 
                 fontSize: '0.7rem', 
-                display: 'block', 
                 lineHeight: 1.3,
                 color: isCurrentUser ? '#00830e' : 'text.primary',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                width: '100%',
               }}
             >
               {usuario.nombre} {usuario.apellidos.split(' ')[0]}
             </Typography>
-            <RolChip 
-              label={`${tipoContratoLabel}${tipoContratoHoras ? ` · ${tipoContratoHoras}` : ''}`}
+            <TipoContratoChip
+              value={usuario.tipoContrato}
+              label={tipoContratoLabel}
+              showRange
               sx={{
-                mt: 0.5,
-                bgcolor: alpha('#00830e', 0.1),
-                color: '#065f46',
-                border: '1px solid rgba(0, 131, 14, 0.18)',
-                maxWidth: '100%',
+                width: '100%',
+                maxWidth: 170,
                 '& .MuiChip-label': {
                   whiteSpace: 'normal',
                   textAlign: 'center',
                   lineHeight: 1.1,
                 },
               }}
-              size="small" 
             />
           </Box>
         </Grid>
@@ -202,7 +264,10 @@ const MobileUserRow = memo(({
               const tieneHorario = horario && horario.tipo !== 'libre';
               const isSelected = selectedTargets.has(`${usuario.id}|${diaKey}`);
               const fecha = addDays(semanaSeleccionada, index);
-              const tooltipTitle = `${dia} ${format(fecha, 'dd/MM')}`;
+              const fechaKey = format(fecha, 'yyyy-MM-dd');
+              const esFeriado = feriadosPorFecha?.has?.(fechaKey);
+              const feriadoLabel = feriadosMap?.[fechaKey]?.label || 'Feriado';
+              const tooltipTitle = esFeriado ? `${dia} ${format(fecha, 'dd/MM')} · ${feriadoLabel}` : `${dia} ${format(fecha, 'dd/MM')}`;
               
               return (
                 <Grid item sx={{ width: '14.28%', flexBasis: '14.28%' }} key={diaKey}>
@@ -211,6 +276,7 @@ const MobileUserRow = memo(({
                       hasSchedule={tieneHorario}
                       scheduleType={horario?.tipo}
                       isCurrentUser={isCurrentUser}
+                      isFeriado={esFeriado}
                       sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : undefined}
                       onClick={() => {
                         if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
@@ -230,9 +296,14 @@ const MobileUserRow = memo(({
                         </CopyButton>
                       )}
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600, lineHeight: 1 }}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600, lineHeight: 1, color: esFeriado ? '#991b1b' : 'inherit' }}>
                           {dia.slice(0, 1)}
                         </Typography>
+                        {esFeriado && (
+                          <Typography variant="caption" sx={{ fontSize: '0.53rem', lineHeight: 1, mt: 0.1, fontWeight: 700, color: '#991b1b' }}>
+                            F
+                          </Typography>
+                        )}
                         {horario && horario.tipo === 'descanso' && (
                           <Typography variant="caption" sx={{ fontSize: '0.5rem', lineHeight: 1, mt: 0.2 }}>
                             D
@@ -247,18 +318,25 @@ const MobileUserRow = memo(({
           </Grid>
         </Grid>
         <Grid item xs={2}>
-          <TotalBadge elevation={0} exceeded={exceso > 0}>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                fontSize: '0.75rem', 
-                fontWeight: 700,
-                color: exceso > 0 ? '#d32f2f' : '#2e7d32',
-              }}
-            >
-              {horasTotales.toFixed(1)}h
-            </Typography>
-          </TotalBadge>
+          <Stack spacing={0.5} alignItems="center">
+            <SummaryMetric
+              title="Horas trabajadas"
+              value={`${horasTotales.toFixed(1)}h`}
+              valueColor="#2e7d32"
+              exceeded={exceso > 0}
+            />
+            <SummaryMetric
+              title="Horas de beneficio"
+              value={`${horasBeneficio.toFixed(1)}h`}
+              valueColor="#2e7d32"
+              tone="neutral"
+            />
+            <SummaryMetric
+              title="Suma semanal"
+              value={`${horasSumaSemanal.toFixed(1)}h`}
+              valueColor="#2e7d32"
+            />
+          </Stack>
         </Grid>
       </Grid>
     </UserCard>
@@ -273,6 +351,7 @@ const DesktopUserRow = memo(({
   isCurrentUser,
   exceso,
   horasTotales,
+  horasBeneficio,
   diasSemana,
   semanaSeleccionada,
   editando,
@@ -284,37 +363,44 @@ const DesktopUserRow = memo(({
   clipboard,
   toggleTarget,
   selectedTargets,
-  NO_SUMAN_HORAS
+  NO_SUMAN_HORAS,
+  feriadosPorFecha,
+  feriadosMap
 }) => {
+  const horasSumaSemanal = horasTotales + horasBeneficio;
+
   return (
     <UserCard elevation={0} isCurrentUser={isCurrentUser}>
       <Grid container spacing={1} alignItems="center">
         <Grid item xs={2}>
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35, minWidth: 0 }}>
             <Typography 
               variant="body2" 
               sx={{ 
                 fontWeight: isCurrentUser ? 700 : 500,
                 color: isCurrentUser ? '#00830e' : 'text.primary',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                width: '100%',
               }}
             >
               {usuario.nombre} {usuario.apellidos}
             </Typography>
-            <RolChip 
-              label={`${tipoContratoLabel}${tipoContratoHoras ? ` · ${tipoContratoHoras}` : ''}`}
+            <TipoContratoChip
+              value={usuario.tipoContrato}
+              label={tipoContratoLabel}
+              showRange
               sx={{
-                mt: 0.5,
-                bgcolor: alpha('#00830e', 0.1),
-                color: '#065f46',
-                border: '1px solid rgba(0, 131, 14, 0.18)',
-                maxWidth: '100%',
+                width: '100%',
+                maxWidth: 170,
                 '& .MuiChip-label': {
                   whiteSpace: 'normal',
                   textAlign: 'center',
                   lineHeight: 1.1,
                 },
               }}
-              size="small" 
             />
           </Box>
         </Grid>
@@ -322,7 +408,10 @@ const DesktopUserRow = memo(({
           const diaKey = `dia${index + 1}`;
           const isSelected = selectedTargets.has(`${usuario.id}|${diaKey}`);
           const fecha = addDays(semanaSeleccionada, index);
-          const tooltipTitle = `${dia} ${format(fecha, 'dd/MM')}`;
+          const fechaKey = format(fecha, 'yyyy-MM-dd');
+          const esFeriado = feriadosPorFecha?.has?.(fechaKey);
+          const feriadoLabel = feriadosMap?.[fechaKey]?.label || 'Feriado';
+          const tooltipTitle = esFeriado ? `${dia} ${format(fecha, 'dd/MM')} · ${feriadoLabel}` : `${dia} ${format(fecha, 'dd/MM')}`;
           return (
             <Grid item key={`${usuario.id}-${index}`} xs>
               <Tooltip title={tooltipTitle} arrow placement="top">
@@ -330,7 +419,12 @@ const DesktopUserRow = memo(({
                   onClick={() => {
                     if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
                   }}
-                  sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)', borderRadius: 1 } : undefined}
+                  sx={{
+                    ...(isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : {}),
+                    borderRadius: 1,
+                    background: esFeriado ? 'linear-gradient(180deg, rgba(254, 242, 242, 0.9), rgba(255,255,255,0.95))' : undefined,
+                    boxShadow: esFeriado ? 'inset 0 0 0 1px rgba(220, 38, 38, 0.12)' : undefined,
+                  }}
                 >
                   <TurnoUsuario
                     usuario={usuario}
@@ -343,6 +437,7 @@ const DesktopUserRow = memo(({
                     handleCopiarHorario={handleCopiarHorario}
                     suppressOpen={!!clipboard && editando}
                     NO_SUMAN_HORAS={NO_SUMAN_HORAS}
+                    isFeriado={esFeriado}
                   />
                 </Box>
               </Tooltip>
@@ -350,17 +445,25 @@ const DesktopUserRow = memo(({
           );
         })}
         <Grid item xs={1}>
-          <TotalBadge elevation={0} exceeded={exceso > 0}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: 700,
-                color: exceso > 0 ? '#d32f2f' : '#2e7d32',
-              }}
-            >
-              {horasTotales.toFixed(1)}h
-            </Typography>
-          </TotalBadge>
+          <Stack spacing={0.5} alignItems="center">
+            <SummaryMetric
+              title="Horas trabajadas"
+              value={`${horasTotales.toFixed(1)}h`}
+              valueColor="#2e7d32"
+              exceeded={exceso > 0}
+            />
+            <SummaryMetric
+              title="Horas de beneficio"
+              value={`${horasBeneficio.toFixed(1)}h`}
+              valueColor="#2e7d32"
+              tone="neutral"
+            />
+            <SummaryMetric
+              title="Suma semanal"
+              value={`${horasSumaSemanal.toFixed(1)}h`}
+              valueColor="#2e7d32"
+            />
+          </Stack>
         </Grid>
       </Grid>
     </UserCard>
@@ -387,10 +490,29 @@ const HorariosTable = memo(({
   semanaActual,
   obtenerUsuario,
   obtenerHorasMaximas,
-  diasSemana
+  diasSemana,
+  feriadosPorFecha,
+  feriadosMap
 }) => {
   const [selectedTargets, setSelectedTargets] = useState(new Set());
   const { getTipoContratoLabel } = useTiposContrato();
+  const { tiposMap: tiposHorarioMap } = useTiposHorario();
+
+  const horariosEditadosVista = useMemo(() => {
+    if (!editando) {
+      return horariosEditados || {};
+    }
+
+    const merged = { ...(horarios || {}) };
+    Object.entries(horariosEditados || {}).forEach(([usuarioId, horariosUsuario]) => {
+      merged[usuarioId] = {
+        ...(horarios?.[usuarioId] || {}),
+        ...(horariosUsuario || {}),
+      };
+    });
+
+    return merged;
+  }, [editando, horarios, horariosEditados]);
   
   const toggleTarget = useCallback((usuarioId, diaKey) => {
     const key = `${usuarioId}|${diaKey}`;
@@ -404,15 +526,17 @@ const HorariosTable = memo(({
 
   const clearSelection = useCallback(() => setSelectedTargets(new Set()), []);
 
-  const handlePaste = useCallback(() => {
+  const handlePaste = useCallback(async () => {
     if (!onApplyCopiedHorario || !clipboard) return;
     const targets = Array.from(selectedTargets).map(k => {
       const [usuarioId, diaKey] = k.split('|');
       return { usuarioId, diaKey };
     });
     if (targets.length === 0) return; // nothing to do
-    onApplyCopiedHorario(targets);
-    clearSelection();
+    const saved = await onApplyCopiedHorario(targets);
+    if (saved) {
+      clearSelection();
+    }
   }, [onApplyCopiedHorario, clipboard, selectedTargets, clearSelection]);
 
   const EMPTY_EXTRAS = useMemo(() => ({}), []);
@@ -461,11 +585,14 @@ const HorariosTable = memo(({
             const exceso = calcularExceso(usuario.id);
             const tipoContratoLabel = getTipoContratoLabel(usuario.tipoContrato);
             const tipoContratoHoras = formatTipoContratoHoras(usuario.tipoContrato);
+            const horariosUsuarioVista = editando
+              ? (horariosEditadosVista[usuario.id] || horarios[usuario.id] || {})
+              : (horarios[usuario.id] || {});
             // Optimización: pasar el usuario directamente para evitar .find()
             const horasTotales = calcularHorasTotales(
               usuario.id, 
               editando, 
-              horariosEditados, 
+              horariosEditadosVista, 
               horarios, 
               semanaSeleccionada, 
               semanaActual, 
@@ -474,6 +601,7 @@ const HorariosTable = memo(({
               obtenerHorasMaximas, 
               true
             );
+            const horasBeneficio = calcularHorasBeneficioConfiguradas(horariosUsuarioVista, tiposHorarioMap);
             
             return (
               <MobileUserRow
@@ -484,16 +612,19 @@ const HorariosTable = memo(({
                 isCurrentUser={isCurrentUser}
                 exceso={exceso}
                 horasTotales={horasTotales}
+                horasBeneficio={horasBeneficio}
                 diasSemana={diasSemana}
                 semanaSeleccionada={semanaSeleccionada}
                 editando={editando}
-                horariosUsuario={editando ? horariosEditados[usuario.id] : horarios[usuario.id]}
+                horariosUsuario={horariosUsuarioVista}
                 selectedTargets={selectedTargets}
                 clipboard={clipboard}
                 toggleTarget={toggleTarget}
                 handleCambiarTurno={handleCambiarTurno}
                 abrirInfoTurno={abrirInfoTurno}
                 handleCopiarHorario={handleCopiarHorario}
+                feriadosPorFecha={feriadosPorFecha}
+                feriadosMap={feriadosMap}
               />
             );
           })}
@@ -508,32 +639,53 @@ const HorariosTable = memo(({
                   👤 Usuario
                 </Typography>
               </Grid>
-              {diasSemana.map((dia, index) => (
-                <Grid item xs key={dia}>
-                  <Typography 
-                    variant="subtitle2" 
-                    align="center" 
-                    sx={{ 
-                      fontWeight: 600,
-                      color: '#1a1a2e',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    {dia}
-                    <Typography 
-                      component="span" 
-                      sx={{ 
-                        display: 'block', 
-                        fontSize: '0.75rem', 
-                        color: 'text.secondary',
-                        fontWeight: 500,
+              {diasSemana.map((dia, index) => {
+                const fecha = addDays(semanaSeleccionada, index);
+                const fechaKey = format(fecha, 'yyyy-MM-dd');
+                const esFeriado = feriadosPorFecha?.has?.(fechaKey);
+                const feriadoLabel = feriadosMap?.[fechaKey]?.label || 'Feriado';
+
+                return (
+                  <Grid item xs key={dia}>
+                    <Box
+                      sx={{
+                        textAlign: 'center',
+                        borderRadius: 2,
+                        px: 1,
+                        py: 0.75,
+                        border: esFeriado ? '1px solid rgba(220, 38, 38, 0.25)' : '1px solid transparent',
+                        background: esFeriado ? 'linear-gradient(180deg, rgba(254, 242, 242, 0.95), rgba(255, 255, 255, 0.98))' : 'transparent',
                       }}
                     >
-                      {format(addDays(semanaSeleccionada, index), 'd')}
-                    </Typography>
-                  </Typography>
-                </Grid>
-              ))}
+                      <Typography 
+                        variant="subtitle2" 
+                        align="center" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: esFeriado ? '#991b1b' : '#1a1a2e',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {dia}
+                        <Typography 
+                          component="span" 
+                          sx={{ 
+                            display: 'block', 
+                            fontSize: '0.75rem', 
+                            color: esFeriado ? '#b91c1c' : 'text.secondary',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {format(fecha, 'd')}
+                        </Typography>
+                      </Typography>
+                      {esFeriado && (
+                        <DayHeaderChip size="small" label={feriadoLabel} sx={{ mt: 0.6 }} />
+                      )}
+                    </Box>
+                  </Grid>
+                );
+              })}
               <Grid item xs={1}>
                 <Typography variant="subtitle2" align="center" sx={{ fontWeight: 700, color: '#00830e' }}>
                   ⏱️ Total
@@ -548,11 +700,14 @@ const HorariosTable = memo(({
             const exceso = calcularExceso(usuario.id);
             const tipoContratoLabel = getTipoContratoLabel(usuario.tipoContrato);
             const tipoContratoHoras = formatTipoContratoHoras(usuario.tipoContrato);
+            const horariosUsuarioVista = editando
+              ? (horariosEditadosVista[usuario.id] || horarios[usuario.id] || {})
+              : (horarios[usuario.id] || {});
             // Optimización: pasar el usuario directamente para evitar .find()
             const horasTotales = calcularHorasTotales(
               usuario.id, 
               editando, 
-              horariosEditados, 
+              horariosEditadosVista, 
               horarios, 
               semanaSeleccionada, 
               semanaActual, 
@@ -561,6 +716,7 @@ const HorariosTable = memo(({
               obtenerHorasMaximas, 
               true
             );
+            const horasBeneficio = calcularHorasBeneficioConfiguradas(horariosUsuarioVista, tiposHorarioMap);
             
             return (
               <DesktopUserRow
@@ -571,10 +727,11 @@ const HorariosTable = memo(({
                 isCurrentUser={isCurrentUser}
                 exceso={exceso}
                 horasTotales={horasTotales}
+                horasBeneficio={horasBeneficio}
                 diasSemana={diasSemana}
                 semanaSeleccionada={semanaSeleccionada}
                 editando={editando}
-                horariosUsuario={horariosEditados[usuario.id]}
+                horariosUsuario={horariosUsuarioVista}
                 horariosOriginalesUsuario={horarios[usuario.id]}
                 currentUser={currentUser}
                 handleCambiarTurno={handleCambiarTurno}
@@ -583,6 +740,8 @@ const HorariosTable = memo(({
                 toggleTarget={toggleTarget}
                 selectedTargets={selectedTargets}
                 NO_SUMAN_HORAS={NO_SUMAN_HORAS}
+                feriadosPorFecha={feriadosPorFecha}
+                feriadosMap={feriadosMap}
               />
             );
           })}

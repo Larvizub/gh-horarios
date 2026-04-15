@@ -43,6 +43,10 @@ import { useSemana } from '../../hooks/useSemana';
 import { useModalConfirm } from '../../hooks/useModalConfirm';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import useFeriados from '../../hooks/useFeriados';
+import useJornadasOrdinarias from '../../hooks/useJornadasOrdinarias';
+import { obtenerJornadaOrdinariaDetectada } from '../../utils/jornadasOrdinarias';
+import { TIPO_TEMPLATES } from '../../utils/tiposHorario';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -184,15 +188,17 @@ const LoadingContainer = styled(Box)(({ theme }) => ({
 
 // Objeto estable para evitar re-renders innecesarios
 const EMPTY_HORAS_EXTRAS = {};
+const REFRESH_EDIT_MODE_FLAG = 'horarios.editModeBeforeRefresh';
 
 const Horarios = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { tipos } = useTiposHorario();
+  const { tipos, tiposMap } = useTiposHorario();
   const { getHorasMaximasTipoContrato } = useTiposContrato();
   const obtenerHorasMaximas = getHorasMaximasTipoContrato;
   const { departamentosActivos } = useDepartamentos();
+  const { jornadasMap: jornadasOrdinariasMap } = useJornadasOrdinarias();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -202,6 +208,7 @@ const Horarios = () => {
   const [loading, setLoading] = useState(true);
   const [horarios, setHorarios] = useState({});
   const { semanaActual, semanaSeleccionada, setSemanaSeleccionada, avanzarSemana, retrocederSemana, obtenerClaveSemana } = useSemana();
+  const { feriadosPorFecha, feriadosMap } = useFeriados(getYear(semanaSeleccionada));
   const [editando, setEditando] = useState(false);
   const [horariosEditados, setHorariosEditados] = useState({});
   // Buffer de ediciones por semana: { [semanaKey]: { ...horariosEditadosSemana } }
@@ -226,6 +233,7 @@ const Horarios = () => {
   // Clave de la semana más recientemente cargada desde backend
   const [lastLoadedWeekKey, setLastLoadedWeekKey] = useState(null);
   const [dialogoHorario, setDialogoHorario] = useState(false);
+  const [guardandoHorario, setGuardandoHorario] = useState(false);
   const [horarioPersonalizado, setHorarioPersonalizado] = useState({
     horaInicio: '',
     horaFin: '',
@@ -235,7 +243,8 @@ const Horarios = () => {
     horaFinBloque2: '',
     usuarioId: null,
     diaKey: null,
-    tipo: 'personalizado'
+    tipo: 'personalizado',
+    horas: ''
   });
   const [dialogoEliminar, setDialogoEliminar] = useState(false);
   const [eliminacionSeleccionada, setEliminacionSeleccionada] = useState({
@@ -263,6 +272,24 @@ const Horarios = () => {
   const [modalUsuario, setModalUsuario] = useState(null);
   const [modalTurno, setModalTurno] = useState(null);
   const [modalDiaKey, setModalDiaKey] = useState(null);
+
+  useEffect(() => {
+    const shouldCloseEditMode = sessionStorage.getItem(REFRESH_EDIT_MODE_FLAG) === '1';
+
+    if (!shouldCloseEditMode) {
+      return;
+    }
+
+    setEditando(false);
+    setHorariosEditados({});
+    setBufferEditSemanas({});
+    setDialogoHorario(false);
+    setDialogoEliminar(false);
+    setDialogoCopiar(false);
+    setClipboard(null);
+    sessionStorage.removeItem(REFRESH_EDIT_MODE_FLAG);
+  }, [tiposMap]);
+
   const abrirInfoTurno = (usuario, turno, diaKey) => {
     setModalUsuario(usuario);
     setModalTurno(turno);
@@ -329,24 +356,59 @@ const Horarios = () => {
   }, [editando, horarios, horariosEditados, mostrarModal]);
 
   // Aplicar el horario copiado a múltiples destinos
-  const applyCopiedHorario = useCallback((targets = []) => {
-    if (!clipboard || !clipboard.horario) return;
-    actualizarHorariosEditados(prev => {
-      const next = { ...prev };
-      targets.forEach(({ usuarioId, diaKey }) => {
-        if (!next[usuarioId]) next[usuarioId] = {};
-        next[usuarioId] = { ...next[usuarioId], [diaKey]: JSON.parse(JSON.stringify(clipboard.horario)) };
-      });
-      return next;
+  const applyCopiedHorario = useCallback(async (targets = []) => {
+    if (!clipboard || !clipboard.horario || targets.length === 0) {
+      return false;
+    }
+
+    const semanaKey = obtenerClaveSemana(semanaSeleccionada);
+    const horarioCopiado = JSON.parse(JSON.stringify(clipboard.horario));
+    const siguienteHorarios = { ...(horariosEditadosRef.current || {}) };
+    const cambiosPorUsuario = new Map();
+
+    targets.forEach(({ usuarioId, diaKey }) => {
+      const horariosUsuario = { ...(siguienteHorarios[usuarioId] || {}) };
+      horariosUsuario[diaKey] = JSON.parse(JSON.stringify(horarioCopiado));
+      siguienteHorarios[usuarioId] = horariosUsuario;
+      cambiosPorUsuario.set(usuarioId, horariosUsuario);
     });
-    // limpiar el portapapeles
-    setClipboard(null);
-    mostrarModal({ tipo: 'success', titulo: 'Pegado completo', mensaje: `Se pegaron ${targets.length} destinos.`, soloInfo: true, position: 'top-center', fill: '#00830e' });
-  }, [clipboard, mostrarModal, actualizarHorariosEditados]);
+
+    try {
+      setGuardandoHorario(true);
+      await Promise.all(
+        Array.from(cambiosPorUsuario.entries()).map(([usuarioId, horariosUsuario]) =>
+          guardarHorariosUsuarioSemana(semanaKey, usuarioId, horariosUsuario)
+        )
+      );
+
+      setHorariosEditados(siguienteHorarios);
+      setBufferEditSemanas((prev) => {
+        const siguienteBuffer = { ...prev };
+        delete siguienteBuffer[semanaKey];
+        return siguienteBuffer;
+      });
+      setClipboard(null);
+      mostrarModal({ tipo: 'success', titulo: 'Pegado completo', mensaje: `Se pegaron ${targets.length} destinos.`, soloInfo: true, position: 'top-center', fill: '#00830e' });
+      return true;
+    } catch (error) {
+      console.error('Error al pegar horarios:', error);
+      mostrarModal({
+        tipo: 'error',
+        titulo: '❌ Error al pegar horarios',
+        mensaje: `No se pudieron guardar los horarios pegados:\n\n${error.message}`,
+        soloInfo: true,
+        position: 'top-center',
+      });
+      return false;
+    } finally {
+      setGuardandoHorario(false);
+    }
+  }, [clipboard, guardarHorariosUsuarioSemana, mostrarModal, obtenerClaveSemana, semanaSeleccionada]);
 
   // Iniciar edición según permisos (evita cargar datos de otros usuarios para no admins)
   const iniciarEdicion = useCallback(() => {
     setEditando(true);
+    sessionStorage.setItem(REFRESH_EDIT_MODE_FLAG, '1');
     const usuarioActual = currentUserData;
     const puedeGuardarTodos = usuarioActual && (
       usuarioActual.rol === 'Administrador' || usuarioActual.rol === 'Modificador'
@@ -823,6 +885,10 @@ const Horarios = () => {
     const currentEdits = horariosEditadosRef.current || {};
     const currentHorarios = horariosRef.current || {};
     const horarioActual = (currentEdits[usuarioId]?.[diaKey]) || (currentHorarios[usuarioId]?.[diaKey]);
+    const tipoConfigActual = tiposMap[horarioActual?.tipo] || {};
+    const horasIniciales = tipoConfigActual.esBeneficio
+      ? (Number(horarioActual?.horas) > 0 ? horarioActual.horas : (tipoConfigActual.horasCredito || ''))
+      : (horarioActual?.horas ?? '');
     
     setHorarioPersonalizado({
       usuarioId,
@@ -841,7 +907,8 @@ const Horarios = () => {
       horaInicioTele: horarioActual?.horaInicioTele || '',
       horaFinTele: horarioActual?.horaFinTele || '',
       horaInicioPres: horarioActual?.horaInicioPres || '',
-      horaFinPres: horarioActual?.horaFinPres || ''
+      horaFinPres: horarioActual?.horaFinPres || '',
+      horas: horasIniciales
     });
     setDialogoHorario(true);
   }, []);
@@ -941,7 +1008,7 @@ const Horarios = () => {
     abrirDialogoHorario(usuarioId, diaKey);
   }, [editando, usuarios, currentUserData, abrirDialogoHorario, mostrarModal]);
 
-  const guardarHorarioPersonalizado = () => {
+  const guardarHorarioPersonalizado = async () => {
     const {
       horaInicio,
       horaFin,
@@ -959,13 +1026,196 @@ const Horarios = () => {
       horaInicioBloque1,
       horaFinBloque1,
       horaInicioBloque2,
-      horaFinBloque2
+      horaFinBloque2,
+      horas
     } = horarioPersonalizado;
+
+    const tipoConfig = tiposMap[tipo] || {};
 
     const nuevosHorarios = { ...horariosEditados };
 
     if (!nuevosHorarios[usuarioId]) {
       nuevosHorarios[usuarioId] = {};
+    }
+
+    const guardarHorarioEnEstado = async (horarioGuardado) => {
+      const semanaKey = obtenerClaveSemana(semanaSeleccionada);
+      const horariosUsuarioActualizados = {
+        ...nuevosHorarios[usuarioId],
+        [diaKey]: horarioGuardado,
+      };
+
+      try {
+        setGuardandoHorario(true);
+        await guardarHorariosUsuarioSemana(semanaKey, usuarioId, horariosUsuarioActualizados);
+
+        const siguienteHorarios = {
+          ...horariosEditadosRef.current,
+          [usuarioId]: horariosUsuarioActualizados,
+        };
+
+        setHorariosEditados(siguienteHorarios);
+        setBufferEditSemanas((prev) => {
+          const semanaPendiente = { ...(prev[semanaKey] || {}) };
+          delete semanaPendiente[usuarioId];
+
+          if (Object.keys(semanaPendiente).length === 0) {
+            const siguienteBuffer = { ...prev };
+            delete siguienteBuffer[semanaKey];
+            return siguienteBuffer;
+          }
+
+          return {
+            ...prev,
+            [semanaKey]: semanaPendiente,
+          };
+        });
+
+        setDialogoHorario(false);
+        mostrarModal({
+          tipo: 'success',
+          titulo: '✅ Horario guardado',
+          mensaje: 'El horario se guardó correctamente.',
+          soloInfo: true,
+          position: 'top-center',
+          fill: '#00830e',
+        });
+      } catch (error) {
+        console.error('Error al guardar horario personalizado:', error);
+        mostrarModal({
+          tipo: 'error',
+          titulo: '❌ Error al Guardar',
+          mensaje: `No se pudo guardar el horario:\n\n${error.message}`,
+          soloInfo: true,
+          position: 'top-center'
+        });
+      } finally {
+        setGuardandoHorario(false);
+      }
+    };
+
+    const validarExcesoContratoYGuardar = (horarioGuardado, horasTrabajadas) => {
+      const horasActuales = calcularHorasTotales(
+        usuarioId,
+        editando,
+        horariosEditados,
+        horarios,
+        semanaSeleccionada,
+        semanaActual,
+        EMPTY_HORAS_EXTRAS,
+        (id) => obtenerUsuario(usuarios, id),
+        obtenerHorasMaximas
+      );
+      const usuario = obtenerUsuario(usuarios, usuarioId);
+      const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
+
+      if (horasActuales + horasTrabajadas > horasMaximas) {
+        const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
+        const recomendacion = generarRecomendacionPracticantes(
+          usuario,
+          exceso,
+          (horasExceso, departamentoDestino, usuarioExcedidoId) => encontrarPracticantesDisponibles(
+            horasExceso,
+            usuarios,
+            (id, edit) => calcularHorasTotales(
+              id,
+              edit,
+              horariosEditados,
+              horarios,
+              semanaSeleccionada,
+              semanaActual,
+              EMPTY_HORAS_EXTRAS,
+              (uid) => obtenerUsuario(usuarios, uid),
+              obtenerHorasMaximas
+            ),
+            obtenerHorasMaximas,
+            departamentoDestino,
+            usuarioExcedidoId
+          )
+        );
+
+        mostrarModal({
+          tipo: 'warning',
+          titulo: '⚠️ Exceso de Horas Detectado',
+          mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
+          textoConfirmar: 'Continuar de todas formas',
+          textoCancelar: 'Cancelar',
+          onConfirmar: () => {
+            void guardarHorarioEnEstado(horarioGuardado);
+            cerrarModal();
+          },
+          onCancelar: cerrarModal
+        });
+        return;
+      }
+
+      void guardarHorarioEnEstado(horarioGuardado);
+    };
+
+    const validarJornadaYGuardar = (horarioGuardado, horasTrabajadas) => {
+      const jornadaConMetadata = (() => {
+        const jornadaDetectada = obtenerJornadaOrdinariaDetectada(horarioGuardado, jornadasOrdinariasMap);
+
+        if (!jornadaDetectada) {
+          return horarioGuardado;
+        }
+
+        return {
+          ...horarioGuardado,
+          jornadaOrdinariaKey: jornadaDetectada.key,
+          jornadaOrdinariaLabel: jornadaDetectada.label,
+          jornadaOrdinariaLimiteDiario: jornadaDetectada.limiteDiario,
+          jornadaOrdinariaHoras: horasTrabajadas,
+        };
+      })();
+
+      const jornadaDetectada = obtenerJornadaOrdinariaDetectada(horarioGuardado, jornadasOrdinariasMap);
+
+      if (jornadaDetectada?.excedeLimite) {
+        mostrarModal({
+          tipo: 'warning',
+          titulo: '⚠️ Límite diario superado',
+          mensaje: `La jornada detectada es ${jornadaDetectada.label} con un límite diario de ${jornadaDetectada.limiteDiario} horas.\n\nEste horario suma ${horasTrabajadas.toFixed(1)} horas y excede por ${jornadaDetectada.horasExcedentes.toFixed(1)} horas.\n\n¿Desea continuar guardándolo?`,
+          textoConfirmar: 'Continuar de todas formas',
+          textoCancelar: 'Cancelar',
+          onConfirmar: () => validarExcesoContratoYGuardar(jornadaConMetadata, horasTrabajadas),
+          onCancelar: cerrarModal,
+        });
+        return;
+      }
+
+      validarExcesoContratoYGuardar(jornadaConMetadata, horasTrabajadas);
+    };
+
+    const crearHorarioBase = (extra = {}) => ({
+      ...extra,
+      jornadaOrdinariaKey: '',
+      jornadaOrdinariaLabel: '',
+      jornadaOrdinariaLimiteDiario: null,
+      jornadaOrdinariaHoras: null,
+    });
+
+    if (tipoConfig.esBeneficio && tipoConfig.template === TIPO_TEMPLATES.SIN_HORAS) {
+      const horasCredito = Number(horas || tipoConfig.horasCredito || 0);
+
+      if (!horasCredito || horasCredito <= 0) {
+        mostrarModal({
+          tipo: 'error',
+          titulo: '⏰ Horas acreditadas obligatorias',
+          mensaje: 'Debes indicar cuántas horas acreditará este beneficio antes de guardarlo.',
+          soloInfo: true
+        });
+        return;
+      }
+
+      const horarioGuardado = crearHorarioBase({
+        tipo,
+        horas: horasCredito,
+        nota: nota || ''
+      });
+
+      void validarJornadaYGuardar(horarioGuardado, horasCredito);
+      return;
     }
 
     // Si es un tipo que no suma horas
@@ -977,8 +1227,13 @@ const Horarios = () => {
         horas: 0,
         nota: nota || ''
       };
-      actualizarHorariosEditados(nuevosHorarios);
-      setDialogoHorario(false);
+      void guardarHorarioEnEstado({
+        tipo,
+        horaInicio: '00:00',
+        horaFin: '00:00',
+        horas: 0,
+        nota: nota || ''
+      });
       return;
     }
 
@@ -1025,76 +1280,7 @@ const Horarios = () => {
       const horasTele = Number(horasTeleRaw.toFixed(1));
       const horasPres = Number(horasPresRaw.toFixed(1));
       const horasTrabajadas = Number((horasTeleRaw + horasPresRaw).toFixed(1));
-
-      // Verificar exceso como en los demás tipos
-      const horasActuales = calcularHorasTotales(
-        usuarioId,
-        editando,
-        horariosEditados,
-        horarios,
-        semanaSeleccionada,
-        semanaActual,
-        EMPTY_HORAS_EXTRAS,
-        (id) => obtenerUsuario(usuarios, id),
-        obtenerHorasMaximas
-      );
-      const usuario = obtenerUsuario(usuarios, usuarioId);
-      const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
-
-      if (horasActuales + horasTrabajadas > horasMaximas) {
-        const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
-        const recomendacion = generarRecomendacionPracticantes(
-          usuario,
-          exceso,
-          (horasExceso, departamentoDestino, usuarioExcedidoId) => encontrarPracticantesDisponibles(
-            horasExceso,
-            usuarios,
-            (id, edit) => calcularHorasTotales(
-              id,
-              edit,
-              horariosEditados,
-              horarios,
-              semanaSeleccionada,
-              semanaActual,
-              EMPTY_HORAS_EXTRAS,
-              (uid) => obtenerUsuario(usuarios, uid),
-              obtenerHorasMaximas
-            ),
-            obtenerHorasMaximas,
-            departamentoDestino,
-            usuarioExcedidoId
-          )
-        );
-
-        mostrarModal({
-          tipo: 'warning',
-          titulo: '⚠️ Exceso de Horas Detectado',
-          mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
-          textoConfirmar: 'Continuar de todas formas',
-          textoCancelar: 'Cancelar',
-          onConfirmar: () => {
-            nuevosHorarios[usuarioId][diaKey] = {
-              tipo,
-              horaInicioTele,
-              horaFinTele,
-              horasTele,
-              horaInicioPres,
-              horaFinPres,
-              horasPres,
-              horas: horasTrabajadas,
-              nota: nota || ''
-            };
-            actualizarHorariosEditados(nuevosHorarios);
-            setDialogoHorario(false);
-            cerrarModal();
-          },
-          onCancelar: cerrarModal
-        });
-        return;
-      }
-
-      // Si no excede, guardar normalmente
-      nuevosHorarios[usuarioId][diaKey] = {
+      const horarioGuardado = crearHorarioBase({
         tipo,
         horaInicioTele,
         horaFinTele,
@@ -1104,10 +1290,9 @@ const Horarios = () => {
         horasPres,
         horas: horasTrabajadas,
         nota: nota || ''
-      };
+      });
 
-      actualizarHorariosEditados(nuevosHorarios);
-      setDialogoHorario(false);
+      void validarJornadaYGuardar(horarioGuardado, horasTrabajadas);
       return;
     }
 
@@ -1138,73 +1323,7 @@ const Horarios = () => {
       const horasBloque2 = Number(horasBloque2Raw.toFixed(1));
       const horasTrabajadas = Number((horasBloque1Raw + horasBloque2Raw).toFixed(1));
 
-      const horasActuales = calcularHorasTotales(
-        usuarioId,
-        editando,
-        horariosEditados,
-        horarios,
-        semanaSeleccionada,
-        semanaActual,
-        EMPTY_HORAS_EXTRAS,
-        (id) => obtenerUsuario(usuarios, id),
-        obtenerHorasMaximas
-      );
-      const usuario = obtenerUsuario(usuarios, usuarioId);
-      const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
-
-      if (horasActuales + horasTrabajadas > horasMaximas) {
-        const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
-        const recomendacion = generarRecomendacionPracticantes(
-          usuario,
-          exceso,
-          (horasExceso, departamentoDestino, usuarioExcedidoId) => encontrarPracticantesDisponibles(
-            horasExceso,
-            usuarios,
-            (id, edit) => calcularHorasTotales(
-              id,
-              edit,
-              horariosEditados,
-              horarios,
-              semanaSeleccionada,
-              semanaActual,
-              EMPTY_HORAS_EXTRAS,
-              (uid) => obtenerUsuario(usuarios, uid),
-              obtenerHorasMaximas
-            ),
-            obtenerHorasMaximas,
-            departamentoDestino,
-            usuarioExcedidoId
-          )
-        );
-
-        mostrarModal({
-          tipo: 'warning',
-          titulo: '⚠️ Exceso de Horas Detectado',
-          mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
-          textoConfirmar: 'Continuar de todas formas',
-          textoCancelar: 'Cancelar',
-          onConfirmar: () => {
-            nuevosHorarios[usuarioId][diaKey] = {
-              tipo,
-              horaInicioBloque1,
-              horaFinBloque1,
-              horasBloque1,
-              horaInicioBloque2,
-              horaFinBloque2,
-              horasBloque2,
-              horas: horasTrabajadas,
-              nota: nota || ''
-            };
-            actualizarHorariosEditados(nuevosHorarios);
-            setDialogoHorario(false);
-            cerrarModal();
-          },
-          onCancelar: cerrarModal
-        });
-        return;
-      }
-
-      nuevosHorarios[usuarioId][diaKey] = {
+      const horarioGuardado = crearHorarioBase({
         tipo,
         horaInicioBloque1,
         horaFinBloque1,
@@ -1214,10 +1333,9 @@ const Horarios = () => {
         horasBloque2,
         horas: horasTrabajadas,
         nota: nota || ''
-      };
+      });
 
-      actualizarHorariosEditados(nuevosHorarios);
-      setDialogoHorario(false);
+      void validarJornadaYGuardar(horarioGuardado, horasTrabajadas);
       return;
     }
 
@@ -1252,84 +1370,8 @@ const Horarios = () => {
       horasTrabajadas = (24 - inicio.hora + fin.hora) + (fin.minutos - inicio.minutos) / 60;
     }
 
-    // Exceso chequeo (reutiliza la lógica ya existente)
-    const horasActuales = calcularHorasTotales(
-      usuarioId,
-      editando,
-      horariosEditados,
-      horarios,
-      semanaSeleccionada,
-      semanaActual,
-      EMPTY_HORAS_EXTRAS,
-      (id) => obtenerUsuario(usuarios, id),
-      obtenerHorasMaximas
-    );
-    const usuario = obtenerUsuario(usuarios, usuarioId);
-    const horasMaximas = obtenerHorasMaximas(usuario?.tipoContrato || 'Operativo');
-
-    if (horasActuales + horasTrabajadas > horasMaximas) {
-      const exceso = ((horasActuales + horasTrabajadas) - horasMaximas);
-      const recomendacion = generarRecomendacionPracticantes(
-        usuario,
-        exceso,
-        (horasExceso, departamentoDestino, usuarioExcedidoId) => encontrarPracticantesDisponibles(
-          horasExceso,
-          usuarios,
-          (id, edit) => calcularHorasTotales(
-            id,
-            edit,
-            horariosEditados,
-            horarios,
-            semanaSeleccionada,
-            semanaActual,
-            EMPTY_HORAS_EXTRAS,
-            (uid) => obtenerUsuario(usuarios, uid),
-            obtenerHorasMaximas
-          ),
-          obtenerHorasMaximas,
-          departamentoDestino,
-          usuarioExcedidoId
-        )
-      );
-
-      mostrarModal({
-        tipo: 'warning',
-        titulo: '⚠️ Exceso de Horas Detectado',
-        mensaje: `${recomendacion}\n\n¿Desea continuar asignando estas horas?`,
-        textoConfirmar: 'Continuar de todas formas',
-        textoCancelar: 'Cancelar',
-        onConfirmar: () => {
-          if (tipo === 'tarde-libre') {
-            nuevosHorarios[usuarioId][diaKey] = {
-              tipo,
-              horaInicio,
-              horaFin,
-              horaInicioLibre: horaInicioLibre || '',
-              horaFinLibre: horaFinLibre || '',
-              horas: horasTrabajadas,
-              nota: nota || ''
-            };
-          } else {
-            nuevosHorarios[usuarioId][diaKey] = {
-              tipo,
-              horaInicio,
-              horaFin,
-              horas: horasTrabajadas,
-              nota: nota || ''
-            };
-          }
-          actualizarHorariosEditados(nuevosHorarios);
-          setDialogoHorario(false);
-          cerrarModal();
-        },
-        onCancelar: cerrarModal
-      });
-      return;
-    }
-
-    // Guardado normal para resto de tipos
-    if (tipo === 'tarde-libre') {
-      nuevosHorarios[usuarioId][diaKey] = {
+    const horarioGuardado = tipo === 'tarde-libre'
+      ? crearHorarioBase({
         tipo,
         horaInicio,
         horaFin,
@@ -1337,19 +1379,16 @@ const Horarios = () => {
         horaFinLibre: horaFinLibre || '',
         horas: horasTrabajadas,
         nota: nota || ''
-      };
-    } else {
-      nuevosHorarios[usuarioId][diaKey] = {
+      })
+      : crearHorarioBase({
         tipo,
         horaInicio,
         horaFin,
         horas: horasTrabajadas,
         nota: nota || ''
-      };
-    }
+      });
 
-    actualizarHorariosEditados(nuevosHorarios);
-    setDialogoHorario(false);
+    void validarJornadaYGuardar(horarioGuardado, horasTrabajadas);
   };
 
   // Función helper optimizada con memoización de resultados
@@ -1582,6 +1621,8 @@ const Horarios = () => {
               obtenerUsuario={obtenerUsuario}
               obtenerHorasMaximas={obtenerHorasMaximas}
               diasSemana={diasSemana}
+              feriadosPorFecha={feriadosPorFecha}
+              feriadosMap={feriadosMap}
             />
 
             {/* Botones de acción */}
@@ -1644,6 +1685,8 @@ const Horarios = () => {
                     onClick={() => {
                       setEditando(false);
                       setHorariosEditados({});
+                      setBufferEditSemanas({});
+                      sessionStorage.removeItem(REFRESH_EDIT_MODE_FLAG);
                     }}
                     disabled={loading}
                     startIcon={<CloseIcon />}
@@ -1656,25 +1699,7 @@ const Horarios = () => {
                       },
                     }}
                   >
-                    Cancelar
-                  </ActionButton>
-                  
-                  <ActionButton 
-                    variant="contained" 
-                    color="primary"
-                    onClick={handleGuardarHorarios}
-                    disabled={loading}
-                    startIcon={<SaveIcon />}
-                    sx={{
-                      flex: { xs: 1, sm: 'none' },
-                      minWidth: { sm: 180 },
-                      background: 'linear-gradient(135deg, #00830e 0%, #4caf50 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #006b0b 0%, #388e3c 100%)',
-                      },
-                    }}
-                  >
-                    Guardar Horarios
+                    Salir edición
                   </ActionButton>
                 </>
               )}
@@ -1690,6 +1715,7 @@ const Horarios = () => {
         horarioPersonalizado={horarioPersonalizado}
         setHorarioPersonalizado={setHorarioPersonalizado}
         guardarHorarioPersonalizado={guardarHorarioPersonalizado}
+        guardandoHorario={guardandoHorario}
         isMobile={isMobile}
         isSmallMobile={isSmallMobile}
         currentUser={currentUserData || null}

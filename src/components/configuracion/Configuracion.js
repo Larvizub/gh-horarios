@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { ref, get, update, remove } from 'firebase/database';
 import { updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { database, auth } from '../../firebase/config';
@@ -35,6 +35,10 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import useDepartamentos from '../../hooks/useDepartamentos';
@@ -43,9 +47,13 @@ import { DEFAULT_DEPARTAMENTOS, normalizeDepartamentoLabel } from '../../utils/d
 import useCargos from '../../hooks/useCargos';
 import useRoles from '../../hooks/useRoles';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import useJornadasTrabajo from '../../hooks/useJornadasTrabajo';
 import { formatTipoContratoHoras } from '../../utils/tiposContrato';
+import TipoContratoChip from '../common/TipoContratoChip';
 import TiposHorarioManager from './TiposHorarioManager';
 import TiposContratoManager from './TiposContratoManager';
+import JornadasManager from './JornadasManager';
+import FeriadosManager from './FeriadosManager';
 import { saveCargosCatalogo } from '../../services/cargosService';
 import { saveRolesCatalogo } from '../../services/rolesService';
 import { buildCargoIdFromLabel, buildDefaultCargoPermissions, normalizeCargoDepartamentoId, normalizeCargoLabel, normalizeCargoPermissions, PERMISOS_CARGO, resolveCargoRecord } from '../../utils/cargos';
@@ -164,12 +172,15 @@ const Configuracion = () => {
   const { cargos, loadingCargos } = useCargos();
   const { roles, loadingRoles } = useRoles();
   const { tipos: tiposContrato, tiposMap: tiposContratoMap } = useTiposContrato();
+  const { jornadas } = useJornadasTrabajo();
   const [busquedaCargo, setBusquedaCargo] = useState('');
   const [permisosModuleOpen, setPermisosModuleOpen] = useState(false);
   const [roleSeleccionadoId, setRoleSeleccionadoId] = useState('');
   const [permisosRolForm, setPermisosRolForm] = useState(buildDefaultCargoPermissions());
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('');
+  const [ordenUsuarios, setOrdenUsuarios] = useState({ campo: 'nombre', direccion: 'asc' });
   const [busquedaDepartamentos, setBusquedaDepartamentos] = useState('');
+  const [cargoNuevoAbierto, setCargoNuevoAbierto] = useState(false);
   const [nuevoCargoDepartamentoId, setNuevoCargoDepartamentoId] = useState('');
   const [departamentoEdicionAbierto, setDepartamentoEdicionAbierto] = useState(false);
   const [departamentoEnEdicion, setDepartamentoEnEdicion] = useState(null);
@@ -212,6 +223,8 @@ const Configuracion = () => {
   const [cargoModuleOpen, setCargoModuleOpen] = useState(false);
   const [tiposModuleOpen, setTiposModuleOpen] = useState(false);
   const [tiposContratoModuleOpen, setTiposContratoModuleOpen] = useState(false);
+  const [jornadasModuleOpen, setJornadasModuleOpen] = useState(false);
+  const [feriadosModuleOpen, setFeriadosModuleOpen] = useState(false);
   const [nuevoDepartamento, setNuevoDepartamento] = useState('');
   const [nuevoCargo, setNuevoCargo] = useState('');
   const [nuevoRolLabel, setNuevoRolLabel] = useState('');
@@ -304,6 +317,82 @@ const Configuracion = () => {
       return campos.includes(termino);
     });
   }, [busquedaUsuarios, usuarios]);
+
+  const usuariosOrdenados = useMemo(() => {
+    const factor = ordenUsuarios.direccion === 'asc' ? 1 : -1;
+
+    const getValorOrden = (usuario) => {
+      switch (ordenUsuarios.campo) {
+        case 'nombre':
+          return `${usuario.nombre || ''} ${usuario.apellidos || ''}`.trim();
+        case 'cargo':
+          return usuario.cargo || '';
+        case 'departamento':
+          return usuario.departamento || '';
+        case 'tipoContrato':
+          return usuario.tipoContrato || '';
+        default:
+          return '';
+      }
+    };
+
+    return [...usuariosFiltrados].sort((a, b) => {
+      const valorA = getValorOrden(a).toString();
+      const valorB = getValorOrden(b).toString();
+      return valorA.localeCompare(valorB, 'es', { sensitivity: 'base' }) * factor;
+    });
+  }, [ordenUsuarios, usuariosFiltrados]);
+
+  const handleOrdenUsuarios = useCallback((campo) => {
+    setOrdenUsuarios((current) => ({
+      campo,
+      direccion: current.campo === campo && current.direccion === 'asc' ? 'desc' : 'asc',
+    }));
+  }, []);
+
+  const renderSortableHeader = useCallback((label, campo, align = 'left') => {
+    const isActive = ordenUsuarios.campo === campo;
+    const SortIcon = isActive
+      ? (ordenUsuarios.direccion === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon)
+      : SwapVertIcon;
+
+    return (
+      <ButtonBase
+        type="button"
+        onClick={() => handleOrdenUsuarios(campo)}
+        sx={{
+          width: '100%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: align === 'right' ? 'flex-end' : 'center',
+          gap: 0.5,
+          px: 0.5,
+          py: 0.25,
+          borderRadius: 1.5,
+          color: isActive ? '#00830e' : '#475569',
+          transition: 'color 160ms ease, background-color 160ms ease',
+          '&:hover': {
+            bgcolor: 'rgba(0, 131, 14, 0.06)',
+          },
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 700,
+            color: 'inherit',
+            textTransform: 'uppercase',
+            letterSpacing: 0.4,
+            textAlign: align,
+            lineHeight: 1,
+          }}
+        >
+          {label}
+        </Typography>
+        <SortIcon sx={{ fontSize: 14, opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
+      </ButtonBase>
+    );
+  }, [handleOrdenUsuarios, ordenUsuarios]);
 
   const departamentosFiltrados = useMemo(() => {
     const termino = normalizeCargoLabel(busquedaDepartamentos).toLowerCase();
@@ -553,7 +642,7 @@ const Configuracion = () => {
           departamentoId: normalizeCargoDepartamentoId(nuevoCargoDepartamentoId),
         },
       ]);
-      setNuevoCargo('');
+      cerrarNuevoCargoDialog();
       toast.success('Cargo creado correctamente.');
     } catch (error) {
       console.error('Error al crear cargo:', error);
@@ -764,6 +853,22 @@ const Configuracion = () => {
     setNuevoCargoDepartamentoId(event.target.value);
   };
 
+  const abrirNuevoCargoDialog = () => {
+    if (!nuevoCargoDepartamentoId && departamentos.length > 0) {
+      setNuevoCargoDepartamentoId(departamentos[0].id);
+    }
+    setNuevoCargo('');
+    setCargoNuevoAbierto(true);
+  };
+
+  const cerrarNuevoCargoDialog = () => {
+    setCargoNuevoAbierto(false);
+    setNuevoCargo('');
+    if (departamentos.length > 0) {
+      setNuevoCargoDepartamentoId((current) => current || departamentos[0].id);
+    }
+  };
+
   const handleGuardarPermisosCargo = async () => {
     if (!rolSeleccionado) {
       toast.error('Selecciona un rol para administrar sus permisos.');
@@ -798,6 +903,8 @@ const Configuracion = () => {
       permisos: permisosModuleOpen,
       tipos: tiposModuleOpen,
       contratos: tiposContratoModuleOpen,
+      jornadas: jornadasModuleOpen,
+      feriados: feriadosModuleOpen,
     };
 
     const isCurrentlyOpen = currentStates[module];
@@ -809,6 +916,8 @@ const Configuracion = () => {
     setPermisosModuleOpen(false);
     setTiposModuleOpen(false);
     setTiposContratoModuleOpen(false);
+    setJornadasModuleOpen(false);
+    setFeriadosModuleOpen(false);
 
     // If the requested module was closed, open it; otherwise leave closed
     if (!isCurrentlyOpen) {
@@ -818,6 +927,8 @@ const Configuracion = () => {
       if (module === 'permisos') setPermisosModuleOpen(true);
       if (module === 'tipos') setTiposModuleOpen(true);
       if (module === 'contratos') setTiposContratoModuleOpen(true);
+      if (module === 'jornadas') setJornadasModuleOpen(true);
+      if (module === 'feriados') setFeriadosModuleOpen(true);
     }
   };
 
@@ -1077,32 +1188,24 @@ const Configuracion = () => {
                           borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
                         }}
                       >
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                          Nombre
-                        </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                          Cargo
-                        </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                          Departamento
-                        </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                          Tipo
-                        </Typography>
+                        {renderSortableHeader('Nombre', 'nombre')}
+                        {renderSortableHeader('Cargo', 'cargo')}
+                        {renderSortableHeader('Departamento', 'departamento')}
+                        {renderSortableHeader('Tipo', 'tipoContrato')}
                         <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4, textAlign: 'right' }}>
                           Acciones
                         </Typography>
                       </Box>
 
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        {usuariosFiltrados.length === 0 ? (
+                        {usuariosOrdenados.length === 0 ? (
                           <Box sx={{ p: 2.5 }}>
                             <Alert severity="info" sx={{ borderRadius: 3, mb: 0 }}>
                               No hay usuarios que coincidan con la búsqueda.
                             </Alert>
                           </Box>
                         ) : (
-                          usuariosFiltrados.map((usuario, index) => (
+                          usuariosOrdenados.map((usuario, index) => (
                             <Box
                               key={usuario.id}
                               sx={{
@@ -1111,7 +1214,7 @@ const Configuracion = () => {
                                 gap: { xs: 1.1, md: 2 },
                                 px: 2.5,
                                 py: 1.5,
-                                borderBottom: index < usuariosFiltrados.length - 1 ? '1px solid rgba(15, 23, 42, 0.08)' : 'none',
+                                borderBottom: index < usuariosOrdenados.length - 1 ? '1px solid rgba(15, 23, 42, 0.08)' : 'none',
                                 alignItems: { xs: 'flex-start', md: 'center' },
                                 background: '#ffffff',
                               }}
@@ -1152,24 +1255,7 @@ const Configuracion = () => {
                                 <Typography variant="caption" sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
                                   Tipo
                                 </Typography>
-                                <Box
-                                  sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '100%',
-                                    maxWidth: 88,
-                                    minWidth: 48,
-                                    px: 1.25,
-                                    py: 0.45,
-                                    borderRadius: 999,
-                                    bgcolor: 'rgba(0, 131, 14, 0.04)',
-                                    color: '#065f46',
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {usuario.tipoContrato || 'Operativo'}
-                                </Box>
+                                <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} sx={{ width: '100%', maxWidth: 140 }} />
                               </Box>
 
                               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 0.5 }}>
@@ -1259,6 +1345,70 @@ const Configuracion = () => {
                   <Collapse in={tiposContratoModuleOpen} timeout="auto">
                     <Box sx={{ p: { xs: 2, md: 3 } }}>
                       <TiposContratoManager />
+                    </Box>
+                  </Collapse>
+                </AdminModuleCard>
+
+                <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
+                  <AdminModuleHeader type="button" onClick={() => toggleModule('jornadas')}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Avatar sx={{ width: 44, height: 44, bgcolor: '#0f766e', color: '#ffffff', fontWeight: 700 }}>
+                        {jornadas.length}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }} noWrap>
+                          Jornadas de Trabajo
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b' }} noWrap>
+                          Administra plantillas semanales reutilizables para horarios.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <ExpandMoreIcon
+                      sx={{
+                        color: '#0f766e',
+                        transition: 'transform 180ms ease',
+                        transform: jornadasModuleOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        flex: '0 0 auto',
+                      }}
+                    />
+                  </AdminModuleHeader>
+
+                  <Collapse in={jornadasModuleOpen} timeout="auto">
+                    <Box sx={{ p: { xs: 2, md: 3 } }}>
+                      <JornadasManager />
+                    </Box>
+                  </Collapse>
+                </AdminModuleCard>
+
+                <AdminModuleCard elevation={0} sx={{ mt: 3 }}>
+                  <AdminModuleHeader type="button" onClick={() => toggleModule('feriados')}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Avatar sx={{ width: 44, height: 44, bgcolor: '#dc2626', color: '#ffffff', fontWeight: 700 }}>
+                        <CalendarMonthIcon />
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }} noWrap>
+                          Feriados por Año
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b' }} noWrap>
+                          Administra los feriados oficiales por cada año calendario.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <ExpandMoreIcon
+                      sx={{
+                        color: '#dc2626',
+                        transition: 'transform 180ms ease',
+                        transform: feriadosModuleOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        flex: '0 0 auto',
+                      }}
+                    />
+                  </AdminModuleHeader>
+
+                  <Collapse in={feriadosModuleOpen} timeout="auto">
+                    <Box sx={{ p: { xs: 2, md: 3 } }}>
+                      <FeriadosManager />
                     </Box>
                   </Collapse>
                 </AdminModuleCard>
@@ -1561,7 +1711,12 @@ const Configuracion = () => {
                           >
                             {tiposContratoOrdenados.map((tipoContrato) => (
                               <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                                {tipoContrato.label} ({formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)})
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                  <TipoContratoChip value={tipoContrato.key} label={tipoContrato.label} sx={{ minWidth: 120 }} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)}
+                                  </Typography>
+                                </Box>
                               </MenuItem>
                             ))}
                           </StyledSelect>
@@ -1633,35 +1788,8 @@ const Configuracion = () => {
                         sx={{ mb: 2.5 }}
                       />
 
-                      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' }, mb: 3 }}>
-                        <TextField
-                          fullWidth
-                          label="Nuevo cargo"
-                          value={nuevoCargo}
-                          onChange={(event) => setNuevoCargo(event.target.value)}
-                          placeholder="Ej. Coordinador de Operaciones"
-                          disabled={loading || loadingCargos}
-                        />
-                        <FormControl fullWidth>
-                          <InputLabel>Departamento</InputLabel>
-                          <StyledSelect
-                            value={nuevoCargoDepartamentoId}
-                            onChange={handleCargoDepartamentoChange}
-                            label="Departamento"
-                            disabled={loading || loadingDepartamentos}
-                          >
-                            {departamentos.map((departamento) => (
-                              <MenuItem key={departamento.id} value={departamento.id}>
-                                {departamento.label}
-                              </MenuItem>
-                            ))}
-                          </StyledSelect>
-                        </FormControl>
-                        <PrimaryButton
-                          onClick={handleAgregarCargo}
-                          disabled={loading || loadingCargos}
-                          sx={{ minWidth: { xs: '100%', sm: 220 } }}
-                        >
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+                        <PrimaryButton onClick={abrirNuevoCargoDialog} disabled={loading || loadingCargos || loadingDepartamentos} sx={{ minWidth: { xs: '100%', sm: 220 } }}>
                           Agregar cargo
                         </PrimaryButton>
                       </Box>
@@ -1826,6 +1954,49 @@ const Configuracion = () => {
                     </Box>
                   </Collapse>
                 </AdminModuleCard>
+
+                <Dialog open={cargoNuevoAbierto} onClose={cerrarNuevoCargoDialog} fullWidth maxWidth="sm">
+                  <DialogTitle sx={{ fontWeight: 700 }}>Nuevo cargo</DialogTitle>
+                  <DialogContent sx={{ pt: 1 }}>
+                    <DialogContentText sx={{ mb: 2 }}>
+                      Agrega un cargo y relaciónalo con el departamento correspondiente.
+                    </DialogContentText>
+
+                    <TextField
+                      fullWidth
+                      label="Nuevo cargo"
+                      value={nuevoCargo}
+                      onChange={(event) => setNuevoCargo(event.target.value)}
+                      placeholder="Ej. Coordinador de Operaciones"
+                      disabled={loading || loadingCargos}
+                      sx={{ mb: 2 }}
+                    />
+
+                    <FormControl fullWidth>
+                      <InputLabel>Departamento</InputLabel>
+                      <StyledSelect
+                        value={nuevoCargoDepartamentoId}
+                        onChange={handleCargoDepartamentoChange}
+                        label="Departamento"
+                        disabled={loading || loadingDepartamentos}
+                      >
+                        {departamentos.map((departamento) => (
+                          <MenuItem key={departamento.id} value={departamento.id}>
+                            {departamento.label}
+                          </MenuItem>
+                        ))}
+                      </StyledSelect>
+                    </FormControl>
+                  </DialogContent>
+                  <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button onClick={cerrarNuevoCargoDialog} sx={{ textTransform: 'none' }}>
+                      Cancelar
+                    </Button>
+                    <PrimaryButton onClick={handleAgregarCargo} disabled={loading || loadingCargos}>
+                      Guardar cargo
+                    </PrimaryButton>
+                  </DialogActions>
+                </Dialog>
 
                 <Dialog open={cargoEdicionAbierto} onClose={cerrarEdicionCargo} fullWidth maxWidth="sm">
                   <DialogTitle sx={{ fontWeight: 700 }}>Editar cargo</DialogTitle>

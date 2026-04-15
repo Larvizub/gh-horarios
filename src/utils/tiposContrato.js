@@ -27,6 +27,62 @@ export const sanitizeTipoContratoKey = (value = '') => {
   return sanitizeKeyBase(value);
 };
 
+const TIPO_CONTRATO_COLOR_MAP = {
+  operativo: {
+    main: '#2563eb',
+    light: '#eff6ff',
+    dark: '#1d4ed8',
+    border: '#bfdbfe',
+    text: '#1e3a8a',
+  },
+  confianza: {
+    main: '#7c3aed',
+    light: '#f5f3ff',
+    dark: '#6d28d9',
+    border: '#ddd6fe',
+    text: '#5b21b6',
+  },
+  pasantes: {
+    main: '#ea580c',
+    light: '#fff7ed',
+    dark: '#c2410c',
+    border: '#fed7aa',
+    text: '#9a3412',
+  },
+  default: {
+    main: '#0f766e',
+    light: '#f0fdfa',
+    dark: '#115e59',
+    border: '#99f6e4',
+    text: '#134e4a',
+  },
+};
+
+export const getTipoContratoColorToken = (value, tiposMap = null) => {
+  const record = findTipoContratoRecord(value, tiposMap);
+  const rawValue = String(record?.key || value || '').toLowerCase();
+  const rawLabel = String(record?.label || value || '').toLowerCase();
+
+  if (rawValue.includes('confianz') || rawLabel.includes('confianz')) {
+    return 'confianza';
+  }
+
+  if (rawValue.includes('pasant') || rawLabel.includes('pasant')) {
+    return 'pasantes';
+  }
+
+  if (rawValue.includes('operativ') || rawLabel.includes('operativ')) {
+    return 'operativo';
+  }
+
+  return 'default';
+};
+
+export const getTipoContratoColorPalette = (value, tiposMap = null) => {
+  const token = getTipoContratoColorToken(value, tiposMap);
+  return TIPO_CONTRATO_COLOR_MAP[token] || TIPO_CONTRATO_COLOR_MAP.default;
+};
+
 export const buildTipoContratoFallbackLabel = (value) => {
   if (!value) return '';
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, ' ');

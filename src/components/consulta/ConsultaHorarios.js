@@ -61,6 +61,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import useDepartamentos from '../../hooks/useDepartamentos';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import TipoContratoChip from '../common/TipoContratoChip';
 import * as XLSX from 'xlsx';
 
 // Styled Components modernos
@@ -1018,9 +1019,12 @@ const ConsultaHorarios = () => {
                             </Typography>
                           }
                           subheader={
-                            <Typography variant="body2" color="text.secondary">
-                              {usuario.cargo} • {usuario.departamento}
-                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                {usuario.cargo} • {usuario.departamento}
+                              </Typography>
+                              <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} sx={{ alignSelf: 'flex-start' }} />
+                            </Box>
                           }
                           action={
                             <Box sx={{ 

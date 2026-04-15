@@ -3,6 +3,7 @@ import { auth, database } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
 import { notify as toast } from '../services/notify';
+import { resolveUsuarioRecord } from '../utils/usuarioRecord';
 
 const AuthContext = createContext();
 
@@ -32,15 +33,12 @@ export const AuthProvider = ({ children }) => {
         return null;
       }
 
-      const userRef = ref(database, `usuarios/${uid}`);
-      const snapshot = await get(userRef);
-      if (snapshot.exists()) {
-        return {
-          ...snapshot.val(),
-          ...(email ? { email } : {}),
-        };
-      }
-      return email ? { email } : null;
+      return resolveUsuarioRecord({
+        database,
+        uid,
+        email,
+        migrateToUid: true,
+      });
     } catch (error) {
       console.error('Error al obtener datos del usuario:', error);
       setError('Error al cargar datos del usuario');

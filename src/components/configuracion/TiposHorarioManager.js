@@ -54,7 +54,9 @@ const EMPTY_FORM = {
   icon: 'Work',
   color: '#00830e',
   template: TIPO_TEMPLATES.SIMPLE,
-  noSumaHoras: false
+  noSumaHoras: false,
+  esBeneficio: false,
+  horasCredito: ''
 };
 
 const TiposHorarioManager = () => {
@@ -108,7 +110,9 @@ const TiposHorarioManager = () => {
       icon: tipo.icon,
       color: tipo.color,
       template: tipo.template,
-      noSumaHoras: Boolean(tipo.noSumaHoras)
+      noSumaHoras: Boolean(tipo.noSumaHoras),
+      esBeneficio: Boolean(tipo.esBeneficio),
+      horasCredito: Number.isFinite(tipo.horasCredito) ? String(tipo.horasCredito) : ''
     });
     setEditModalOpen(true);
   };
@@ -149,7 +153,9 @@ const TiposHorarioManager = () => {
               icon: form.icon,
               color: form.color,
               template: form.template,
-              noSumaHoras: form.noSumaHoras
+              esBeneficio: form.esBeneficio,
+              noSumaHoras: form.esBeneficio ? false : form.noSumaHoras,
+              horasCredito: form.esBeneficio ? (Number(form.horasCredito) || 0) : null
             };
           });
         }
@@ -163,7 +169,9 @@ const TiposHorarioManager = () => {
             icon: form.icon,
             color: form.color,
             template: form.template,
-            noSumaHoras: form.noSumaHoras,
+            esBeneficio: form.esBeneficio,
+            noSumaHoras: form.esBeneficio ? false : form.noSumaHoras,
+            horasCredito: form.esBeneficio ? (Number(form.horasCredito) || 0) : null,
             orden: nextOrder,
             editable: true
           }
@@ -174,7 +182,7 @@ const TiposHorarioManager = () => {
 
       if (editingKey) {
         const templateLabel = TEMPLATES_OPTIONS.find((item) => item.value === form.template)?.label || form.template;
-        const detail = `Se actualizo "${form.label}" (${form.key}). Icono: ${form.icon}. Color: ${form.color}. Plantilla: ${templateLabel}. ${form.noSumaHoras ? 'No suma horas.' : 'Si suma horas.'}`;
+        const detail = `Se actualizo "${form.label}" (${form.key}). Icono: ${form.icon}. Color: ${form.color}. Plantilla: ${templateLabel}. ${form.esBeneficio ? `Marcado como beneficio${form.esBeneficio && form.horasCredito ? ` (${form.horasCredito}h acreditadas)` : ''}.` : ''} ${form.noSumaHoras && !form.esBeneficio ? 'No suma horas.' : 'Si suma horas.'}`;
         toast.success({
           title: 'Tipo de horario actualizado',
           description: detail,
@@ -333,10 +341,36 @@ const TiposHorarioManager = () => {
                   <Switch
                     checked={form.noSumaHoras}
                     onChange={(event) => setForm((prev) => ({ ...prev, noSumaHoras: event.target.checked }))}
+                    disabled={form.esBeneficio}
                   />
                 }
                 label="No suma horas"
               />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.esBeneficio}
+                    onChange={(event) => setForm((prev) => ({
+                      ...prev,
+                      esBeneficio: event.target.checked,
+                      noSumaHoras: event.target.checked ? false : prev.noSumaHoras,
+                      horasCredito: event.target.checked ? (prev.horasCredito || '8') : prev.horasCredito
+                    }))}
+                  />
+                }
+                label="Es beneficio"
+              />
+              {form.esBeneficio && (
+                <TextField
+                  label="Horas acreditadas"
+                  type="number"
+                  inputProps={{ min: 0, step: 0.1 }}
+                  value={form.horasCredito}
+                  onChange={(event) => setForm((prev) => ({ ...prev, horasCredito: event.target.value }))}
+                  helperText="Horas que sumará este tipo al guardarlo"
+                  sx={{ maxWidth: 220 }}
+                />
+              )}
               <Chip
                 icon={<PreviewIcon style={{ color: form.color }} />}
                 label={form.label || 'Vista previa'}
@@ -429,10 +463,36 @@ const TiposHorarioManager = () => {
                   <Switch
                     checked={form.noSumaHoras}
                     onChange={(event) => setForm((prev) => ({ ...prev, noSumaHoras: event.target.checked }))}
+                    disabled={form.esBeneficio}
                   />
                 }
                 label="No suma horas"
               />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.esBeneficio}
+                    onChange={(event) => setForm((prev) => ({
+                      ...prev,
+                      esBeneficio: event.target.checked,
+                      noSumaHoras: event.target.checked ? false : prev.noSumaHoras,
+                      horasCredito: event.target.checked ? (prev.horasCredito || '8') : prev.horasCredito
+                    }))}
+                  />
+                }
+                label="Es beneficio"
+              />
+              {form.esBeneficio && (
+                <TextField
+                  label="Horas acreditadas"
+                  type="number"
+                  inputProps={{ min: 0, step: 0.1 }}
+                  value={form.horasCredito}
+                  onChange={(event) => setForm((prev) => ({ ...prev, horasCredito: event.target.value }))}
+                  helperText="Horas que sumará este tipo al guardarlo"
+                  sx={{ maxWidth: 220 }}
+                />
+              )}
               <Chip
                 icon={<PreviewIcon style={{ color: form.color }} />}
                 label={form.label || 'Vista previa'}
@@ -493,6 +553,9 @@ const TiposHorarioManager = () => {
                     {tipo.key}
                   </Typography>
                 </Box>
+                {tipo.esBeneficio && (
+                  <Chip size="small" label="Beneficio" color="warning" variant="outlined" />
+                )}
                 {tipo.noSumaHoras && (
                   <Chip size="small" label="No suma horas" color="default" />
                 )}

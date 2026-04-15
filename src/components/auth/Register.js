@@ -37,6 +37,7 @@ import { resolveCargoRecord } from '../../utils/cargos';
 import useCargos from '../../hooks/useCargos';
 import useTiposContrato from '../../hooks/useTiposContrato';
 import { formatTipoContratoHoras } from '../../utils/tiposContrato';
+import TipoContratoChip from '../common/TipoContratoChip';
 
 // Styled Components modernos
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -74,7 +75,6 @@ const RegisterCard = styled(Paper)(({ theme }) => ({
   },
   [theme.breakpoints.down('sm')]: {
     backdropFilter: 'none',
-    background: '#ffffff',
     padding: theme.spacing(3),
     borderRadius: 20,
   },
@@ -638,10 +638,16 @@ const Register = () => {
                       value={formData.tipoContrato}
                       onChange={handleChange}
                       label="Tipo de Contrato"
+                      disabled={!puedeModificarTipoContrato(userData)}
                     >
                       {tiposContrato.map((tipoContrato) => (
                         <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                          {tipoContrato.label} ({formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)})
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                            <TipoContratoChip value={tipoContrato.key} label={tipoContrato.label} sx={{ minWidth: 120 }} />
+                            <Typography variant="caption" color="text.secondary">
+                              {formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)}
+                            </Typography>
+                          </Box>
                         </MenuItem>
                       ))}
                     </Select>

@@ -25,7 +25,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import useTiposContrato from '../../hooks/useTiposContrato';
 import { notify as toast } from '../../services/notify';
 import { saveTiposContrato } from '../../services/tiposContratoService';
-import { sanitizeTipoContratoKey, formatTipoContratoHoras } from '../../utils/tiposContrato';
+import { sanitizeTipoContratoKey, formatTipoContratoHoras, getTipoContratoColorPalette } from '../../utils/tiposContrato';
+import TipoContratoChip from '../common/TipoContratoChip';
 
 const HIGHLIGHT_BLUE = '#dbeafe';
 
@@ -397,13 +398,19 @@ const TiposContratoManager = () => {
           </Alert>
         ) : (
           sortedTipos.map((tipo) => (
+            (() => {
+              const palette = getTipoContratoColorPalette(tipo.key);
+
+              return (
             <Paper
               key={tipo.key}
               variant="outlined"
               sx={{
                 p: 1.5,
                 borderRadius: 2,
-                borderColor: alpha('#2563eb', 0.18),
+                borderColor: alpha(palette.main, 0.18),
+                borderLeft: `4px solid ${palette.main}`,
+                backgroundColor: alpha(palette.light, 0.72),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -411,22 +418,32 @@ const TiposContratoManager = () => {
               }}
             >
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
-                  {tipo.label}
-                </Typography>
+                <TipoContratoChip value={tipo.key} label={tipo.label} sx={{ mb: 0.75 }} />
                 <Typography variant="caption" color="text.secondary">
                   {tipo.key}
                 </Typography>
               </Box>
 
               <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-                <Chip size="small" label={formatTipoContratoHoras(tipo.key, undefined)} color="primary" variant="outlined" />
+                <Chip
+                  size="small"
+                  label={formatTipoContratoHoras(tipo.key, undefined)}
+                  variant="outlined"
+                  sx={{
+                    borderColor: alpha(palette.main, 0.28),
+                    color: palette.dark,
+                    bgcolor: alpha(palette.light, 0.92),
+                    fontWeight: 700,
+                  }}
+                />
                 {!tipo.editable && <Chip size="small" label="Base" color="success" variant="outlined" />}
                 <IconButton size="small" onClick={() => handleEdit(tipo)} aria-label={`Editar ${tipo.label}`}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Stack>
             </Paper>
+              );
+            })()
           ))
         )}
       </Stack>

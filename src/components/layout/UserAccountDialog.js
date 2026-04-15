@@ -45,6 +45,7 @@ import { resolveCargoRecord } from '../../utils/cargos';
 import useCargos from '../../hooks/useCargos';
 import useTiposContrato from '../../hooks/useTiposContrato';
 import { formatTipoContratoHoras } from '../../utils/tiposContrato';
+import TipoContratoChip from '../common/TipoContratoChip';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -423,7 +424,12 @@ const UserAccountDialog = ({ open, onClose, user, userData }) => {
                   >
                     {tiposContrato.map((tipoContrato) => (
                       <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                        {tipoContrato.label} ({formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)})
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                          <TipoContratoChip value={tipoContrato.key} label={tipoContrato.label} sx={{ minWidth: 120 }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {formatTipoContratoHoras(tipoContrato.key, tiposContratoMap)}
+                          </Typography>
+                        </Box>
                       </MenuItem>
                     ))}
                   </StyledSelect>

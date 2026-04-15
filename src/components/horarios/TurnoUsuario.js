@@ -3,7 +3,7 @@ import { Grid, Box, Typography, IconButton } from '@mui/material';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import { getTipoIconComponent } from '../../utils/tiposHorario';
 
-const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso', 'beneficio-operaciones'];
+const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso'];
 
 const TurnoUsuario = memo(({ 
   usuario, 
@@ -15,10 +15,13 @@ const TurnoUsuario = memo(({
   handleCambiarTurno, 
   handleCopiarHorario, 
   NO_SUMAN_HORAS,
-  suppressOpen // when true, clicking the slot should not open the edit dialog (used during multi-target selection)
+  suppressOpen, // when true, clicking the slot should not open the edit dialog (used during multi-target selection)
+  isFeriado,
 }) => {
   const { getTipoLabel, tiposMap } = useTiposHorario();
-  const horariosUsuario = editando ? horariosEditados[usuario.id] : horarios[usuario.id];
+  const horariosUsuario = editando
+    ? (horariosEditados[usuario.id] || horarios[usuario.id] || {})
+    : (horarios[usuario.id] || {});
   const horario = horariosUsuario?.[diaKey];
   const tieneHorario = horario && horario.tipo !== 'libre';
   const tipoCatalogo = horario?.tipo ? tiposMap[horario.tipo] : null;
@@ -47,12 +50,12 @@ const TurnoUsuario = memo(({
           justifyContent: 'center',
           alignItems: 'center',
           borderRadius: '8px',
-          border: '1px solid #e0e0e0',
+          border: isFeriado ? '1px solid rgba(220, 38, 38, 0.35)' : '1px solid #e0e0e0',
           cursor: editando ? 'pointer' : 'default',
           position: 'relative',
           overflow: 'hidden',
           bgcolor: soloLabel
-            ? '#fff'
+            ? (isFeriado ? '#fff7f7' : '#fff')
             : tieneHorario ? (
                 horario.tipo === 'viaje-trabajo' ? '#1a237e' : // azul oscuro
                 horario.tipo === 'tele-presencial' ? '#6a1b9a' : // nuevo: morado/berenjena
@@ -66,7 +69,7 @@ const TurnoUsuario = memo(({
                 usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
               ) : 'transparent',
           color: soloLabel
-            ? '#333'
+            ? (isFeriado ? '#991b1b' : '#333')
             : tieneHorario ? 'white' : 'text.secondary',
           '& > :not([aria-hidden="true"])': {
             position: 'relative',
@@ -74,7 +77,7 @@ const TurnoUsuario = memo(({
           },
           '&:hover': editando ? {
             backgroundColor: soloLabel
-              ? '#fff'
+              ? (isFeriado ? '#fff1f1' : '#fff')
               : tieneHorario ? (
                   horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
                   horario.tipo === 'horario-dividido' ? '#6d28d9' :
@@ -106,6 +109,19 @@ const TurnoUsuario = memo(({
           >
             <IconoTipoHorario sx={{ fontSize: '3.8rem' }} />
           </Box>
+        )}
+        {isFeriado && (
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(254, 242, 242, 0.22), rgba(255, 255, 255, 0.04))',
+              borderTop: '4px solid rgba(220, 38, 38, 0.75)',
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}
+          />
         )}
         {/* Icono de copiar para desktop */}
         {tieneHorario && editando && !soloLabel &&
@@ -405,12 +421,14 @@ const TurnoUsuario = memo(({
               </>
             )
           ) : (
-          <Typography 
-            variant="caption" 
-            sx={{ fontSize: '0.8rem', textAlign: 'center', lineHeight: 1.2, color: '#888' }}
-          >
-            Sin Turno
-          </Typography>
+          <>
+            <Typography 
+              variant="caption" 
+              sx={{ fontSize: '0.8rem', textAlign: 'center', lineHeight: 1.2, color: isFeriado ? '#991b1b' : '#888', fontWeight: isFeriado ? 700 : 400 }}
+            >
+              {isFeriado ? 'Feriado' : 'Sin Turno'}
+            </Typography>
+          </>
           )}
       </Box>
     </Grid>

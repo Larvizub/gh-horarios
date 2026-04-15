@@ -58,6 +58,8 @@ import { es } from 'date-fns/locale';
 import { NO_SUMAN_HORAS } from '../../utils/horariosConstants';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import { getFeriadosAnio } from '../../services/feriadosService';
+import { calcularResumenMensualHoras, obtenerSemanasDelMes } from '../../utils/controlHorasMensuales';
 
 // Styled Components para diseño moderno
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -201,9 +203,16 @@ const Dashboard = () => {
   const [usuariosNoTrabajan, setUsuariosNoTrabajan] = useState([]);
   const [usuariosTeletrabajo, setUsuariosTeletrabajo] = useState([]);
   const [modalUsuarios, setModalUsuarios] = useState({ open: false, tipo: '', usuarios: [] });
+  const [resumenMensual, setResumenMensual] = useState(null);
   const { getTipoLabel, tipos } = useTiposHorario();
   const { getHorasMaximasTipoContrato } = useTiposContrato();
   const navigate = useNavigate();
+  const tiposHorarioMap = useMemo(() => {
+    return tipos.reduce((accumulator, tipo) => {
+      accumulator[tipo.key] = tipo;
+      return accumulator;
+    }, {});
+  }, [tipos]);
   const tiposNoSumaHoras = useMemo(() => {
     const merged = new Set(NO_SUMAN_HORAS);
     tipos.forEach((tipo) => {
@@ -380,6 +389,46 @@ const Dashboard = () => {
     }
   };
 
+  const procesarResumenMensual = async (userId, tipoContrato) => {
+    try {
+      const fechaBase = new Date();
+      const semanasDelMes = obtenerSemanasDelMes(fechaBase);
+      const feriadosAnio = await getFeriadosAnio(fechaBase.getFullYear());
+      const feriadosPorFecha = new Set(
+        feriadosAnio.feriados
+          .filter((feriado) => feriado.activo !== false && Boolean(feriado.fecha))
+          .map((feriado) => feriado.fecha)
+      );
+
+      const promesasHorarios = semanasDelMes.map(async ({ weekKey }) => {
+        const horariosRef = ref(database, `horarios_registros/${weekKey}/${userId}`);
+        const snapshot = await get(horariosRef);
+        return {
+          weekKey,
+          horarios: snapshot.exists() ? snapshot.val() : {},
+        };
+      });
+
+      const resultados = await Promise.all(promesasHorarios);
+      const horariosPorSemana = resultados.reduce((accumulator, item) => {
+        accumulator[item.weekKey] = item.horarios;
+        return accumulator;
+      }, {});
+
+      return calcularResumenMensualHoras({
+        tipoContrato,
+        horariosPorSemana,
+        fechaBase,
+        tiposNoSumaHoras,
+        tiposHorarioMap,
+        feriadosPorFecha,
+      });
+    } catch (error) {
+      console.error('Error al procesar resumen mensual:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchAllData = async () => {
       try {
@@ -394,9 +443,9 @@ const Dashboard = () => {
 
         // Paralelizar todas las peticiones iniciales para mejorar rendimiento en móvil
         const [
-          userSnapshot, 
-          horasExtrasSnapshot, 
-          usuariosSnap, 
+          userSnapshot,
+          horasExtrasSnapshot,
+          usuariosSnap,
           horariosSemSnap,
           stats
         ] = await Promise.all([
@@ -424,6 +473,9 @@ const Dashboard = () => {
             setHorasDisponibles(Math.max(horasMaximas - horasExtrasUsuario, horasMinimas));
           }
           setEstadisticas(stats);
+
+          const resumenMensualData = await procesarResumenMensual(user.uid, userData?.tipoContrato || 'Operativo');
+          setResumenMensual(resumenMensualData);
         }
 
         if (usuariosSnap.exists() && mountedRef.current) {
@@ -633,6 +685,99 @@ const Dashboard = () => {
                 }
               }} 
             />
+          </Paper>
+        )}
+
+        {resumenMensual && (
+          <Paper sx={{
+            p: 2.5,
+            mb: 3,
+            borderRadius: 4,
+            background: resumenMensual.excesoMensual > 0
+              ? 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)'
+              : 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+            border: `1px solid ${resumenMensual.excesoMensual > 0 ? '#fb923c' : '#34d399'}`,
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <EventNoteIcon sx={{ color: resumenMensual.excesoMensual > 0 ? '#c2410c' : '#047857', fontSize: 28 }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: resumenMensual.excesoMensual > 0 ? '#9a3412' : '#065f46' }}>
+                  Control mensual
+                </Typography>
+                <Typography variant="caption" sx={{ color: resumenMensual.excesoMensual > 0 ? '#b45309' : '#047857' }}>
+                  {resumenMensual.sinLimite
+                    ? 'Este tipo de contrato no tiene límite mensual.'
+                    : `Basado en ${resumenMensual.diasMes} días del mes y ${resumenMensual.diasNoLaborablesMes} días no laborables configurados en el calendario.`}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Grid container spacing={2}>
+              <Grid item xs={6} md={3}>
+                <QuickStatBox color={resumenMensual.excesoMensual > 0 ? '#fb923c' : '#0f766e'}>
+                  <ScheduleIcon sx={{ color: resumenMensual.excesoMensual > 0 ? '#c2410c' : '#0f766e' }} />
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                      Horas del mes
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      {resumenMensual.horasPlanificadasMes.toFixed(1)}h
+                    </Typography>
+                  </Box>
+                </QuickStatBox>
+              </Grid>
+              <Grid item xs={6} md={3}>
+                <QuickStatBox color="#3b82f6">
+                  <AccessTimeIcon sx={{ color: '#2563eb' }} />
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                      Meta estimada
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      {resumenMensual.sinLimite ? 'Sin límite' : `${Math.round(resumenMensual.metaMensual)}h`}
+                    </Typography>
+                  </Box>
+                </QuickStatBox>
+              </Grid>
+              <Grid item xs={6} md={3}>
+                <QuickStatBox color={resumenMensual.excesoMensual > 0 ? '#ef4444' : '#10b981'}>
+                  <TrendingUpIcon sx={{ color: resumenMensual.excesoMensual > 0 ? '#dc2626' : '#059669' }} />
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                      Saldo mensual
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      {resumenMensual.sinLimite
+                        ? 'Sin control'
+                        : `${Math.round(resumenMensual.saldoMensual) >= 0 ? '+' : ''}${Math.round(resumenMensual.saldoMensual)}h`}
+                    </Typography>
+                  </Box>
+                </QuickStatBox>
+              </Grid>
+              <Grid item xs={6} md={3}>
+                <QuickStatBox color="#7c3aed">
+                  <BarChartIcon sx={{ color: '#7c3aed' }} />
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                      Compensación sugerida
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      {resumenMensual.excesoMensual > 0
+                        ? `${Math.round(resumenMensual.reduccionSugeridaSemanal)}h/semana`
+                        : 'No aplica'}
+                    </Typography>
+                  </Box>
+                </QuickStatBox>
+              </Grid>
+            </Grid>
+
+            {!resumenMensual.sinLimite && (
+              <Typography variant="caption" sx={{ display: 'block', mt: 2, color: resumenMensual.excesoMensual > 0 ? '#b45309' : '#065f46' }}>
+                {resumenMensual.excesoMensual > 0
+                  ? `La planificación mensual excede la meta estimada por ${Math.round(resumenMensual.excesoMensual)}h. Conviene bajar el tiempo en los próximos ${resumenMensual.diasRestantesMes} días.`
+                  : `Quedan ${Math.round(Math.max(resumenMensual.metaMensual - resumenMensual.horasPlanificadasMes, 0))}h de margen dentro de la meta estimada.`}
+              </Typography>
+            )}
           </Paper>
         )}
 

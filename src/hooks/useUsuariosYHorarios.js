@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ref, get, query, orderByChild, equalTo } from 'firebase/database';
 import { notify as toast } from '../services/notify';
 import useDepartamentos from './useDepartamentos';
+import { resolveUsuarioRecord } from '../utils/usuarioRecord';
 
 /**
  * Hook para cargar usuarios y gestionar departamento seleccionado y usuario actual.
@@ -22,13 +23,16 @@ export function useUsuariosYHorarios() {
     async function cargarMiPerfil() {
       if (authLoading || loadingDepartamentos || !authUser) return;
       try {
-        const snapshot = await get(ref(database, `usuarios/${authUser.uid}`));
-        if (snapshot.exists()) {
-          const myData = { id: authUser.uid, ...snapshot.val() };
+        const myData = await resolveUsuarioRecord({
+          database,
+          uid: authUser.uid,
+          email: authUser.email,
+          migrateToUid: false,
+        });
+
+        if (myData) {
           setUserData(myData);
-          setDepartamentoSeleccionado(
-            myData.departamento || departamentosActivos[0] || ''
-          );
+          setDepartamentoSeleccionado(myData.departamento || departamentosActivos[0] || '');
         } else if (departamentosActivos.length > 0) {
           setDepartamentoSeleccionado(departamentosActivos[0]);
         }

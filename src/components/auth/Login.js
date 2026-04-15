@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { auth, database } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import { notify as toast } from '../../services/notify';
+import { resolveUsuarioRecord } from '../../utils/usuarioRecord';
 import { 
   TextField, 
   Button, 
@@ -197,12 +198,15 @@ const Login = () => {
       setCurrentUser(user);
 
       // Verificar si debe cambiar contraseña
-      const userRef = ref(database, `usuarios/${user.uid}`);
-      const userSnapshot = await get(userRef);
+      const userSnapshot = await resolveUsuarioRecord({
+        database,
+        uid: user.uid,
+        email: user.email,
+        migrateToUid: true,
+      });
       let debeCambiarPassword = false;
-      if (userSnapshot.exists()) {
-        const userData = userSnapshot.val();
-        debeCambiarPassword = userData.debeCambiarPassword;
+      if (userSnapshot) {
+        debeCambiarPassword = userSnapshot.debeCambiarPassword;
       }
 
       if (debeCambiarPassword) {

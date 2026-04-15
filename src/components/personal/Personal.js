@@ -12,6 +12,7 @@ import {
   ROLES 
 } from '../../utils/contratoUtils';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import TipoContratoChip from '../common/TipoContratoChip';
 import { ref as dbRef, update } from 'firebase/database';
 import {
   Container,
@@ -510,12 +511,7 @@ const Personal = () => {
                     size="small" 
                     sx={{ height: 24, fontSize: '0.7rem' }}
                   />
-                  <Chip 
-                    label={usuario.tipoContrato || 'Operativo'} 
-                    size="small" 
-                    color={usuario.tipoContrato === 'Confianza' ? 'success' : 'info'}
-                    sx={{ height: 24, fontSize: '0.7rem' }}
-                  />
+                  <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} />
                   {usuario.rol && (
                     <Chip 
                       label={usuario.rol} 
@@ -625,17 +621,15 @@ const Personal = () => {
                     >
                         {tiposContrato.map((tipoContrato) => (
                           <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                            {tipoContrato.label}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                              <TipoContratoChip value={tipoContrato.key} label={tipoContrato.label} sx={{ minWidth: 120 }} />
+                            </Box>
                           </MenuItem>
                         ))}
                     </Select>
                   </FormControl>
                 ) : (
-                  <Chip
-                    label={usuario.tipoContrato || 'Operativo'}
-                    color={usuario.tipoContrato === 'Confianza' ? 'success' : 'info'}
-                    size="small"
-                  />
+                  <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} />
                 )}
               </TableCell>
               <TableCell>

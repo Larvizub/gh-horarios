@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   DEFAULT_TIPOS_CONTRATO,
+  getHorasMinimasTipoContrato,
   getHorasMaximasTipoContrato,
   getTipoContratoLabel,
   tiposContratoArrayToMap,
@@ -27,6 +28,7 @@ export const useTiposContrato = () => {
     tiposMap,
     loadingTipos,
     getTipoContratoLabel: (tipo) => getTipoContratoLabel(tipo, tiposMap),
+    getHorasMinimasTipoContrato: (tipo) => getHorasMinimasTipoContrato(tipo, tiposMap),
     getHorasMaximasTipoContrato: (tipo) => getHorasMaximasTipoContrato(tipo, tiposMap),
   };
 };

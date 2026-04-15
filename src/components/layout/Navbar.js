@@ -28,13 +28,13 @@ import HistoryIcon from '@mui/icons-material/History';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
-import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { database } from '../../firebase/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { notify as toast } from '../../services/notify';
-import { puedeAccederPersonal, puedeVerHorarios } from '../../utils/contratoUtils';
+import { puedeVerHorarios } from '../../utils/contratoUtils';
 import UserAccountDialog from './UserAccountDialog';
+import { resolveUsuarioRecord } from '../../utils/usuarioRecord';
 
 const HEADER_HEIGHT = { xs: 56, md: 64 };
 const SIDEBAR_COLLAPSED_WIDTH = 84;
@@ -142,7 +142,6 @@ const menuItems = [
   { label: 'Inicio', icon: <HomeIcon />, path: '/dashboard' },
   { label: 'Horarios', icon: <EventNoteIcon />, path: '/horarios' },
   { label: 'Consulta', icon: <HistoryIcon />, path: '/consulta-horarios' },
-  { label: 'Personal', icon: <PersonIcon />, path: '/personal' },
   // Tipos moved into Configuración — removed external menu item
 ];
 
@@ -170,10 +169,15 @@ const Navbar = memo(({ user }) => {
       }
 
       try {
-        const userRef = ref(database, `usuarios/${user.uid}`);
-        const userSnapshot = await get(userRef);
-        if (userSnapshot.exists() && mountedRef.current) {
-          setUserData({ ...userSnapshot.val(), email: user.email });
+        const resolvedUser = await resolveUsuarioRecord({
+          database,
+          uid: user.uid,
+          email: user.email,
+          migrateToUid: false,
+        });
+
+        if (resolvedUser && mountedRef.current) {
+          setUserData({ ...resolvedUser, email: resolvedUser.email || user.email });
         }
       } catch (error) {
         console.error('Error al cargar datos del usuario:', error);
@@ -213,8 +217,6 @@ const Navbar = memo(({ user }) => {
       }
 
       switch (item.path) {
-        case '/personal':
-          return userData && puedeAccederPersonal(userData);
         case '/horarios':
         case '/consulta-horarios':
           return userData && puedeVerHorarios(userData);
