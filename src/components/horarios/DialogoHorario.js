@@ -30,6 +30,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import { getTipoIconComponent, TIPO_TEMPLATES } from '../../utils/tiposHorario';
 import { obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
+import { cargarHorariosUsuarioEnSemanas } from '../../services/firebaseHorarios';
+import { debeValidarLimiteUsoHorario, obtenerFechaTurnoDesdeSemana, obtenerSemanasDelPeriodoUso, validarLimiteUsoHorario } from '../../utils/limitesUsoHorarios';
 
 // Styled Components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -145,6 +147,11 @@ const DialogoHorario = ({
   // Permiso para eliminar/modificar
   const puedeEliminar = puedeModificarHorarios(currentUser, usuarioObjetivo);
   const { tipos, tiposMap } = useTiposHorario();
+  const [disponibilidadTipos, setDisponibilidadTipos] = React.useState({});
+  const [cargandoDisponibilidad, setCargandoDisponibilidad] = React.useState(false);
+  const horarioActualSeleccionado = editando && horariosEditados
+    ? horariosEditados[horarioPersonalizado.usuarioId]?.[horarioPersonalizado.diaKey]
+    : horarios?.[horarioPersonalizado.usuarioId]?.[horarioPersonalizado.diaKey];
 
   // Al abrir el modal o cambiar de usuario/día, inicializa desde datos existentes pero no borres lo ya tipeado
   React.useEffect(() => {
@@ -184,6 +191,90 @@ const DialogoHorario = ({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dialogoHorario, horarioPersonalizado.usuarioId, horarioPersonalizado.diaKey]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const cargarDisponibilidad = async () => {
+      if (!dialogoHorario || !horarioPersonalizado.usuarioId || !horarioPersonalizado.diaKey || !semanaSeleccionada) {
+        setDisponibilidadTipos({});
+        return;
+      }
+
+      const fechaTurno = obtenerFechaTurnoDesdeSemana(semanaSeleccionada, horarioPersonalizado.diaKey);
+      if (!fechaTurno) {
+        setDisponibilidadTipos({});
+        return;
+      }
+
+      const tiposConLimite = tipos.filter((tipoItem) => debeValidarLimiteUsoHorario(tipoItem));
+      const semanasNecesarias = new Set();
+      tiposConLimite.forEach((tipoItem) => {
+        const periodosNecesarios = tipoItem.key === 'media-cumple' || tipoItem.key === 'media2-cumple'
+          ? ['mes', tipoItem.limiteUsoPeriodo]
+          : tipoItem.limiteUsoPeriodo
+          ? [tipoItem.limiteUsoPeriodo]
+          : ['mes'];
+
+        periodosNecesarios.filter(Boolean).forEach((periodo) => {
+          obtenerSemanasDelPeriodoUso(fechaTurno, periodo).forEach((weekKey) => semanasNecesarias.add(weekKey));
+        });
+      });
+
+      setCargandoDisponibilidad(true);
+      try {
+        const historialHorarios = await cargarHorariosUsuarioEnSemanas(horarioPersonalizado.usuarioId, Array.from(semanasNecesarias));
+        const semanaKeyActual = obtenerClaveSemana?.(semanaSeleccionada) || null;
+        const horariosLocalesSemana = (editando ? horariosEditados : horarios)?.[horarioPersonalizado.usuarioId] || {};
+
+        if (semanaKeyActual && Object.keys(horariosLocalesSemana).length > 0) {
+          historialHorarios[semanaKeyActual] = {
+            ...(historialHorarios[semanaKeyActual] || {}),
+            [horarioPersonalizado.usuarioId]: {
+              ...(historialHorarios[semanaKeyActual]?.[horarioPersonalizado.usuarioId] || {}),
+              ...horariosLocalesSemana,
+            },
+          };
+        }
+
+        const siguienteDisponibilidad = {};
+
+        tipos.forEach((tipoItem) => {
+          const tipoConfig = tiposMap[tipoItem.key] || tipoItem;
+          if (!debeValidarLimiteUsoHorario(tipoConfig)) {
+            siguienteDisponibilidad[tipoItem.key] = { disponible: true };
+            return;
+          }
+
+          const validacion = validarLimiteUsoHorario({
+            tipoConfig: { ...tipoConfig, key: tipoItem.key },
+            usuario: usuarioObjetivo,
+            fechaTurno,
+            historialHorarios,
+            horarioExistente: horarioActualSeleccionado?.tipo === tipoItem.key ? horarioActualSeleccionado : null,
+          });
+
+          siguienteDisponibilidad[tipoItem.key] = validacion.permitido
+            ? { disponible: true }
+            : { disponible: false, motivo: validacion.mensaje };
+        });
+
+        if (!cancelled) {
+          setDisponibilidadTipos(siguienteDisponibilidad);
+        }
+      } finally {
+        if (!cancelled) {
+          setCargandoDisponibilidad(false);
+        }
+      }
+    };
+
+    void cargarDisponibilidad();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogoHorario, horarioPersonalizado.usuarioId, horarioPersonalizado.diaKey, semanaSeleccionada, tipos, tiposMap, usuarioObjetivo, horarioActualSeleccionado, editando, horariosEditados, horarios, obtenerClaveSemana]);
 
   const handleTimeChange = (field, value) => {
     setHorarioPersonalizado((prev) => {
@@ -332,6 +423,7 @@ const DialogoHorario = ({
             <InputLabel>Tipo de asignación</InputLabel>
             <Select
               value={tipo}
+              disabled={cargandoDisponibilidad}
               onChange={(e) => {
                 const nuevoTipo = e.target.value;
                 const newTemplate = tiposMap[nuevoTipo]?.template || TIPO_TEMPLATES.SIMPLE;
@@ -359,17 +451,61 @@ const DialogoHorario = ({
             >
               {tipos.map((tipoItem) => {
                 const Icon = getTipoIconComponent(tipoItem.icon);
+                const disponibilidad = disponibilidadTipos[tipoItem.key];
+                const esTipoActual = horarioActualSeleccionado?.tipo === tipoItem.key;
+                const deshabilitado = Boolean(disponibilidad && !disponibilidad.disponible && !esTipoActual);
+                const motivo = disponibilidad?.motivo || 'Sin cupo disponible';
+                const etiquetaDisponibilidad = deshabilitado ? 'Agotado' : (tipoItem.limiteUsoPeriodo ? 'Disponible' : null);
                 return (
-                  <MenuItem key={tipoItem.key} value={tipoItem.key}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <MenuItem
+                    key={tipoItem.key}
+                    value={tipoItem.key}
+                    disabled={deshabilitado}
+                    sx={{
+                      borderLeft: deshabilitado ? '4px solid rgba(220, 38, 38, 0.8)' : '4px solid transparent',
+                      '&.Mui-disabled': {
+                        opacity: 1,
+                        backgroundColor: deshabilitado ? 'rgba(248, 113, 113, 0.08)' : undefined,
+                      },
+                    }}
+                    title={deshabilitado ? motivo : ''}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                       <Icon sx={{ fontSize: 18, color: tipoItem.color || 'primary.main' }} />
-                      {tipoItem.label}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {tipoItem.label}
+                        </Typography>
+                        {tipoItem.limiteUsoPeriodo && (
+                          <Chip
+                            size="small"
+                            label={tipoItem.limiteUsoPeriodo === 'mes' ? '1 vez/mes' : '1 vez/año'}
+                            color={deshabilitado ? 'error' : 'info'}
+                            variant="outlined"
+                          />
+                        )}
+                        {etiquetaDisponibilidad && (
+                          <Chip
+                            size="small"
+                            label={etiquetaDisponibilidad}
+                            color={deshabilitado ? 'error' : 'success'}
+                            variant="filled"
+                            sx={{ fontWeight: 700 }}
+                          />
+                        )}
+                      </Box>
                     </Box>
                   </MenuItem>
                 );
               })}
             </Select>
           </StyledFormControl>
+
+          {cargandoDisponibilidad && (
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+              Verificando disponibilidad de tipos...
+            </Alert>
+          )}
 
           {tipoTemplate === TIPO_TEMPLATES.VIAJE_TRABAJO ? null
           : tipoTemplate === TIPO_TEMPLATES.TARDE_LIBRE ? (

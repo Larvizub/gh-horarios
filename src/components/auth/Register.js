@@ -201,6 +201,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
+    fechaNacimiento: '',
     email: '',
     cargo: '',
     departamento: '',
@@ -255,11 +256,11 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
 
-    let { nombre, apellidos, email, cargo, departamento, tipoContrato, rol, password, confirmPassword } = formData;
+    let { nombre, apellidos, fechaNacimiento, email, cargo, departamento, tipoContrato, rol, password, confirmPassword } = formData;
     const cargoRecord = resolveCargoRecord(cargo);
 
     // Validaciones básicas
-    if (!nombre || !apellidos || !email || !cargo || !departamento || !password || !confirmPassword) {
+    if (!nombre || !apellidos || !fechaNacimiento || !email || !cargo || !departamento || !password || !confirmPassword) {
       toast.error('Por favor completa todos los campos obligatorios');
       setLoading(false);
       return;
@@ -364,6 +365,7 @@ const Register = () => {
               body: JSON.stringify({
                 nombre,
                 apellidos,
+                fechaNacimiento,
                 email,
                 cargo: cargoRecord.cargo,
                 cargoId: cargoRecord.cargoId,
@@ -414,6 +416,7 @@ const Register = () => {
               body: JSON.stringify({
                 nombre,
                 apellidos,
+                fechaNacimiento,
                 email,
                 cargo: cargoRecord.cargo,
                 cargoId: cargoRecord.cargoId,
@@ -562,6 +565,19 @@ const Register = () => {
                         </InputAdornment>
                       ),
                     }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    name="fechaNacimiento"
+                    required
+                    fullWidth
+                    label="Fecha de nacimiento"
+                    type="date"
+                    value={formData.fechaNacimiento}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
               </Grid>

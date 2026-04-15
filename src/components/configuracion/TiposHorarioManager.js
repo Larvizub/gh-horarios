@@ -36,6 +36,12 @@ import {
   TIPO_TEMPLATES
 } from '../../utils/tiposHorario';
 
+const USO_PERIODO_OPTIONS = [
+  { value: '', label: 'Sin límite' },
+  { value: 'mes', label: '1 vez por mes' },
+  { value: 'anio', label: '1 vez por año' },
+];
+
 const HIGHLIGHT_YELLOW = '#fff59d';
 
 const TEMPLATES_OPTIONS = [
@@ -56,7 +62,10 @@ const EMPTY_FORM = {
   template: TIPO_TEMPLATES.SIMPLE,
   noSumaHoras: false,
   esBeneficio: false,
-  horasCredito: ''
+  horasCredito: '',
+  limiteUsoPeriodo: '',
+  limiteUsoCantidad: '',
+  requiereMesNacimiento: false,
 };
 
 const TiposHorarioManager = () => {
@@ -112,7 +121,10 @@ const TiposHorarioManager = () => {
       template: tipo.template,
       noSumaHoras: Boolean(tipo.noSumaHoras),
       esBeneficio: Boolean(tipo.esBeneficio),
-      horasCredito: Number.isFinite(tipo.horasCredito) ? String(tipo.horasCredito) : ''
+      horasCredito: Number.isFinite(tipo.horasCredito) ? String(tipo.horasCredito) : '',
+      limiteUsoPeriodo: tipo.limiteUsoPeriodo || '',
+      limiteUsoCantidad: Number.isFinite(tipo.limiteUsoCantidad) ? String(tipo.limiteUsoCantidad) : '',
+      requiereMesNacimiento: Boolean(tipo.requiereMesNacimiento),
     });
     setEditModalOpen(true);
   };
@@ -155,7 +167,10 @@ const TiposHorarioManager = () => {
               template: form.template,
               esBeneficio: form.esBeneficio,
               noSumaHoras: form.esBeneficio ? false : form.noSumaHoras,
-              horasCredito: form.esBeneficio ? (Number(form.horasCredito) || 0) : null
+              horasCredito: form.esBeneficio ? (Number(form.horasCredito) || 0) : null,
+              limiteUsoPeriodo: form.limiteUsoPeriodo || null,
+              limiteUsoCantidad: form.limiteUsoPeriodo ? (Number(form.limiteUsoCantidad) || 1) : null,
+              requiereMesNacimiento: Boolean(form.requiereMesNacimiento),
             };
           });
         }
@@ -172,6 +187,9 @@ const TiposHorarioManager = () => {
             esBeneficio: form.esBeneficio,
             noSumaHoras: form.esBeneficio ? false : form.noSumaHoras,
             horasCredito: form.esBeneficio ? (Number(form.horasCredito) || 0) : null,
+            limiteUsoPeriodo: form.limiteUsoPeriodo || null,
+            limiteUsoCantidad: form.limiteUsoPeriodo ? (Number(form.limiteUsoCantidad) || 1) : null,
+            requiereMesNacimiento: Boolean(form.requiereMesNacimiento),
             orden: nextOrder,
             editable: true
           }
@@ -377,6 +395,53 @@ const TiposHorarioManager = () => {
                 sx={{ border: `1px solid ${alpha(form.color, 0.4)}`, fontWeight: 600 }}
               />
             </Stack>
+
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                Reglas de uso
+              </Typography>
+              <Stack spacing={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Frecuencia</InputLabel>
+                  <Select
+                    value={form.limiteUsoPeriodo}
+                    label="Frecuencia"
+                    onChange={(event) => setForm((prev) => ({
+                      ...prev,
+                      limiteUsoPeriodo: event.target.value,
+                      limiteUsoCantidad: event.target.value ? (prev.limiteUsoCantidad || '1') : '',
+                    }))}
+                  >
+                    {USO_PERIODO_OPTIONS.map((option) => (
+                      <MenuItem key={option.value || 'sin-limite'} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  fullWidth
+                  label="Cantidad permitida"
+                  type="number"
+                  inputProps={{ min: 1, step: 1 }}
+                  value={form.limiteUsoCantidad}
+                  onChange={(event) => setForm((prev) => ({ ...prev, limiteUsoCantidad: event.target.value }))}
+                  disabled={!form.limiteUsoPeriodo}
+                  helperText="Ejemplo: 1 vez al mes"
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.requiereMesNacimiento}
+                      onChange={(event) => setForm((prev) => ({ ...prev, requiereMesNacimiento: event.target.checked }))}
+                    />
+                  }
+                  label="Requiere mes de nacimiento"
+                />
+              </Stack>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
@@ -499,6 +564,53 @@ const TiposHorarioManager = () => {
                 sx={{ border: `1px solid ${alpha(form.color, 0.4)}`, fontWeight: 600 }}
               />
             </Stack>
+
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                Reglas de uso
+              </Typography>
+              <Stack spacing={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Frecuencia</InputLabel>
+                  <Select
+                    value={form.limiteUsoPeriodo}
+                    label="Frecuencia"
+                    onChange={(event) => setForm((prev) => ({
+                      ...prev,
+                      limiteUsoPeriodo: event.target.value,
+                      limiteUsoCantidad: event.target.value ? (prev.limiteUsoCantidad || '1') : '',
+                    }))}
+                  >
+                    {USO_PERIODO_OPTIONS.map((option) => (
+                      <MenuItem key={option.value || 'sin-limite'} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  fullWidth
+                  label="Cantidad permitida"
+                  type="number"
+                  inputProps={{ min: 1, step: 1 }}
+                  value={form.limiteUsoCantidad}
+                  onChange={(event) => setForm((prev) => ({ ...prev, limiteUsoCantidad: event.target.value }))}
+                  disabled={!form.limiteUsoPeriodo}
+                  helperText="Ejemplo: 1 vez al mes"
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.requiereMesNacimiento}
+                      onChange={(event) => setForm((prev) => ({ ...prev, requiereMesNacimiento: event.target.checked }))}
+                    />
+                  }
+                  label="Requiere mes de nacimiento"
+                />
+              </Stack>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
@@ -564,6 +676,17 @@ const TiposHorarioManager = () => {
                 )}
               </Stack>
               <Stack direction="row" spacing={0.5}>
+                {tipo.limiteUsoPeriodo && (
+                  <Chip
+                    size="small"
+                    label={tipo.limiteUsoPeriodo === 'mes' ? `1 vez/mes` : `1 vez/año`}
+                    color="info"
+                    variant="outlined"
+                  />
+                )}
+                {tipo.requiereMesNacimiento && (
+                  <Chip size="small" label="Cumpleaños" color="warning" variant="outlined" />
+                )}
                 <IconButton
                   size="small"
                   onClick={() => handleEdit(tipo)}
@@ -615,6 +738,17 @@ const TiposHorarioManager = () => {
                 )}
               </Stack>
               <Stack direction="row" spacing={0.5}>
+                {tipo.limiteUsoPeriodo && (
+                  <Chip
+                    size="small"
+                    label={tipo.limiteUsoPeriodo === 'mes' ? `1 vez/mes` : `1 vez/año`}
+                    color="info"
+                    variant="outlined"
+                  />
+                )}
+                {tipo.requiereMesNacimiento && (
+                  <Chip size="small" label="Cumpleaños" color="warning" variant="outlined" />
+                )}
                 <IconButton
                   size="small"
                   onClick={() => handleEdit(tipo)}

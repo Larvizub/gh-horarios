@@ -31,6 +31,22 @@ export async function cargarHorariosUsuarios(semanaKey, usuarioIds) {
   return results;
 }
 
+export async function cargarHorariosUsuarioEnSemanas(usuarioId, semanaKeys = []) {
+  if (!usuarioId || !Array.isArray(semanaKeys) || semanaKeys.length === 0) {
+    return {};
+  }
+
+  const results = {};
+  await Promise.all(semanaKeys.map(async (semanaKey) => {
+    const snapshot = await get(ref(database, `horarios_registros/${semanaKey}/${usuarioId}`));
+    if (snapshot.exists()) {
+      results[semanaKey] = snapshot.val();
+    }
+  }));
+
+  return results;
+}
+
 // Suscripción en tiempo real para una semana concreta. Devuelve una función de unsubscribe.
 export function subscribeHorariosSemana(semanaKey, onChange) {
   if (!semanaKey) return () => {};

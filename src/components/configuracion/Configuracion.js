@@ -209,6 +209,7 @@ const Configuracion = () => {
   const [usuarioEdicionForm, setUsuarioEdicionForm] = useState({
     nombre: '',
     apellidos: '',
+    fechaNacimiento: '',
     email: '',
     cargo: '',
     departamento: '',
@@ -231,6 +232,7 @@ const Configuracion = () => {
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
+    fechaNacimiento: '',
     email: '',
     cargo: '',
     departamento: '',
@@ -776,6 +778,7 @@ const Configuracion = () => {
     setUsuarioEdicionForm({
       nombre: usuario.nombre || '',
       apellidos: usuario.apellidos || '',
+      fechaNacimiento: usuario.fechaNacimiento || '',
       email: usuario.email || '',
       cargo: usuario.cargo || '',
       departamento: usuario.departamento || '',
@@ -789,7 +792,7 @@ const Configuracion = () => {
   const cerrarEdicionUsuario = () => {
     setUsuarioEdicionAbierto(false);
     setUsuarioEnEdicion(null);
-    setUsuarioEdicionForm({ nombre: '', apellidos: '', email: '', cargo: '', departamento: '', tipoContrato: '', rol: null, activo: true });
+    setUsuarioEdicionForm({ nombre: '', apellidos: '', fechaNacimiento: '', email: '', cargo: '', departamento: '', tipoContrato: '', rol: null, activo: true });
   };
 
   const handleUsuarioEdicionChange = (event) => {
@@ -809,6 +812,7 @@ const Configuracion = () => {
       const updateData = {
         nombre: usuarioEdicionForm.nombre,
         apellidos: usuarioEdicionForm.apellidos,
+        fechaNacimiento: usuarioEdicionForm.fechaNacimiento || null,
         email: usuarioEdicionForm.email,
         cargo: cargoRecord.cargo,
         cargoId: cargoRecord.cargoId,
@@ -1007,6 +1011,7 @@ const Configuracion = () => {
                 setFormData({
                   nombre: usuarioEncontrado.nombre || '',
                   apellidos: usuarioEncontrado.apellidos || '',
+                  fechaNacimiento: usuarioEncontrado.fechaNacimiento || '',
                   email: usuarioEncontrado.email || '',
                   cargo: usuarioEncontrado.cargo || '',
                   departamento: usuarioEncontrado.departamento || '',
@@ -1018,6 +1023,7 @@ const Configuracion = () => {
                 setUsuarioEdicionForm({
                   nombre: usuarioEncontrado.nombre || '',
                   apellidos: usuarioEncontrado.apellidos || '',
+                  fechaNacimiento: usuarioEncontrado.fechaNacimiento || '',
                   email: usuarioEncontrado.email || '',
                   cargo: usuarioEncontrado.cargo || '',
                   departamento: usuarioEncontrado.departamento || '',
@@ -1036,6 +1042,7 @@ const Configuracion = () => {
           setFormData({
             nombre: userDataFromDB?.nombre || '',
             apellidos: userDataFromDB?.apellidos || '',
+            fechaNacimiento: userDataFromDB?.fechaNacimiento || '',
             email: userDataFromDB?.email || '',
             cargo: userDataFromDB?.cargo || '',
             departamento: userDataFromDB?.departamento || '',
@@ -1658,6 +1665,17 @@ const Configuracion = () => {
                           type="email"
                           value={usuarioEdicionForm.email}
                           onChange={handleUsuarioEdicionChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <StyledTextField
+                          fullWidth
+                          label="Fecha de nacimiento"
+                          name="fechaNacimiento"
+                          type="date"
+                          value={usuarioEdicionForm.fechaNacimiento}
+                          onChange={handleUsuarioEdicionChange}
+                          InputLabelProps={{ shrink: true }}
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>

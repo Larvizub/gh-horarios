@@ -35,7 +35,7 @@ import {
 import { obtenerUsuario } from '../../utils/horariosHelpers';
 import { useUsuariosFiltrados } from '../../hooks/useUsuariosFiltrados';
 import HorariosTable from './HorariosTable';
-import { guardarBatchHorarios, guardarHorariosUsuarioSemana, subscribeHorariosUsuarios, cargarHorariosUsuarios } from '../../services/firebaseHorarios';
+import { guardarBatchHorarios, guardarHorariosUsuarioSemana, subscribeHorariosUsuarios, cargarHorariosUsuarios, cargarHorariosUsuarioEnSemanas } from '../../services/firebaseHorarios';
 import { puedeVerHorarios } from '../../utils/contratoUtils';
 import { useUsuariosYHorarios } from '../../hooks/useUsuariosYHorarios';
 import useDepartamentos from '../../hooks/useDepartamentos';
@@ -46,6 +46,7 @@ import useTiposContrato from '../../hooks/useTiposContrato';
 import useFeriados from '../../hooks/useFeriados';
 import useJornadasOrdinarias from '../../hooks/useJornadasOrdinarias';
 import { obtenerJornadaOrdinariaDetectada } from '../../utils/jornadasOrdinarias';
+import { debeValidarLimiteUsoHorario, obtenerFechaTurnoDesdeSemana, obtenerPeriodosUsoHorario, obtenerSemanasDelPeriodoUso, validarLimiteUsoHorario } from '../../utils/limitesUsoHorarios';
 import { TIPO_TEMPLATES } from '../../utils/tiposHorario';
 
 // Styled Components modernos
@@ -365,13 +366,60 @@ const Horarios = () => {
     const horarioCopiado = JSON.parse(JSON.stringify(clipboard.horario));
     const siguienteHorarios = { ...(horariosEditadosRef.current || {}) };
     const cambiosPorUsuario = new Map();
+    const tipoConfigUso = tiposMap[horarioCopiado.tipo] || {};
+    const requiereValidacionUso = debeValidarLimiteUsoHorario(tipoConfigUso);
+    const periodosUso = obtenerPeriodosUsoHorario(tipoConfigUso);
 
-    targets.forEach(({ usuarioId, diaKey }) => {
+    for (const { usuarioId, diaKey } of targets) {
       const horariosUsuario = { ...(siguienteHorarios[usuarioId] || {}) };
+
+      if (requiereValidacionUso) {
+        const fechaTurno = obtenerFechaTurnoDesdeSemana(semanaSeleccionada, diaKey);
+        if (!fechaTurno) {
+          mostrarModal({
+            tipo: 'error',
+            titulo: '📅 Fecha inválida',
+            mensaje: 'No se pudo calcular la fecha del horario seleccionado.',
+            soloInfo: true,
+          });
+          return false;
+        }
+
+        const semanasPeriodo = [...new Set(periodosUso.flatMap((periodo) => obtenerSemanasDelPeriodoUso(fechaTurno, periodo)))];
+        const historialHorarios = await cargarHorariosUsuarioEnSemanas(usuarioId, semanasPeriodo);
+        historialHorarios[semanaKey] = {
+          ...(historialHorarios[semanaKey] || {}),
+          [usuarioId]: {
+            ...(historialHorarios[semanaKey]?.[usuarioId] || {}),
+            ...horariosUsuario,
+            [diaKey]: horarioCopiado,
+          },
+        };
+
+        const usuario = obtenerUsuario(usuarios, usuarioId);
+        const validacionUso = validarLimiteUsoHorario({
+          tipoConfig: { ...tipoConfigUso, key: horarioCopiado.tipo },
+          usuario,
+          fechaTurno,
+          historialHorarios,
+          horarioExistente: horariosUsuario[diaKey] || null,
+        });
+
+        if (!validacionUso.permitido) {
+          mostrarModal({
+            tipo: 'warning',
+            titulo: `⚠️ ${validacionUso.titulo}`,
+            mensaje: validacionUso.mensaje,
+            soloInfo: true,
+          });
+          return false;
+        }
+      }
+
       horariosUsuario[diaKey] = JSON.parse(JSON.stringify(horarioCopiado));
       siguienteHorarios[usuarioId] = horariosUsuario;
       cambiosPorUsuario.set(usuarioId, horariosUsuario);
-    });
+    }
 
     try {
       setGuardandoHorario(true);
@@ -1152,7 +1200,63 @@ const Horarios = () => {
       void guardarHorarioEnEstado(horarioGuardado);
     };
 
-    const validarJornadaYGuardar = (horarioGuardado, horasTrabajadas) => {
+    const validarJornadaYGuardar = async (horarioGuardado, horasTrabajadas) => {
+      const tipoConfigUso = tiposMap[horarioGuardado.tipo] || {};
+      if (debeValidarLimiteUsoHorario(tipoConfigUso)) {
+        const fechaTurno = obtenerFechaTurnoDesdeSemana(semanaSeleccionada, diaKey);
+        if (!fechaTurno) {
+          mostrarModal({
+            tipo: 'error',
+            titulo: '📅 Fecha inválida',
+            mensaje: 'No se pudo calcular la fecha del horario seleccionado.',
+            soloInfo: true,
+          });
+          return;
+        }
+
+        const semanasPeriodo = [...new Set(obtenerPeriodosUsoHorario(tipoConfigUso).flatMap((periodo) => obtenerSemanasDelPeriodoUso(fechaTurno, periodo)))];
+        const historialHorarios = await cargarHorariosUsuarioEnSemanas(usuarioId, semanasPeriodo);
+        const historialValidacion = { ...historialHorarios };
+        const bufferPendiente = bufferEditSemanasRef.current || {};
+
+        semanasPeriodo.forEach((weekKey) => {
+          const horariosPendientesSemana = bufferPendiente[weekKey]?.[usuarioId];
+          if (!horariosPendientesSemana) {
+            return;
+          }
+
+          historialValidacion[weekKey] = {
+            ...(historialValidacion[weekKey] || {}),
+            [usuarioId]: {
+              ...(historialValidacion[weekKey]?.[usuarioId] || {}),
+              ...Object.fromEntries(
+                Object.entries(horariosPendientesSemana).filter(([pendingDiaKey]) => pendingDiaKey !== diaKey)
+              ),
+            },
+          };
+        });
+
+        const horarioExistente = horariosEditadosRef.current?.[usuarioId]?.[diaKey] || horariosRef.current?.[usuarioId]?.[diaKey] || null;
+        const usuario = obtenerUsuario(usuarios, usuarioId);
+        const validacionUso = validarLimiteUsoHorario({
+          tipoConfig: { ...tipoConfigUso, key: horarioGuardado.tipo },
+          usuario,
+          fechaTurno,
+          historialHorarios: historialValidacion,
+          horarioExistente,
+        });
+
+        if (!validacionUso.permitido) {
+          mostrarModal({
+            tipo: 'warning',
+            titulo: `⚠️ ${validacionUso.titulo}`,
+            mensaje: validacionUso.mensaje,
+            soloInfo: true,
+          });
+          return;
+        }
+      }
+
       const jornadaConMetadata = (() => {
         const jornadaDetectada = obtenerJornadaOrdinariaDetectada(horarioGuardado, jornadasOrdinariasMap);
 
@@ -1634,6 +1738,37 @@ const Horarios = () => {
                   </Box>
                 </Box>
               </Box>
+
+                <Box
+                  sx={{
+                    mt: 2,
+                    pt: 1.5,
+                    borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, borderRadius: 999, bgcolor: 'rgba(134, 239, 172, 0.18)', border: '1px solid rgba(134, 239, 172, 0.7)' }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#86efac', border: '1px solid rgba(22, 163, 74, 0.45)' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#166534' }}>
+                      Diurna
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, borderRadius: 999, bgcolor: 'rgba(253, 186, 116, 0.18)', border: '1px solid rgba(253, 186, 116, 0.75)' }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#fdba74', border: '1px solid rgba(234, 88, 12, 0.45)' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#9a3412' }}>
+                      Nocturna
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, borderRadius: 999, bgcolor: 'rgba(250, 204, 21, 0.18)', border: '1px solid rgba(250, 204, 21, 0.75)' }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#facc15', border: '1px solid rgba(161, 98, 7, 0.45)' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#854d0e' }}>
+                      Mixta
+                    </Typography>
+                  </Box>
+                </Box>
             </ModernAlert>
 
             {/* Tabla de horarios */}
@@ -1660,6 +1795,7 @@ const Horarios = () => {
               diasSemana={diasSemana}
               feriadosPorFecha={feriadosPorFecha}
               feriadosMap={feriadosMap}
+              jornadasOrdinariasMap={jornadasOrdinariasMap}
             />
 
             {/* Botones de acción */}
@@ -1796,6 +1932,7 @@ const Horarios = () => {
         turno={modalTurno}
         diaKey={modalDiaKey}
         semanaSeleccionada={semanaSeleccionada}
+        jornadasOrdinariasMap={jornadasOrdinariasMap}
       />
     </PageContainer>
   );

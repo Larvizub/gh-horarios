@@ -36,11 +36,11 @@ const TIPO_CONTRATO_COLOR_MAP = {
     text: '#1e3a8a',
   },
   confianza: {
-    main: '#7c3aed',
-    light: '#f5f3ff',
-    dark: '#6d28d9',
-    border: '#ddd6fe',
-    text: '#5b21b6',
+    main: '#16a34a',
+    light: '#f0fdf4',
+    dark: '#15803d',
+    border: '#bbf7d0',
+    text: '#166534',
   },
   pasantes: {
     main: '#ea580c',

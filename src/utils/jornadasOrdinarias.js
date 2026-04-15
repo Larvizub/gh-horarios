@@ -298,3 +298,17 @@ export const obtenerJornadaOrdinariaDetectada = (horario = {}, jornadasMap = {})
   };
 };
 
+const COLORES_JORNADA_ORDINARIA = {
+  diurna: '#86efac',
+  nocturna: '#fdba74',
+  mixta: '#facc15',
+};
+
+export const obtenerColorJornadaOrdinaria = (key) => {
+  if (!key) {
+    return null;
+  }
+
+  return COLORES_JORNADA_ORDINARIA[key] || null;
+};
+

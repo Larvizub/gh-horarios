@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Grid, Box, Typography, IconButton } from '@mui/material';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import { getTipoIconComponent } from '../../utils/tiposHorario';
+import { obtenerColorJornadaOrdinaria, obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
 
 const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso'];
 
@@ -15,6 +16,7 @@ const TurnoUsuario = memo(({
   handleCambiarTurno, 
   handleCopiarHorario, 
   NO_SUMAN_HORAS,
+  jornadasOrdinariasMap = {},
   suppressOpen, // when true, clicking the slot should not open the edit dialog (used during multi-target selection)
   isFeriado,
 }) => {
@@ -27,6 +29,11 @@ const TurnoUsuario = memo(({
   const tipoCatalogo = horario?.tipo ? tiposMap[horario.tipo] : null;
   const colorTipoDinamico = tipoCatalogo?.editable ? tipoCatalogo?.color : null;
   const IconoTipoHorario = getTipoIconComponent(tipoCatalogo?.icon);
+  const horaInicioJornada = horario?.horaInicio || horario?.horaInicioPres || horario?.horaInicioBloque1 || horario?.horaInicioTele || horario?.horaInicioLibre || '';
+  const resumenJornada = horaInicioJornada ? obtenerResumenJornadaLegal(horaInicioJornada, jornadasOrdinariasMap) : null;
+  const colorJornada = obtenerColorJornadaOrdinaria(resumenJornada?.key);
+  const esVacaciones = horario?.tipo === 'vacaciones';
+  const esDescanso = horario?.tipo === 'descanso';
 
   // Determina si solo se debe mostrar el label
   const soloLabel = tieneHorario && TIPOS_SOLO_LABEL.includes(horario.tipo);
@@ -50,18 +57,34 @@ const TurnoUsuario = memo(({
           justifyContent: 'center',
           alignItems: 'center',
           borderRadius: '8px',
-          border: isFeriado ? '1px solid rgba(220, 38, 38, 0.35)' : '1px solid #e0e0e0',
+          border: isFeriado
+            ? '1px solid rgba(220, 38, 38, 0.35)'
+            : esVacaciones
+              ? '1px solid rgba(45, 212, 191, 0.55)'
+              : esDescanso
+                ? '1px solid rgba(214, 201, 182, 0.4)'
+              : '1px solid #e0e0e0',
+          borderLeft: isFeriado
+            ? '5px solid rgba(220, 38, 38, 0.8)'
+            : esVacaciones
+              ? '5px solid #2DD4BF'
+              : esDescanso
+                ? '5px solid #E7D9BF'
+            : colorJornada
+              ? `5px solid ${colorJornada}`
+              : undefined,
           cursor: editando ? 'pointer' : 'default',
           position: 'relative',
           overflow: 'hidden',
           bgcolor: soloLabel
-            ? (isFeriado ? '#fff7f7' : '#fff')
+            ? (isFeriado ? '#fff7f7' : esVacaciones ? 'rgba(45, 212, 191, 0.14)' : esDescanso ? '#FBFAF3' : '#fff')
             : tieneHorario ? (
                 horario.tipo === 'viaje-trabajo' ? '#1a237e' : // azul oscuro
                 horario.tipo === 'tele-presencial' ? '#6a1b9a' : // nuevo: morado/berenjena
                 horario.tipo === 'horario-dividido' ? '#7c3aed' :
                 horario.tipo === 'visita-comercial' ? '#795548' :
                 horario.tipo === 'tele-media-libre' ? '#2e7d32' :
+                horario.tipo === 'media2-cumple' ? '#607d8b' :
                 horario.tipo === 'media-cumple' ? '#607d8b' :
                 horario.tipo === 'teletrabajo' ? '#2e7d32' :
                 horario.tipo === 'cambio' ? '#f57c00' :
@@ -69,7 +92,7 @@ const TurnoUsuario = memo(({
                 usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
               ) : 'transparent',
           color: soloLabel
-            ? (isFeriado ? '#991b1b' : '#333')
+            ? (isFeriado ? '#991b1b' : esVacaciones ? '#0f766e' : esDescanso ? '#92400e' : '#333')
             : tieneHorario ? 'white' : 'text.secondary',
           '& > :not([aria-hidden="true"])': {
             position: 'relative',
@@ -77,12 +100,13 @@ const TurnoUsuario = memo(({
           },
           '&:hover': editando ? {
             backgroundColor: soloLabel
-              ? (isFeriado ? '#fff1f1' : '#fff')
+              ? (isFeriado ? '#fff1f1' : esVacaciones ? 'rgba(45, 212, 191, 0.2)' : esDescanso ? '#F8F6EE' : '#fff')
               : tieneHorario ? (
                   horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
                   horario.tipo === 'horario-dividido' ? '#6d28d9' :
                   horario.tipo === 'visita-comercial' ? '#5d4037' :
                   horario.tipo === 'tele-media-libre' ? '#1b5e20' :
+                  horario.tipo === 'media2-cumple' ? '#455a64' :
                   horario.tipo === 'media-cumple' ? '#455a64' :
                   horario.tipo === 'teletrabajo' ? '#1b5e20' :
                   horario.tipo === 'cambio' ? '#e65100' :
@@ -109,6 +133,18 @@ const TurnoUsuario = memo(({
           >
             <IconoTipoHorario sx={{ fontSize: '3.8rem' }} />
           </Box>
+        )}
+        {resumenJornada && colorJornada && (
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              boxShadow: `inset 0 0 0 1px ${colorJornada}`,
+              zIndex: 0,
+            }}
+          />
         )}
         {isFeriado && (
           <Box
@@ -405,6 +441,7 @@ const TurnoUsuario = memo(({
                      horario.tipo === 'descanso' ? 'D' :
                      horario.tipo === 'vacaciones' ? 'V' :
                      horario.tipo === 'feriado' ? 'F' :
+                     horario.tipo === 'media2-cumple' ? '🎂' :
                      horario.tipo === 'media-cumple' ? '🎂' :
                      horario.tipo === 'permiso' ? 'P' : 'X')
                   : `${horario.horas?.toFixed(1) || '0'}h`

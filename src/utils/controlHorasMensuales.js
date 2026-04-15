@@ -9,6 +9,7 @@ const TIPOS_AJUSTE_META = new Set([
   'dia-brigada',
   'beneficio-operaciones',
   'media-cumple',
+  'media2-cumple',
   'fuera-oficina',
   'incapacidad-enfermedad',
   'incapacidad-accidente',

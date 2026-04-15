@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { obtenerResumenJornadaLegal, sumarHorasAHora } from './jornadasOrdinarias';
+import { obtenerColorJornadaOrdinaria, obtenerResumenJornadaLegal, sumarHorasAHora } from './jornadasOrdinarias';
 
 describe('jornadasOrdinarias', () => {
   it('sugiere 22:00 cuando la entrada es 15:00', () => {
@@ -20,5 +20,11 @@ describe('jornadasOrdinarias', () => {
 
   it('suma horas cruzando medianoche', () => {
     expect(sumarHorasAHora('22:00', 7)).toBe('05:00');
+  });
+
+  it('expone colores de jornada por tipo', () => {
+    expect(obtenerColorJornadaOrdinaria('diurna')).toBe('#86efac');
+    expect(obtenerColorJornadaOrdinaria('nocturna')).toBe('#fdba74');
+    expect(obtenerColorJornadaOrdinaria('mixta')).toBe('#facc15');
   });
 });

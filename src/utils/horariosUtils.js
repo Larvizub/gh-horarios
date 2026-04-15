@@ -140,7 +140,7 @@ export const calcularHorasTotales = (
   // Si no hay horarios para el usuario, retorna 0
   if (!horariosUsuario || typeof horariosUsuario !== 'object') return 0;
 
-  const NO_SUMAN_HORAS = ['descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'media-cumple'];
+  const NO_SUMAN_HORAS = ['descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'media-cumple', 'media2-cumple'];
   const total = Object.values(horariosUsuario).reduce((total, turno) => {
     if (!turno || NO_SUMAN_HORAS.includes(turno.tipo)) return total;
     return total + calcularHorasTurno(turno);

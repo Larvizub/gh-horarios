@@ -28,6 +28,13 @@ export const TIPO_TEMPLATES = {
   VIAJE_TRABAJO: 'viaje-trabajo'
 };
 
+export const VARIANTES_MEDIA_JORNADA_COMPARTIDA = new Set([
+  'tarde-libre',
+  'tele-media-libre',
+  'media-cumple',
+  'media2-cumple',
+]);
+
 export const TIPO_ICON_COMPONENTS = {
   Work: WorkIcon,
   HomeWork: HomeWorkIcon,
@@ -84,14 +91,15 @@ export const DEFAULT_TIPOS_HORARIO = [
   { key: 'feriado', label: 'Feriado', icon: 'Celebration', color: '#ef4444', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 9, editable: false },
   { key: 'permiso', label: 'Permiso Otorgado por Jefatura', icon: 'AssignmentInd', color: '#8b5cf6', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 10, editable: false },
   { key: 'dia-brigada', label: 'Día por Brigada', icon: 'HealthAndSafety', color: '#d32f2f', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 11, editable: false },
-  { key: 'beneficio-operaciones', label: 'Día libre - beneficio operaciones', icon: 'EmojiEvents', color: '#ffd700', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: false, esBeneficio: true, horasCredito: 8, orden: 12, editable: false },
+  { key: 'beneficio-operaciones', label: 'Día libre - beneficio operaciones', icon: 'EmojiEvents', color: '#ffd700', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: false, esBeneficio: true, horasCredito: 8, limiteUsoPeriodo: 'mes', limiteUsoCantidad: 1, orden: 12, editable: false },
   { key: 'tarde-libre', label: 'Media Jornada Libre', icon: 'Weekend', color: '#64748b', template: TIPO_TEMPLATES.TARDE_LIBRE, noSumaHoras: false, esBeneficio: false, orden: 13, editable: false },
   { key: 'tele-media-libre', label: 'Teletrabajo & Media Jornada Libre', icon: 'HomeWork', color: '#10b981', template: TIPO_TEMPLATES.TELE_MEDIA_LIBRE, noSumaHoras: false, esBeneficio: false, orden: 14, editable: false },
-  { key: 'media-cumple', label: 'Media Jornada Libre & Mes de cumpleaños', icon: 'Cake', color: '#607d8b', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 15, editable: false },
-  { key: 'fuera-oficina', label: 'Fuera de Oficina', icon: 'LocationOff', color: '#607d8b', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 16, editable: false },
-  { key: 'viaje-trabajo', label: 'Viaje de Trabajo', icon: 'Flight', color: '#1a237e', template: TIPO_TEMPLATES.VIAJE_TRABAJO, noSumaHoras: false, esBeneficio: false, orden: 17, editable: false },
-  { key: 'incapacidad-enfermedad', label: 'Incapacidad por Enfermedad', icon: 'LocalHospital', color: '#d32f2f', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 18, editable: false },
-  { key: 'incapacidad-accidente', label: 'Incapacidad por Accidente', icon: 'Healing', color: '#c62828', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 19, editable: false }
+  { key: 'media-cumple', label: 'Media Jornada Libre & Mes de cumpleaños', icon: 'Cake', color: '#607d8b', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, limiteUsoPeriodo: 'anio', limiteUsoCantidad: 1, requiereMesNacimiento: true, orden: 15, editable: false },
+  { key: 'media2-cumple', label: 'Media Jornada Libre & Mes de cumpleaños 2', icon: 'Cake', color: '#607d8b', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, limiteUsoPeriodo: 'anio', limiteUsoCantidad: 1, requiereMesNacimiento: true, orden: 16, editable: false },
+  { key: 'fuera-oficina', label: 'Fuera de Oficina', icon: 'LocationOff', color: '#607d8b', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 17, editable: false },
+  { key: 'viaje-trabajo', label: 'Viaje de Trabajo', icon: 'Flight', color: '#1a237e', template: TIPO_TEMPLATES.VIAJE_TRABAJO, noSumaHoras: false, esBeneficio: false, orden: 18, editable: false },
+  { key: 'incapacidad-enfermedad', label: 'Incapacidad por Enfermedad', icon: 'LocalHospital', color: '#d32f2f', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 19, editable: false },
+  { key: 'incapacidad-accidente', label: 'Incapacidad por Accidente', icon: 'Healing', color: '#c62828', template: TIPO_TEMPLATES.SIN_HORAS, noSumaHoras: true, esBeneficio: false, orden: 20, editable: false }
 ];
 
 const DEFAULT_TIPOS_MAP = DEFAULT_TIPOS_HORARIO.reduce((acc, tipo) => {
@@ -132,6 +140,10 @@ export const normalizeTipo = (key, raw = {}, index = 0) => {
   const horasCredito = horasCreditoValue === undefined || horasCreditoValue === null || horasCreditoValue === ''
     ? null
     : Number(horasCreditoValue);
+  const limiteUsoCantidadValue = raw.limiteUsoCantidad ?? base.limiteUsoCantidad ?? null;
+  const limiteUsoCantidad = limiteUsoCantidadValue === undefined || limiteUsoCantidadValue === null || limiteUsoCantidadValue === ''
+    ? null
+    : Number(limiteUsoCantidadValue);
   return {
     key,
     label: raw.label || base.label || buildTipoFallbackLabel(key),
@@ -145,6 +157,11 @@ export const normalizeTipo = (key, raw = {}, index = 0) => {
         : (typeof raw.noSumaHoras === 'boolean' ? raw.noSumaHoras : Boolean(base.noSumaHoras))),
     esBeneficio,
     horasCredito,
+    limiteUsoPeriodo: raw.limiteUsoPeriodo || base.limiteUsoPeriodo || null,
+    limiteUsoCantidad,
+    requiereMesNacimiento: raw.requiereMesNacimiento !== undefined
+      ? Boolean(raw.requiereMesNacimiento)
+      : Boolean(base.requiereMesNacimiento),
     orden: Number.isFinite(raw.orden) ? raw.orden : (base.orden || index + 1),
     editable: isBuiltIn ? false : true
   };
@@ -184,6 +201,9 @@ export const tiposArrayToFirebaseObject = (tipos = []) => {
       noSumaHoras: Boolean(tipo.noSumaHoras),
       esBeneficio: Boolean(tipo.esBeneficio),
       horasCredito: Number.isFinite(horasCredito) ? horasCredito : null,
+      limiteUsoPeriodo: tipo.limiteUsoPeriodo || null,
+      limiteUsoCantidad: Number.isFinite(Number(tipo.limiteUsoCantidad)) ? Number(tipo.limiteUsoCantidad) : null,
+      requiereMesNacimiento: Boolean(tipo.requiereMesNacimiento),
       orden: tipo.orden
     };
     return acc;

@@ -63,9 +63,9 @@ const createEmptyForm = () => ({
   patternSemanal: createEmptyJornadaPattern(),
 });
 
-const JOURNEY_TYPES = ['personalizado', 'teletrabajo', 'tarde-libre', 'descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'beneficio-operaciones', 'media-cumple', 'fuera-oficina', 'viaje-trabajo', 'incapacidad-enfermedad', 'incapacidad-accidente'];
+const JOURNEY_TYPES = ['personalizado', 'teletrabajo', 'tarde-libre', 'descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'beneficio-operaciones', 'media-cumple', 'media2-cumple', 'fuera-oficina', 'viaje-trabajo', 'incapacidad-enfermedad', 'incapacidad-accidente'];
 
-const isNoHoursType = (tipo) => ['descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'media-cumple', 'fuera-oficina', 'incapacidad-enfermedad', 'incapacidad-accidente'].includes(tipo);
+const isNoHoursType = (tipo) => ['descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'media-cumple', 'media2-cumple', 'fuera-oficina', 'incapacidad-enfermedad', 'incapacidad-accidente'].includes(tipo);
 
 const calculateHourRange = (start, end) => {
   if (!start || !end) return 0;

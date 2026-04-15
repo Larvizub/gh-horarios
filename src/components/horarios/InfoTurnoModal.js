@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogActions,
+  Alert,
   Button,
   Typography,
   Box,
@@ -20,6 +21,7 @@ import EventBusyIcon from '@mui/icons-material/EventBusy';
 import CloseIcon from '@mui/icons-material/Close';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import { getTipoIconComponent } from '../../utils/tiposHorario';
+import { obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
 
 // Styled Components
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -119,14 +121,15 @@ const getTipoIcon = (tipo, tipoConfig) => {
     case 'teletrabajo':
       return <HomeWorkIcon sx={{ color: '#2196f3' }} />;
     case 'descanso':
+      return <EventBusyIcon sx={{ color: '#d97706' }} />;
     case 'vacaciones':
-      return <EventBusyIcon sx={{ color: '#9e9e9e' }} />;
+      return <EventBusyIcon sx={{ color: '#2DD4BF' }} />;
     default:
       return <WorkIcon sx={{ color: '#00830e' }} />;
   }
 };
 
-const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccionada }) => {
+const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccionada, jornadasOrdinariasMap = {} }) => {
   const { getTipoLabel, tiposMap } = useTiposHorario();
 
   const getDiaInfo = () => {
@@ -141,6 +144,18 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
 
   const tipoActual = turno?.tipo;
   const tipoConfig = tipoActual ? tiposMap[tipoActual] : null;
+  const resumenJornada = React.useMemo(() => {
+    if (!turno?.horaInicio) {
+      return null;
+    }
+
+    return obtenerResumenJornadaLegal(turno.horaInicio, jornadasOrdinariasMap);
+  }, [turno?.horaInicio, jornadasOrdinariasMap]);
+
+  const horasLaboradas = Number(turno?.horas ?? 0) || 0;
+  const horasExcedidas = resumenJornada
+    ? Math.max(horasLaboradas - resumenJornada.limiteDiario, 0)
+    : 0;
 
   return (
     <StyledDialog
@@ -198,9 +213,29 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
               <InfoRow>
                 <AccessTimeIcon sx={{ color: 'text.secondary' }} />
                 <Box sx={{ flex: 1 }}>
-                  <InfoLabel>Horario</InfoLabel>
+                  <InfoLabel>Hora de entrada</InfoLabel>
                   <InfoValue>
-                    {turno.horaInicio || '--:--'} - {turno.horaFin || '--:--'}
+                    {turno.horaInicio || '--:--'}
+                  </InfoValue>
+                </Box>
+              </InfoRow>
+
+              <InfoRow>
+                <AccessTimeIcon sx={{ color: 'text.secondary' }} />
+                <Box sx={{ flex: 1 }}>
+                  <InfoLabel>Hora de salida</InfoLabel>
+                  <InfoValue>
+                    {turno.horaFin || '--:--'}
+                  </InfoValue>
+                </Box>
+              </InfoRow>
+
+              <InfoRow>
+                <WorkIcon sx={{ color: 'text.secondary' }} />
+                <Box sx={{ flex: 1 }}>
+                  <InfoLabel>Jornada</InfoLabel>
+                  <InfoValue>
+                    {resumenJornada ? `${resumenJornada.label} · Límite ${resumenJornada.limiteDiario}h` : 'No definida'}
                   </InfoValue>
                 </Box>
               </InfoRow>
@@ -212,12 +247,23 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
                   </Box>
                   <HoursChip
                     icon={<AccessTimeIcon />}
-                    label={`${turno.horas?.toFixed(1) || '0.0'}h`}
+                    label={`${horasLaboradas.toFixed(1)}h`}
                     color="primary"
                     variant="outlined"
                   />
                 </Box>
               </InfoRow>
+
+              {resumenJornada && (
+                <Alert
+                  severity={horasExcedidas > 0 ? 'warning' : 'info'}
+                  sx={{ mt: 1.5, borderRadius: 2 }}
+                >
+                  {horasExcedidas > 0
+                    ? `Excede la jornada por ${horasExcedidas.toFixed(1)}h.`
+                    : `Dentro del límite de la jornada ${resumenJornada.label.toLowerCase()}.`}
+                </Alert>
+              )}
             </>
           )}
         </InfoCard>

@@ -80,7 +80,11 @@ const DaySlot = styled(Box, {
   transition: 'all 0.15s ease',
   background: hasSchedule
     ? scheduleType === 'descanso' || scheduleType === 'vacaciones' || scheduleType === 'feriado' || scheduleType === 'permiso'
-      ? 'rgba(158, 158, 158, 0.15)'
+      ? scheduleType === 'vacaciones'
+        ? 'rgba(45, 212, 191, 0.18)'
+        : scheduleType === 'descanso'
+        ? '#FBFAF3'
+        : 'rgba(158, 158, 158, 0.15)'
       : scheduleType === 'teletrabajo'
       ? '#2e7d32'
       : scheduleType === 'tele-presencial'
@@ -95,7 +99,11 @@ const DaySlot = styled(Box, {
     : alpha(theme.palette.grey[200], 0.5),
   color: hasSchedule
     ? scheduleType === 'descanso' || scheduleType === 'vacaciones' || scheduleType === 'feriado' || scheduleType === 'permiso'
-      ? theme.palette.text.secondary
+      ? scheduleType === 'vacaciones'
+        ? '#0f766e'
+        : scheduleType === 'descanso'
+        ? '#7c5b2b'
+        : theme.palette.text.secondary
       : 'white'
     : theme.palette.text.disabled,
   fontWeight: hasSchedule ? 600 : 400,
@@ -212,8 +220,8 @@ const MobileUserRow = memo(({
   clipboard, 
   toggleTarget, 
   handleCambiarTurno, 
-  abrirInfoTurno, 
   handleCopiarHorario,
+  jornadasOrdinariasMap,
   feriadosPorFecha,
   feriadosMap
 }) => {
@@ -273,6 +281,7 @@ const MobileUserRow = memo(({
                 <Grid item sx={{ width: '14.28%', flexBasis: '14.28%' }} key={diaKey}>
                   <Tooltip title={tooltipTitle} arrow placement="top">
                     <DaySlot
+                      data-dia-key={diaKey}
                       hasSchedule={tieneHorario}
                       scheduleType={horario?.tipo}
                       isCurrentUser={isCurrentUser}
@@ -281,7 +290,6 @@ const MobileUserRow = memo(({
                       onClick={() => {
                         if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
                         if (editando) handleCambiarTurno(usuario.id, diaKey);
-                        else if (tieneHorario) abrirInfoTurno(usuario, horario, diaKey);
                       }}
                     >
                       {tieneHorario && editando && (
@@ -359,13 +367,15 @@ const DesktopUserRow = memo(({
   horariosOriginalesUsuario,
   currentUser,
   handleCambiarTurno,
+  abrirInfoTurno,
   handleCopiarHorario,
   clipboard,
   toggleTarget,
   selectedTargets,
   NO_SUMAN_HORAS,
   feriadosPorFecha,
-  feriadosMap
+  feriadosMap,
+  jornadasOrdinariasMap
 }) => {
   const horasSumaSemanal = horasTotales + horasBeneficio;
 
@@ -412,18 +422,23 @@ const DesktopUserRow = memo(({
           const esFeriado = feriadosPorFecha?.has?.(fechaKey);
           const feriadoLabel = feriadosMap?.[fechaKey]?.label || 'Feriado';
           const tooltipTitle = esFeriado ? `${dia} ${format(fecha, 'dd/MM')} · ${feriadoLabel}` : `${dia} ${format(fecha, 'dd/MM')}`;
+          const puedeAbrirInfo = !editando && Boolean(horariosUsuario?.[diaKey]);
           return (
             <Grid item key={`${usuario.id}-${index}`} xs>
               <Tooltip title={tooltipTitle} arrow placement="top">
                 <Box
+                  data-dia-key={diaKey}
                   onClick={() => {
-                    if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
+                    if (puedeAbrirInfo) {
+                      abrirInfoTurno(usuario, horariosUsuario[diaKey], diaKey);
+                    }
                   }}
                   sx={{
                     ...(isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : {}),
                     borderRadius: 1,
                     background: esFeriado ? 'linear-gradient(180deg, rgba(254, 242, 242, 0.9), rgba(255,255,255,0.95))' : undefined,
                     boxShadow: esFeriado ? 'inset 0 0 0 1px rgba(220, 38, 38, 0.12)' : undefined,
+                    cursor: puedeAbrirInfo ? 'pointer' : 'default',
                   }}
                 >
                   <TurnoUsuario
@@ -435,6 +450,7 @@ const DesktopUserRow = memo(({
                     currentUser={currentUser}
                     handleCambiarTurno={handleCambiarTurno}
                     handleCopiarHorario={handleCopiarHorario}
+                    jornadasOrdinariasMap={jornadasOrdinariasMap}
                     suppressOpen={!!clipboard && editando}
                     NO_SUMAN_HORAS={NO_SUMAN_HORAS}
                     isFeriado={esFeriado}
@@ -492,7 +508,8 @@ const HorariosTable = memo(({
   obtenerHorasMaximas,
   diasSemana,
   feriadosPorFecha,
-  feriadosMap
+  feriadosMap,
+  jornadasOrdinariasMap
 }) => {
   const [selectedTargets, setSelectedTargets] = useState(new Set());
   const { getTipoContratoLabel } = useTiposContrato();
@@ -604,28 +621,50 @@ const HorariosTable = memo(({
             const horasBeneficio = calcularHorasBeneficioConfiguradas(horariosUsuarioVista, tiposHorarioMap);
             
             return (
-              <MobileUserRow
+              <Box
                 key={usuario.id}
-                usuario={usuario}
-                tipoContratoLabel={tipoContratoLabel}
-                tipoContratoHoras={tipoContratoHoras}
-                isCurrentUser={isCurrentUser}
-                exceso={exceso}
-                horasTotales={horasTotales}
-                horasBeneficio={horasBeneficio}
-                diasSemana={diasSemana}
-                semanaSeleccionada={semanaSeleccionada}
-                editando={editando}
-                horariosUsuario={horariosUsuarioVista}
-                selectedTargets={selectedTargets}
-                clipboard={clipboard}
-                toggleTarget={toggleTarget}
-                handleCambiarTurno={handleCambiarTurno}
-                abrirInfoTurno={abrirInfoTurno}
-                handleCopiarHorario={handleCopiarHorario}
-                feriadosPorFecha={feriadosPorFecha}
-                feriadosMap={feriadosMap}
-              />
+                onClick={(event) => {
+                  if (clipboard && editando) {
+                    return;
+                  }
+
+                  if (!editando) {
+                    const target = event.target.closest?.('[data-dia-key]');
+                    if (!target) {
+                      return;
+                    }
+
+                    const diaKey = target.getAttribute('data-dia-key');
+                    const horario = horariosUsuarioVista?.[diaKey];
+                    if (horario) {
+                      abrirInfoTurno(usuario, horario, diaKey);
+                    }
+                  }
+                }}
+                sx={{ cursor: editando ? 'default' : 'pointer' }}
+              >
+                <MobileUserRow
+                  usuario={usuario}
+                  tipoContratoLabel={tipoContratoLabel}
+                  tipoContratoHoras={tipoContratoHoras}
+                  isCurrentUser={isCurrentUser}
+                  exceso={exceso}
+                  horasTotales={horasTotales}
+                  horasBeneficio={horasBeneficio}
+                  diasSemana={diasSemana}
+                  semanaSeleccionada={semanaSeleccionada}
+                  editando={editando}
+                  horariosUsuario={horariosUsuarioVista}
+                  selectedTargets={selectedTargets}
+                  clipboard={clipboard}
+                  toggleTarget={toggleTarget}
+                  handleCambiarTurno={handleCambiarTurno}
+                  handleCopiarHorario={handleCopiarHorario}
+                  jornadasOrdinariasMap={jornadasOrdinariasMap}
+                  feriadosPorFecha={feriadosPorFecha}
+                  feriadosMap={feriadosMap}
+                />
+              </Box>
             );
           })}
         </Box>
@@ -735,6 +774,7 @@ const HorariosTable = memo(({
                 horariosOriginalesUsuario={horarios[usuario.id]}
                 currentUser={currentUser}
                 handleCambiarTurno={handleCambiarTurno}
+                abrirInfoTurno={abrirInfoTurno}
                 handleCopiarHorario={handleCopiarHorario}
                 clipboard={clipboard}
                 toggleTarget={toggleTarget}

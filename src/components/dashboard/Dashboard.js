@@ -182,6 +182,7 @@ const COLORS = {
   'visita-comercial': '#795548',
   'tele-media-libre': '#10b981',
   'media-cumple': '#9e9e9e',
+  'media2-cumple': '#9e9e9e',
   'fuera-oficina': '#607d8b'
 };
 
@@ -275,7 +276,7 @@ const Dashboard = () => {
         if (horario && horario.tipo) {
           let tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
           if (horario.tipo === 'tele-media-libre') tipoFinal = 'teletrabajo';
-          if (horario.tipo === 'visita-comercial' || horario.tipo === 'media-cumple') tipoFinal = 'fuera-oficina';
+          if (horario.tipo === 'visita-comercial' || horario.tipo === 'media-cumple' || horario.tipo === 'media2-cumple') tipoFinal = 'fuera-oficina';
           
           if (tipoFinal === 'descanso') {
             tipos['descanso'] = (tipos['descanso'] || 0) + 24;
@@ -339,7 +340,7 @@ const Dashboard = () => {
             if (horario && horario.tipo) {
               let tipoFinal = horario.tipo === 'tele-presencial' ? 'teletrabajo' : horario.tipo;
               if (horario.tipo === 'tele-media-libre') tipoFinal = 'teletrabajo';
-              if (horario.tipo === 'visita-comercial' || horario.tipo === 'media-cumple') tipoFinal = 'fuera-oficina';
+              if (horario.tipo === 'visita-comercial' || horario.tipo === 'media-cumple' || horario.tipo === 'media2-cumple') tipoFinal = 'fuera-oficina';
 
               contadorTipos[tipoFinal] = (contadorTipos[tipoFinal] || 0) + 1;
               if (tipoFinal === 'descanso') {

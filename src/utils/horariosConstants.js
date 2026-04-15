@@ -26,7 +26,7 @@ export const diasSemana = [
 ];
 
 export const NO_SUMAN_HORAS = [
-  'descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'fuera-oficina', 'incapacidad-enfermedad', 'incapacidad-accidente', 'media-cumple'
+  'descanso', 'vacaciones', 'feriado', 'permiso', 'dia-brigada', 'fuera-oficina', 'incapacidad-enfermedad', 'incapacidad-accidente', 'media-cumple', 'media2-cumple'
   // 'viaje-trabajo' NO debe estar aquí
 ];
 
