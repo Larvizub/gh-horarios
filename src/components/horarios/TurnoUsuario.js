@@ -3,6 +3,7 @@ import { Grid, Box, Typography, IconButton } from '@mui/material';
 import useTiposHorario from '../../hooks/useTiposHorario';
 import { getTipoIconComponent } from '../../utils/tiposHorario';
 import { obtenerColorJornadaOrdinaria, obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
+import { esContratoOperativo, getTipoContratoColorPalette } from '../../utils/tiposContrato';
 
 const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso'];
 
@@ -26,14 +27,27 @@ const TurnoUsuario = memo(({
     : (horarios[usuario.id] || {});
   const horario = horariosUsuario?.[diaKey];
   const tieneHorario = horario && horario.tipo !== 'libre';
+  const contratoOperativo = esContratoOperativo(usuario?.tipoContrato);
   const tipoCatalogo = horario?.tipo ? tiposMap[horario.tipo] : null;
   const colorTipoDinamico = tipoCatalogo?.editable ? tipoCatalogo?.color : null;
   const IconoTipoHorario = getTipoIconComponent(tipoCatalogo?.icon);
   const horaInicioJornada = horario?.horaInicio || horario?.horaInicioPres || horario?.horaInicioBloque1 || horario?.horaInicioTele || horario?.horaInicioLibre || '';
-  const resumenJornada = horaInicioJornada ? obtenerResumenJornadaLegal(horaInicioJornada, jornadasOrdinariasMap) : null;
-  const colorJornada = obtenerColorJornadaOrdinaria(resumenJornada?.key);
+  const resumenJornada = contratoOperativo && horaInicioJornada ? obtenerResumenJornadaLegal(horaInicioJornada, jornadasOrdinariasMap) : null;
+  const colorJornada = contratoOperativo ? obtenerColorJornadaOrdinaria(resumenJornada?.key) : null;
   const esVacaciones = horario?.tipo === 'vacaciones';
   const esDescanso = horario?.tipo === 'descanso';
+
+  // Detecta si la tarjeta muestra contenido presencial (label o bloques presencial)
+  const tipoLabel = getTipoLabel(horario?.tipo);
+  const esTarjetaPresencial = Boolean(
+    (tipoLabel && String(tipoLabel).toLowerCase().includes('presencial')) ||
+    horario?.horaInicioPres || horario?.horaInicioBloque1 || horario?.horaInicioBloque2
+  );
+
+  // Paleta de color según tipo de contrato del usuario
+  const contratoPalette = getTipoContratoColorPalette(usuario?.tipoContrato);
+  const contratoMain = contratoPalette?.main || '#6c757d';
+  const contratoDark = contratoPalette?.dark || contratoMain;
 
   // Determina si solo se debe mostrar el label
   const soloLabel = tieneHorario && TIPOS_SOLO_LABEL.includes(horario.tipo);
@@ -59,14 +73,18 @@ const TurnoUsuario = memo(({
           borderRadius: '8px',
           border: isFeriado
             ? '1px solid rgba(220, 38, 38, 0.35)'
-            : esVacaciones
+            : !contratoOperativo
+              ? '1px solid #e0e0e0'
+              : esVacaciones
               ? '1px solid rgba(45, 212, 191, 0.55)'
               : esDescanso
                 ? '1px solid rgba(214, 201, 182, 0.4)'
               : '1px solid #e0e0e0',
           borderLeft: isFeriado
             ? '5px solid rgba(220, 38, 38, 0.8)'
-            : esVacaciones
+            : !contratoOperativo
+              ? '5px solid #cbd5e1'
+              : esVacaciones
               ? '5px solid #2DD4BF'
               : esDescanso
                 ? '5px solid #E7D9BF'
@@ -79,6 +97,8 @@ const TurnoUsuario = memo(({
           bgcolor: soloLabel
             ? (isFeriado ? '#fff7f7' : esVacaciones ? 'rgba(45, 212, 191, 0.14)' : esDescanso ? '#FBFAF3' : '#fff')
             : tieneHorario ? (
+                esTarjetaPresencial ? contratoMain :
+                !contratoOperativo ? '#fff' :
                 horario.tipo === 'viaje-trabajo' ? '#1a237e' : // azul oscuro
                 horario.tipo === 'tele-presencial' ? '#6a1b9a' : // nuevo: morado/berenjena
                 horario.tipo === 'horario-dividido' ? '#7c3aed' :
@@ -93,7 +113,7 @@ const TurnoUsuario = memo(({
               ) : 'transparent',
           color: soloLabel
             ? (isFeriado ? '#991b1b' : esVacaciones ? '#0f766e' : esDescanso ? '#92400e' : '#333')
-            : tieneHorario ? 'white' : 'text.secondary',
+            : tieneHorario ? (esTarjetaPresencial ? '#fff' : (contratoOperativo ? 'white' : '#334155')) : 'text.secondary',
           '& > :not([aria-hidden="true"])': {
             position: 'relative',
             zIndex: 1
@@ -102,6 +122,8 @@ const TurnoUsuario = memo(({
             backgroundColor: soloLabel
               ? (isFeriado ? '#fff1f1' : esVacaciones ? 'rgba(45, 212, 191, 0.2)' : esDescanso ? '#F8F6EE' : '#fff')
               : tieneHorario ? (
+                  esTarjetaPresencial ? contratoDark :
+                  !contratoOperativo ? '#fff' :
                   horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
                   horario.tipo === 'horario-dividido' ? '#6d28d9' :
                   horario.tipo === 'visita-comercial' ? '#5d4037' :
@@ -124,8 +146,10 @@ const TurnoUsuario = memo(({
               right: -10,
               top: '50%',
               transform: 'translateY(-50%) rotate(-14deg)',
-              opacity: soloLabel ? 0.14 : 0.25,
-              color: soloLabel ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.45)',
+              opacity: contratoOperativo ? (soloLabel ? 0.14 : 0.25) : 0.08,
+              color: contratoOperativo
+                ? (soloLabel ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.45)')
+                : 'rgba(100, 116, 139, 0.35)',
               pointerEvents: 'none',
               userSelect: 'none',
               zIndex: 0

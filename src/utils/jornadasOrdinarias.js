@@ -1,3 +1,5 @@
+import { esContratoOperativo } from './tiposContrato';
+
 const sanitizeHora = (value = '') => {
   const hora = String(value).trim();
   return /^\d{2}:\d{2}$/.test(hora) ? hora : '';
@@ -232,7 +234,11 @@ export const formatCoberturaJornadaOrdinaria = (jornada = {}) => {
   return `Entre ${inicioLabel || inicio} y ${finLabel || fin}`;
 };
 
-export const obtenerJornadaOrdinariaDetectada = (horario = {}, jornadasMap = {}) => {
+export const obtenerJornadaOrdinariaDetectada = (horario = {}, jornadasMap = {}, tipoContrato = '') => {
+  if (!esContratoOperativo(tipoContrato)) {
+    return null;
+  }
+
   const diurna = jornadasMap.diurna;
   const nocturna = jornadasMap.nocturna;
   const mixta = jornadasMap.mixta;

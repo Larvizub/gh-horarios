@@ -1202,6 +1202,8 @@ const Horarios = () => {
 
     const validarJornadaYGuardar = async (horarioGuardado, horasTrabajadas) => {
       const tipoConfigUso = tiposMap[horarioGuardado.tipo] || {};
+      const usuario = obtenerUsuario(usuarios, usuarioId);
+
       if (debeValidarLimiteUsoHorario(tipoConfigUso)) {
         const fechaTurno = obtenerFechaTurnoDesdeSemana(semanaSeleccionada, diaKey);
         if (!fechaTurno) {
@@ -1237,7 +1239,6 @@ const Horarios = () => {
         });
 
         const horarioExistente = horariosEditadosRef.current?.[usuarioId]?.[diaKey] || horariosRef.current?.[usuarioId]?.[diaKey] || null;
-        const usuario = obtenerUsuario(usuarios, usuarioId);
         const validacionUso = validarLimiteUsoHorario({
           tipoConfig: { ...tipoConfigUso, key: horarioGuardado.tipo },
           usuario,
@@ -1257,15 +1258,25 @@ const Horarios = () => {
         }
       }
 
+      const contratoUsuario = usuario?.tipoContrato || 'Operativo';
+      const jornadaDetectada = obtenerJornadaOrdinariaDetectada(horarioGuardado, jornadasOrdinariasMap, contratoUsuario);
+
       const jornadaConMetadata = (() => {
-        const jornadaDetectada = obtenerJornadaOrdinariaDetectada(horarioGuardado, jornadasOrdinariasMap);
+        const baseHorario = {
+          ...horarioGuardado,
+          jornadaOrdinariaKey: '',
+          jornadaOrdinariaLabel: '',
+          jornadaOrdinariaLimiteDiario: null,
+          jornadaOrdinariaLimiteSemanal: null,
+          jornadaOrdinariaHoras: null,
+        };
 
         if (!jornadaDetectada) {
-          return horarioGuardado;
+          return baseHorario;
         }
 
         return {
-          ...horarioGuardado,
+          ...baseHorario,
           jornadaOrdinariaKey: jornadaDetectada.key,
           jornadaOrdinariaLabel: jornadaDetectada.label,
           jornadaOrdinariaLimiteDiario: jornadaDetectada.limiteDiario,
@@ -1273,8 +1284,6 @@ const Horarios = () => {
           jornadaOrdinariaHoras: horasTrabajadas,
         };
       })();
-
-      const jornadaDetectada = obtenerJornadaOrdinariaDetectada(horarioGuardado, jornadasOrdinariasMap);
 
       if (jornadaDetectada?.excedeLimite) {
         mostrarModal({

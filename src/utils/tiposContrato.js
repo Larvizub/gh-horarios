@@ -83,6 +83,10 @@ export const getTipoContratoColorPalette = (value, tiposMap = null) => {
   return TIPO_CONTRATO_COLOR_MAP[token] || TIPO_CONTRATO_COLOR_MAP.default;
 };
 
+export const esContratoOperativo = (value, tiposMap = null) => {
+  return getTipoContratoColorToken(value, tiposMap) === 'operativo';
+};
+
 export const buildTipoContratoFallbackLabel = (value) => {
   if (!value) return '';
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, ' ');
