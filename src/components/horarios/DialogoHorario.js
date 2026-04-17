@@ -274,7 +274,7 @@ const DialogoHorario = ({
     return () => {
       cancelled = true;
     };
-  }, [dialogoHorario, horarioPersonalizado.usuarioId, horarioPersonalizado.diaKey, semanaSeleccionada, tipos, tiposMap, usuarioObjetivo, horarioActualSeleccionado, editando, horariosEditados, horarios, obtenerClaveSemana]);
+  }, [dialogoHorario, horarioPersonalizado.usuarioId, horarioPersonalizado.diaKey, semanaSeleccionada, tipos, tiposMap, editando, horariosEditados, horarios, obtenerClaveSemana]);
 
   const handleTimeChange = (field, value) => {
     setHorarioPersonalizado((prev) => {

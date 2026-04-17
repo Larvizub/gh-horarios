@@ -7,6 +7,25 @@ import { esContratoOperativo, getTipoContratoColorPalette } from '../../utils/ti
 
 const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso'];
 
+const hexToRgba = (hex = '#000000', alpha = 1) => {
+  const sanitized = (hex || '').replace('#', '');
+  if (sanitized.length !== 6) return `rgba(0,0,0,${alpha})`;
+  const r = parseInt(sanitized.substring(0, 2), 16);
+  const g = parseInt(sanitized.substring(2, 4), 16);
+  const b = parseInt(sanitized.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const getContrastColor = (hex = '#000000') => {
+  const sanitized = (hex || '').replace('#', '');
+  if (sanitized.length !== 6) return '#fff';
+  const r = parseInt(sanitized.substring(0, 2), 16);
+  const g = parseInt(sanitized.substring(2, 4), 16);
+  const b = parseInt(sanitized.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#000' : '#fff';
+};
+
 const TurnoUsuario = memo(({ 
   usuario, 
   diaKey, 
@@ -29,7 +48,8 @@ const TurnoUsuario = memo(({
   const tieneHorario = horario && horario.tipo !== 'libre';
   const contratoOperativo = esContratoOperativo(usuario?.tipoContrato);
   const tipoCatalogo = horario?.tipo ? tiposMap[horario.tipo] : null;
-  const colorTipoDinamico = tipoCatalogo?.editable ? tipoCatalogo?.color : null;
+  const colorTipoDinamico = tipoCatalogo?.color || null;
+  const esBeneficio = Boolean(tipoCatalogo?.esBeneficio);
   const IconoTipoHorario = getTipoIconComponent(tipoCatalogo?.icon);
   const horaInicioJornada = horario?.horaInicio || horario?.horaInicioPres || horario?.horaInicioBloque1 || horario?.horaInicioTele || horario?.horaInicioLibre || '';
   const resumenJornada = contratoOperativo && horaInicioJornada ? obtenerResumenJornadaLegal(horaInicioJornada, jornadasOrdinariasMap) : null;
@@ -44,6 +64,11 @@ const TurnoUsuario = memo(({
     horario?.horaInicioPres || horario?.horaInicioBloque1 || horario?.horaInicioBloque2
   );
 
+  // Considerar tipos que muestran bloques presenciales (aunque el label no incluya la palabra)
+  const tiposConBloquePresencial = new Set(['tarde-libre', 'tele-presencial', 'horario-dividido', 'tele-media-libre']);
+  const esTipoConBloquePresencial = Boolean(horario?.tipo && tiposConBloquePresencial.has(horario.tipo));
+  const esTarjetaPresencialFinal = esTarjetaPresencial || esTipoConBloquePresencial;
+
   // Paleta de color según tipo de contrato del usuario
   const contratoPalette = getTipoContratoColorPalette(usuario?.tipoContrato);
   const contratoMain = contratoPalette?.main || '#6c757d';
@@ -54,6 +79,26 @@ const TurnoUsuario = memo(({
 
   // Color del icono de copiar
   const copiarColor = soloLabel ? '#222' : '#fff';
+
+  // Colores para split: superior = color por contrato (usar siempre `contratoMain`), inferior = color por tipo (o fallback)
+  const topColor = contratoMain;
+  const tipoColorComputed = tieneHorario ? (
+    // Si la tarjeta es presencial, mantener contratoMain **solo si NO es beneficio**.
+    esTarjetaPresencialFinal && !esBeneficio ? contratoMain :
+    horario.tipo === 'viaje-trabajo' ? '#1a237e' :
+    horario.tipo === 'tele-presencial' ? '#6a1b9a' :
+    horario.tipo === 'horario-dividido' ? '#7c3aed' :
+    horario.tipo === 'visita-comercial' ? '#795548' :
+    horario.tipo === 'tele-media-libre' ? '#2e7d32' :
+    horario.tipo === 'media2-cumple' ? '#607d8b' :
+    horario.tipo === 'media-cumple' ? '#607d8b' :
+    horario.tipo === 'teletrabajo' ? '#2e7d32' :
+    horario.tipo === 'cambio' ? '#f57c00' :
+    colorTipoDinamico ? colorTipoDinamico :
+    !contratoOperativo ? '#fff' :
+    usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
+  ) : '#ffffff';
+  const vacationBg = tipoCatalogo?.color || tipoColorComputed;
 
   return (
     <Grid item xs={true} key={diaKey}>
@@ -76,7 +121,7 @@ const TurnoUsuario = memo(({
             : !contratoOperativo
               ? '1px solid #e0e0e0'
               : esVacaciones
-              ? '1px solid rgba(45, 212, 191, 0.55)'
+              ? `1px solid ${tipoCatalogo?.color || '#2DD4BF'}`
               : esDescanso
                 ? '1px solid rgba(214, 201, 182, 0.4)'
               : '1px solid #e0e0e0',
@@ -85,7 +130,7 @@ const TurnoUsuario = memo(({
             : !contratoOperativo
               ? '5px solid #cbd5e1'
               : esVacaciones
-              ? '5px solid #2DD4BF'
+              ? `5px solid ${tipoCatalogo?.color || '#2DD4BF'}`
               : esDescanso
                 ? '5px solid #E7D9BF'
             : colorJornada
@@ -94,36 +139,36 @@ const TurnoUsuario = memo(({
           cursor: editando ? 'pointer' : 'default',
           position: 'relative',
           overflow: 'hidden',
-          bgcolor: soloLabel
-            ? (isFeriado ? '#fff7f7' : esVacaciones ? 'rgba(45, 212, 191, 0.14)' : esDescanso ? '#FBFAF3' : '#fff')
-            : tieneHorario ? (
-                esTarjetaPresencial ? contratoMain :
-                !contratoOperativo ? '#fff' :
-                horario.tipo === 'viaje-trabajo' ? '#1a237e' : // azul oscuro
-                horario.tipo === 'tele-presencial' ? '#6a1b9a' : // nuevo: morado/berenjena
-                horario.tipo === 'horario-dividido' ? '#7c3aed' :
-                horario.tipo === 'visita-comercial' ? '#795548' :
-                horario.tipo === 'tele-media-libre' ? '#2e7d32' :
-                horario.tipo === 'media2-cumple' ? '#607d8b' :
-                horario.tipo === 'media-cumple' ? '#607d8b' :
-                horario.tipo === 'teletrabajo' ? '#2e7d32' :
-                horario.tipo === 'cambio' ? '#f57c00' :
-                colorTipoDinamico ? colorTipoDinamico :
-                usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
-              ) : 'transparent',
+          /* Vacaciones: usar fondo sólido con color configurado. Otros: split gradient */
+          backgroundColor: tieneHorario && esVacaciones ? vacationBg : 'transparent',
+          backgroundImage: tieneHorario && !esVacaciones
+            ? (!soloLabel
+                ? `linear-gradient(180deg, ${topColor} 0 50%, ${tipoColorComputed} 50% 100%)`
+                : undefined)
+            : undefined,
+          backgroundRepeat: 'no-repeat',
           color: soloLabel
-            ? (isFeriado ? '#991b1b' : esVacaciones ? '#0f766e' : esDescanso ? '#92400e' : '#333')
-            : tieneHorario ? (esTarjetaPresencial ? '#fff' : (contratoOperativo ? 'white' : '#334155')) : 'text.secondary',
+            ? (isFeriado
+                ? '#991b1b'
+                : esVacaciones
+                  ? '#fff'
+                  : esDescanso
+                    ? '#92400e'
+                    : '#333')
+            : (tieneHorario
+                ? (esTarjetaPresencialFinal ? '#fff' : (esVacaciones ? '#fff' : (contratoOperativo ? 'white' : '#334155')))
+                : 'text.secondary'),
           '& > :not([aria-hidden="true"])': {
             position: 'relative',
             zIndex: 1
           },
           '&:hover': editando ? {
             backgroundColor: soloLabel
-              ? (isFeriado ? '#fff1f1' : esVacaciones ? 'rgba(45, 212, 191, 0.2)' : esDescanso ? '#F8F6EE' : '#fff')
+              ? (isFeriado ? '#fff1f1' : esVacaciones ? hexToRgba(vacationBg, 0.12) : esDescanso ? '#F8F6EE' : '#fff')
               : tieneHorario ? (
-                  esTarjetaPresencial ? contratoDark :
+                  esTarjetaPresencialFinal ? contratoDark :
                   !contratoOperativo ? '#fff' :
+                  esVacaciones ? hexToRgba(vacationBg, 0.16) :
                   horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
                   horario.tipo === 'horario-dividido' ? '#6d28d9' :
                   horario.tipo === 'visita-comercial' ? '#5d4037' :
