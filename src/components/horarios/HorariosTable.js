@@ -128,17 +128,23 @@ const TotalBadge = styled(Paper, {
     ? 'linear-gradient(135deg, #f5f5f5, #e5e7eb)'
     : exceeded
       ? 'linear-gradient(135deg, #ffebee, #ffcdd2)'
-      : 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+      : tone === 'blue'
+        ? 'linear-gradient(135deg, #ebf8ff, #bfdbfe)'
+        : 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
   border: tone === 'neutral'
     ? '2px solid #bdbdbd'
     : exceeded
       ? '2px solid #f44336'
-      : '2px solid #4caf50',
+      : tone === 'blue'
+        ? '2px solid #3b82f6'
+        : '2px solid #4caf50',
   boxShadow: tone === 'neutral'
     ? '0 2px 8px rgba(0, 0, 0, 0.08)'
     : exceeded
       ? '0 2px 8px rgba(244, 67, 54, 0.25)'
-      : '0 2px 8px rgba(76, 175, 80, 0.2)',
+      : tone === 'blue'
+        ? '0 2px 8px rgba(59,130,246,0.18)'
+        : '0 2px 8px rgba(76, 175, 80, 0.2)',
 }));
 
 const SummaryMetric = ({ title, value, valueColor, exceeded = false, tone }) => (
@@ -343,6 +349,7 @@ const MobileUserRow = memo(({
               title="Suma semanal"
               value={`${horasSumaSemanal.toFixed(1)}h`}
               valueColor="#2e7d32"
+              tone="blue"
             />
           </Stack>
         </Grid>
@@ -478,6 +485,7 @@ const DesktopUserRow = memo(({
               title="Suma semanal"
               value={`${horasSumaSemanal.toFixed(1)}h`}
               valueColor="#2e7d32"
+              tone="blue"
             />
           </Stack>
         </Grid>

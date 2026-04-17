@@ -560,7 +560,7 @@ const Dashboard = () => {
             <Grid container spacing={2}>
               <Grid item xs={6} sm={3}>
                 <Box sx={{ 
-                  bgcolor: { xs: 'rgba(255,255,255,0.25)', sm: 'rgba(255,255,255,0.15)' }, 
+                  bgcolor: { xs: 'rgba(59,130,246,0.12)', sm: '#bfdbfe' },
                   borderRadius: 3, 
                   p: 1.5,
                   backdropFilter: { xs: 'none', sm: 'blur(10px)' },
