@@ -1,11 +1,11 @@
 import React, { memo } from 'react';
 import { Grid, Box, Typography, IconButton } from '@mui/material';
 import useTiposHorario from '../../hooks/useTiposHorario';
-import { getTipoIconComponent } from '../../utils/tiposHorario';
+import { getTipoIconComponent, DEFAULT_TIPOS_HORARIO } from '../../utils/tiposHorario';
 import { obtenerColorJornadaOrdinaria, obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
 import { esContratoOperativo, getTipoContratoColorPalette } from '../../utils/tiposContrato';
 
-const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso'];
+const TIPOS_SOLO_LABEL = ['descanso', 'vacaciones', 'feriado', 'permiso', 'incapacidad-enfermedad', 'incapacidad-accidente'];
 
 const hexToRgba = (hex = '#000000', alpha = 1) => {
   const sanitized = (hex || '').replace('#', '');
@@ -56,6 +56,7 @@ const TurnoUsuario = memo(({
   const colorJornada = contratoOperativo ? obtenerColorJornadaOrdinaria(resumenJornada?.key) : null;
   const esVacaciones = horario?.tipo === 'vacaciones';
   const esDescanso = horario?.tipo === 'descanso';
+  const esIncapacidad = horario?.tipo === 'incapacidad-enfermedad' || horario?.tipo === 'incapacidad-accidente';
 
   // Detecta si la tarjeta muestra contenido presencial (label o bloques presencial)
   const tipoLabel = getTipoLabel(horario?.tipo);
@@ -65,9 +66,20 @@ const TurnoUsuario = memo(({
   );
 
   // Considerar tipos que muestran bloques presenciales (aunque el label no incluya la palabra)
-  const tiposConBloquePresencial = new Set(['tarde-libre', 'tele-presencial', 'horario-dividido', 'tele-media-libre']);
+  const tiposConBloquePresencial = new Set(['tele-presencial', 'horario-dividido']);
   const esTipoConBloquePresencial = Boolean(horario?.tipo && tiposConBloquePresencial.has(horario.tipo));
   const esTarjetaPresencialFinal = esTarjetaPresencial || esTipoConBloquePresencial;
+
+  // Tipos que deben mostrar split (mitad contrato / mitad tipo)
+  const tiposConSplit = new Set(['tarde-libre', 'tele-media-libre']);
+  const hasMainBlock = Boolean(
+    horario?.horaInicio || horario?.horaFin || horario?.horaInicioPres || horario?.horaFinPres || horario?.horaInicioBloque1 || horario?.horaFinBloque1 || horario?.horaInicioTele || horario?.horaFinTele
+  );
+  const tieneBloqueLibre = Boolean(
+    horario?.horaInicioLibre || horario?.horaFinLibre || horario?.horaInicioBloque2 || horario?.horaFinBloque2
+  );
+  const combinaTeleYLibre = Boolean(hasMainBlock && tieneBloqueLibre);
+  const necesitaSplit = Boolean(esBeneficio || tiposConSplit.has(horario?.tipo) || combinaTeleYLibre);
 
   // Paleta de color según tipo de contrato del usuario
   const contratoPalette = getTipoContratoColorPalette(usuario?.tipoContrato);
@@ -82,27 +94,127 @@ const TurnoUsuario = memo(({
 
   // Colores para split: superior = color por contrato (usar siempre `contratoMain`), inferior = color por tipo (o fallback)
   const topColor = contratoMain;
-  const tipoColorComputed = tieneHorario ? (
-    // Si la tarjeta es presencial, mantener contratoMain **solo si NO es beneficio**.
-    esTarjetaPresencialFinal && !esBeneficio ? contratoMain :
-    horario.tipo === 'viaje-trabajo' ? '#1a237e' :
-    horario.tipo === 'tele-presencial' ? '#6a1b9a' :
-    horario.tipo === 'horario-dividido' ? '#7c3aed' :
-    horario.tipo === 'visita-comercial' ? '#795548' :
-    horario.tipo === 'tele-media-libre' ? '#2e7d32' :
-    horario.tipo === 'media2-cumple' ? '#607d8b' :
-    horario.tipo === 'media-cumple' ? '#607d8b' :
-    horario.tipo === 'teletrabajo' ? '#2e7d32' :
-    horario.tipo === 'cambio' ? '#f57c00' :
-    colorTipoDinamico ? colorTipoDinamico :
-    !contratoOperativo ? '#fff' :
-    usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
+  let tipoColorComputed = tieneHorario ? (
+    // Si la tarjeta es presencial, mantener contratoMain **solo si NO es beneficio**
+    // y **no** necesita split (tele+libre, tarde-libre, etc.).
+    (esTarjetaPresencialFinal && !esBeneficio && !necesitaSplit) ? contratoMain :
+    // Preferir el color configurado en el catálogo del tipo cuando exista.
+    colorTipoDinamico || (
+      horario.tipo === 'viaje-trabajo' ? '#1a237e' :
+      horario.tipo === 'visita-comercial' ? '#795548' :
+      horario.tipo === 'tele-presencial' ? '#6a1b9a' :
+      horario.tipo === 'horario-dividido' ? '#7c3aed' :
+      horario.tipo === 'cambio' ? '#f57c00' :
+      !contratoOperativo ? '#fff' :
+      usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
+    )
   ) : '#ffffff';
+
+  // Si el turno combina teletrabajo y tiempo libre, preferir el color configurado
+  // para la mitad de "tiempo libre" (ej. `tarde-libre` o `tele-media-libre`).
+  if (necesitaSplit && combinaTeleYLibre) {
+    // Si hay un bloque libre, preferir el color según sea tele+libre o tarde-libre.
+    const preferTeleFree = Boolean(
+      horario?.horaInicioTele || horario?.horaFinTele || horario?.tipo === 'tele-media-libre' || (horario?.tipo && String(horario.tipo).includes('tele'))
+    );
+    let freeColor = tipoColorComputed;
+    if (preferTeleFree && tiposMap?.['tele-media-libre']?.color) {
+      freeColor = tiposMap['tele-media-libre'].color;
+    } else if (tiposMap?.['tarde-libre']?.color) {
+      freeColor = tiposMap['tarde-libre'].color;
+    }
+    // Fallback: buscar cualquier tipo que incluya 'libre' en su key/label
+    if (!freeColor || (!colorTipoDinamico && freeColor === tipoColorComputed)) {
+      const libreTipo = Object.values(tiposMap || {}).find(t => (
+        String(t.key || '').toLowerCase().includes('libre') || String(t.label || '').toLowerCase().includes('libre')
+      ));
+      if (libreTipo?.color) freeColor = libreTipo.color;
+      // Si el catálogo remoto no tiene una entrada de 'libre', usar el default embebido
+      if ((!freeColor || (!colorTipoDinamico && freeColor === tipoColorComputed)) && Array.isArray(DEFAULT_TIPOS_HORARIO)) {
+        const defaultLibre = DEFAULT_TIPOS_HORARIO.find(t => String(t.key || '').toLowerCase().includes('libre'));
+        if (defaultLibre?.color) freeColor = defaultLibre.color;
+      }
+    }
+    tipoColorComputed = freeColor || tipoColorComputed;
+  }
+
+  // Asegurar: para contratos operativos que tengan un bloque de 'tiempo libre'
+  // siempre usar el color asociado a un tipo 'libre' en la mitad inferior.
+  if (contratoOperativo && tieneBloqueLibre) {
+    const preferTeleFree2 = Boolean(
+      horario?.horaInicioTele || horario?.horaFinTele || horario?.tipo === 'tele-media-libre' || (horario?.tipo && String(horario.tipo).includes('tele'))
+    );
+    let freeColor2 = tipoColorComputed;
+    if (preferTeleFree2 && tiposMap?.['tele-media-libre']?.color) {
+      freeColor2 = tiposMap['tele-media-libre'].color;
+    } else if (tiposMap?.['tarde-libre']?.color) {
+      freeColor2 = tiposMap['tarde-libre'].color;
+    }
+    if (!freeColor2 || (!colorTipoDinamico && freeColor2 === tipoColorComputed)) {
+      const libreTipo2 = Object.values(tiposMap || {}).find(t => (
+        String(t.key || '').toLowerCase().includes('libre') || String(t.label || '').toLowerCase().includes('libre')
+      ));
+      if (libreTipo2?.color) freeColor2 = libreTipo2.color;
+      if ((!freeColor2 || (!colorTipoDinamico && freeColor2 === tipoColorComputed)) && Array.isArray(DEFAULT_TIPOS_HORARIO)) {
+        const defaultLibre2 = DEFAULT_TIPOS_HORARIO.find(t => String(t.key || '').toLowerCase().includes('libre'));
+        if (defaultLibre2?.color) freeColor2 = defaultLibre2.color;
+      }
+    }
+    tipoColorComputed = freeColor2 || tipoColorComputed;
+  }
+
+  // Heurística adicional: si el label/nota o la estructura del horario sugiere
+  // explícitamente "tiempo libre", forzar el color de la mitad inferior
+  // a un color de tipo 'libre' (tarde-libre / tele-media-libre / fallback).
+  const tipoLabelText = (getTipoLabel(horario?.tipo) || '').toLowerCase();
+  const notaText = (horario?.nota || '').toLowerCase();
+  const muestraTiempoLibre = Boolean(
+    tieneBloqueLibre ||
+    tipoLabelText.includes('libre') ||
+    notaText.includes('tiempo libre') ||
+    notaText.includes('libre')
+  );
+  if (contratoOperativo && muestraTiempoLibre && !esVacaciones) {
+    const preferTele = Boolean(
+      horario?.horaInicioTele || horario?.horaFinTele || (horario?.tipo && String(horario.tipo).includes('tele')) || tipoLabelText.includes('tele')
+    );
+    let freeColor3 = (
+      preferTele ? tiposMap?.['tele-media-libre']?.color : tiposMap?.['tarde-libre']?.color
+    ) || tiposMap?.['tarde-libre']?.color || tiposMap?.['tele-media-libre']?.color || null;
+    if (!freeColor3) {
+      const libreTipo3 = Object.values(tiposMap || {}).find(t => (
+        String(t.key || '').toLowerCase().includes('libre') || String(t.label || '').toLowerCase().includes('libre')
+      ));
+      if (libreTipo3?.color) freeColor3 = libreTipo3.color;
+    }
+    if (!freeColor3 && Array.isArray(DEFAULT_TIPOS_HORARIO)) {
+      const defaultLibre3 = DEFAULT_TIPOS_HORARIO.find(t => String(t.key || '').toLowerCase().includes('libre'));
+      if (defaultLibre3?.color) freeColor3 = defaultLibre3.color;
+    }
+    tipoColorComputed = freeColor3 || tipoColorComputed;
+  }
+
   const vacationBg = tipoCatalogo?.color || tipoColorComputed;
+  const descansoBg = tipoCatalogo?.color || '#767e89';
+  const incapacidadBg = tipoCatalogo?.color || (horario?.tipo === 'incapacidad-enfermedad' ? '#d32f2f' : '#c62828');
+  // Determinar color del texto para garantizar contraste cuando hay split
+  const textColor = soloLabel
+    ? (isFeriado ? '#991b1b' : esVacaciones ? '#fff' : esDescanso ? getContrastColor(descansoBg) : esIncapacidad ? getContrastColor(incapacidadBg) : '#333')
+    : (tieneHorario
+        ? (esTarjetaPresencialFinal ? '#fff' : (esDescanso ? getContrastColor(descansoBg) : (esVacaciones ? '#fff' : (esIncapacidad ? getContrastColor(incapacidadBg) : (necesitaSplit ? '#fff' : (contratoOperativo ? 'white' : getContrastColor(tipoColorComputed)))))))
+        : 'text.secondary');
 
   return (
     <Grid item xs={true} key={diaKey}>
       <Box
+        data-tipo-color={esDescanso ? (tipoCatalogo?.color || '#767e89') : esIncapacidad ? incapacidadBg : tipoColorComputed}
+        data-horario-info={JSON.stringify({
+          tipo: horario?.tipo || null,
+          horaInicioLibre: horario?.horaInicioLibre || null,
+          horaFinLibre: horario?.horaFinLibre || null,
+          horaInicioBloque2: horario?.horaInicioBloque2 || null,
+          horaFinBloque2: horario?.horaFinBloque2 || null,
+        })}
         onClick={() => {
           if (editando && !suppressOpen) {
             handleCambiarTurno(usuario.id, diaKey);
@@ -124,7 +236,9 @@ const TurnoUsuario = memo(({
               ? `1px solid ${tipoCatalogo?.color || '#2DD4BF'}`
               : esDescanso
                 ? '1px solid rgba(214, 201, 182, 0.4)'
-              : '1px solid #e0e0e0',
+                : esIncapacidad
+                  ? `1px solid ${incapacidadBg}`
+                  : '1px solid #e0e0e0',
           borderLeft: isFeriado
             ? '5px solid rgba(220, 38, 38, 0.8)'
             : !contratoOperativo
@@ -133,42 +247,49 @@ const TurnoUsuario = memo(({
               ? `5px solid ${tipoCatalogo?.color || '#2DD4BF'}`
               : esDescanso
                 ? '5px solid #E7D9BF'
-            : colorJornada
-              ? `5px solid ${colorJornada}`
-              : undefined,
+                : esIncapacidad
+                  ? `5px solid ${incapacidadBg}`
+                  : colorJornada
+                  ? `5px solid ${colorJornada}`
+                  : undefined,
           cursor: editando ? 'pointer' : 'default',
           position: 'relative',
           overflow: 'hidden',
-          /* Vacaciones: usar fondo sólido con color configurado. Otros: split gradient */
-          backgroundColor: tieneHorario && esVacaciones ? vacationBg : 'transparent',
-          backgroundImage: tieneHorario && !esVacaciones
+          /* Vacaciones/Descanso/Incapacidad: usar fondo sólido con color configurado.
+             Excepción: 'viaje-trabajo' no tiene horario partido, mostrar fondo sólido completo.
+             Otros casos: split gradient cuando aplica. */
+          backgroundColor: tieneHorario
+            ? (esVacaciones
+                ? vacationBg
+                : esDescanso
+                  ? descansoBg
+                  : esIncapacidad
+                    ? incapacidadBg
+                    : (horario?.tipo === 'viaje-trabajo' ? (tipoCatalogo?.color || tipoColorComputed) : 'transparent'))
+            : 'transparent',
+          backgroundImage: (tieneHorario && !esVacaciones && !esDescanso && !esIncapacidad && horario?.tipo !== 'viaje-trabajo')
             ? (!soloLabel
                 ? `linear-gradient(180deg, ${topColor} 0 50%, ${tipoColorComputed} 50% 100%)`
                 : undefined)
             : undefined,
           backgroundRepeat: 'no-repeat',
-          color: soloLabel
-            ? (isFeriado
-                ? '#991b1b'
-                : esVacaciones
-                  ? '#fff'
-                  : esDescanso
-                    ? '#92400e'
-                    : '#333')
-            : (tieneHorario
-                ? (esTarjetaPresencialFinal ? '#fff' : (esVacaciones ? '#fff' : (contratoOperativo ? 'white' : '#334155')))
-                : 'text.secondary'),
+          color: textColor,
+          // Forzar que los Typography internos hereden el color calculado
+          '& .MuiTypography-root': {
+            color: 'inherit !important'
+          },
           '& > :not([aria-hidden="true"])': {
             position: 'relative',
             zIndex: 1
           },
           '&:hover': editando ? {
             backgroundColor: soloLabel
-              ? (isFeriado ? '#fff1f1' : esVacaciones ? hexToRgba(vacationBg, 0.12) : esDescanso ? '#F8F6EE' : '#fff')
+              ? (isFeriado ? '#fff1f1' : esVacaciones ? hexToRgba(vacationBg, 0.12) : esDescanso ? '#F8F6EE' : esIncapacidad ? hexToRgba(incapacidadBg, 0.12) : '#fff')
               : tieneHorario ? (
                   esTarjetaPresencialFinal ? contratoDark :
                   !contratoOperativo ? '#fff' :
                   esVacaciones ? hexToRgba(vacationBg, 0.16) :
+                  esIncapacidad ? hexToRgba(incapacidadBg, 0.16) :
                   horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
                   horario.tipo === 'horario-dividido' ? '#6d28d9' :
                   horario.tipo === 'visita-comercial' ? '#5d4037' :

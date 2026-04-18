@@ -28,6 +28,29 @@ const HORAS_MAXIMAS = {
   "Confianza": 72
 };
 
+const DAILY_STATUS_TYPE_META = {
+  "personalizado": { label: "Presencial", color: "#00830e", icon: "🏢", category: "onsite" },
+  "teletrabajo": { label: "Teletrabajo", color: "#2e7d32", icon: "🏠", category: "telework" },
+  "tele-presencial": { label: "Teletrabajo y Presencial", color: "#6a1b9a", icon: "🏠🏢", category: "telework" },
+  "horario-dividido": { label: "Horario Dividido", color: "#7c3aed", icon: "⏱️", category: "onsite" },
+  "visita-comercial": { label: "Visita Comercial", color: "#795548", icon: "💼", category: "outside" },
+  "cambio": { label: "Cambio", color: "#f57c00", icon: "🔄", category: "onsite" },
+  "descanso": { label: "Descanso", color: "#64748b", icon: "💤", category: "outside" },
+  "vacaciones": { label: "Vacaciones", color: "#f97316", icon: "🏖️", category: "outside" },
+  "feriado": { label: "Feriado", color: "#ef4444", icon: "📅", category: "outside" },
+  "permiso": { label: "Permiso Otorgado por Jefatura", color: "#8b5cf6", icon: "✋", category: "outside" },
+  "dia-brigada": { label: "Día por Brigada", color: "#d32f2f", icon: "⛑️", category: "outside" },
+  "beneficio-operaciones": { label: "Día libre - beneficio operaciones", color: "#b8860b", icon: "🎁", category: "benefit" },
+  "tarde-libre": { label: "Media Jornada Libre", color: "#64748b", icon: "🕒", category: "benefit" },
+  "tele-media-libre": { label: "Teletrabajo y Media Jornada Libre", color: "#10b981", icon: "🏠⏸️", category: "telework" },
+  "media-cumple": { label: "Media Jornada Libre y Mes de Cumpleaños", color: "#607d8b", icon: "🎂", category: "benefit" },
+  "media2-cumple": { label: "Media Jornada Libre y Mes de Cumpleaños 2", color: "#607d8b", icon: "🎂", category: "benefit" },
+  "fuera-oficina": { label: "Fuera de Oficina", color: "#607d8b", icon: "🚫", category: "outside" },
+  "viaje-trabajo": { label: "Viaje de Trabajo", color: "#1a237e", icon: "✈️", category: "outside" },
+  "incapacidad-enfermedad": { label: "Incapacidad por Enfermedad", color: "#d32f2f", icon: "🏥", category: "medical" },
+  "incapacidad-accidente": { label: "Incapacidad por Accidente", color: "#c62828", icon: "🩹", category: "medical" }
+};
+
 // --- AYUDANTES ---
 
 /**
@@ -129,6 +152,125 @@ async function getSchedulesForWeek(weekKey) {
   return snapshot.val() || {};
 }
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getDailyStatusTypeMeta(tipo) {
+  if (DAILY_STATUS_TYPE_META[tipo]) {
+    return DAILY_STATUS_TYPE_META[tipo];
+  }
+
+  const fallbackLabel = String(tipo || "Sin tipo")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+  return {
+    label: fallbackLabel,
+    color: "#6b7280",
+    icon: "📌",
+    category: "other"
+  };
+}
+
+function getInitials(nombre = "", apellidos = "") {
+  const fullName = `${nombre} ${apellidos}`.trim();
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("") || "--";
+}
+
+function formatHourNumber(value) {
+  return Number(value || 0).toFixed(1);
+}
+
+function getHoursDetail(scheduleEntry = {}) {
+  const horas = Number(scheduleEntry?.horas);
+  if (Number.isFinite(horas) && horas > 0) {
+    return {
+      text: `${formatHourNumber(horas)} h`,
+      className: "has-hours"
+    };
+  }
+
+  if (scheduleEntry?.tipo === "beneficio-operaciones") {
+    return {
+      text: `${formatHourNumber(8)} h crédito`,
+      className: "has-hours"
+    };
+  }
+
+  return {
+    text: "Sin horas",
+    className: "no-hours"
+  };
+}
+
+function getTimeRangeLabel(scheduleEntry = {}) {
+  if (scheduleEntry?.horaInicio && scheduleEntry?.horaFin) {
+    return `${scheduleEntry.horaInicio} - ${scheduleEntry.horaFin}`;
+  }
+
+  if (scheduleEntry?.tipo === "tele-presencial") {
+    const tele = scheduleEntry?.horaInicioTele && scheduleEntry?.horaFinTele
+      ? `TT: ${scheduleEntry.horaInicioTele}-${scheduleEntry.horaFinTele}`
+      : null;
+    const presencial = scheduleEntry?.horaInicioPres && scheduleEntry?.horaFinPres
+      ? `Pres: ${scheduleEntry.horaInicioPres}-${scheduleEntry.horaFinPres}`
+      : null;
+    return [tele, presencial].filter(Boolean).join(" / ");
+  }
+
+  if (scheduleEntry?.tipo === "horario-dividido") {
+    const bloque1 = scheduleEntry?.horaInicioBloque1 && scheduleEntry?.horaFinBloque1
+      ? `B1: ${scheduleEntry.horaInicioBloque1}-${scheduleEntry.horaFinBloque1}`
+      : null;
+    const bloque2 = scheduleEntry?.horaInicioBloque2 && scheduleEntry?.horaFinBloque2
+      ? `B2: ${scheduleEntry.horaInicioBloque2}-${scheduleEntry.horaFinBloque2}`
+      : null;
+    return [bloque1, bloque2].filter(Boolean).join(" / ");
+  }
+
+  if (scheduleEntry?.tipo === "tele-media-libre") {
+    const tele = scheduleEntry?.horaInicio && scheduleEntry?.horaFin
+      ? `TT: ${scheduleEntry.horaInicio}-${scheduleEntry.horaFin}`
+      : null;
+    const libre = scheduleEntry?.horaInicioLibre && scheduleEntry?.horaFinLibre
+      ? `Libre: ${scheduleEntry.horaInicioLibre}-${scheduleEntry.horaFinLibre}`
+      : null;
+    return [tele, libre].filter(Boolean).join(" / ");
+  }
+
+  if (scheduleEntry?.tipo === "tarde-libre") {
+    const presencial = scheduleEntry?.horaInicio && scheduleEntry?.horaFin
+      ? `Pres: ${scheduleEntry.horaInicio}-${scheduleEntry.horaFin}`
+      : null;
+    const libre = scheduleEntry?.horaInicioLibre && scheduleEntry?.horaFinLibre
+      ? `Libre: ${scheduleEntry.horaInicioLibre}-${scheduleEntry.horaFinLibre}`
+      : null;
+    return [presencial, libre].filter(Boolean).join(" / ");
+  }
+
+  return "";
+}
+
+function getDailyCategoryCounters(entries = []) {
+  return entries.reduce((acc, entry) => {
+    const category = getDailyStatusTypeMeta(entry.schedule?.tipo).category;
+    if (category === "telework") acc.telework += 1;
+    if (category === "outside") acc.outside += 1;
+    if (category === "medical") acc.medical += 1;
+    if (category === "onsite") acc.onsite += 1;
+    return acc;
+  }, { telework: 0, outside: 0, medical: 0, onsite: 0 });
+}
+
 // --- PLANTILLAS ---
 
 // Plantillas de email y estilos
@@ -175,6 +317,36 @@ const baseStyles = `
     .day-item { flex-direction: row; justify-content: space-between; padding: 8px 12px; text-align: left; } 
     .day-label { margin-bottom: 0; font-size: 11px; }
     .day-value { font-size: 12px; }
+  }
+
+  .intro-text { margin: 0 0 24px; color: #555; font-size: 14px; }
+  .stats-row { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; }
+  .stat-card { flex: 1; min-width: 100px; background: #f8f9fa; border-radius: 10px; padding: 12px 14px; text-align: center; border: 1px solid #e8e8e8; }
+  .stat-num { font-size: 24px; font-weight: 700; color: #00830e; line-height: 1; }
+  .stat-label { font-size: 11px; color: #777; margin-top: 4px; }
+  .stat-card.warn .stat-num { color: #d32f2f; }
+  .stat-card.neutral .stat-num { color: #64748b; }
+  .dept-section { margin-bottom: 28px; }
+  .dept-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #00830e; }
+  .dept-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin: 0; }
+  .dept-count { background: #00830e; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
+  .person-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 8px; margin-bottom: 7px; border: 1px solid #eee; background: #fdfdfd; }
+  .person-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .person-info { flex: 1; min-width: 0; }
+  .person-name { font-size: 13.5px; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .person-cargo { font-size: 11.5px; color: #888; margin-top: 1px; }
+  .person-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+  .tipo-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 14px; font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .horas-detail { font-size: 11px; color: #888; background: #f0f0f0; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+  .horas-detail.has-hours { background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+  .horas-detail.no-hours { background: #f3f4f6; color: #9ca3af; }
+  .turno-info { font-size: 11px; color: #777; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .turno-time { font-weight: 600; color: #444; }
+
+  @media (max-width: 480px) {
+    .person-row { align-items: flex-start; }
+    .person-right { align-items: flex-start; }
+    .turno-info { justify-content: flex-start; }
   }
 `;
 
@@ -236,44 +408,104 @@ exports.dailyStatusReminder = functions.pubsub.schedule("0 8 * * 1-5")
       getSchedulesForWeek(weekKey),
     ]);
 
-    const teletrabajo = [];
-    const fueraOficina = [];
-
-    Object.entries(schedules).forEach(([userId, userSchedule]) => {
-      const scheduleEntry = userSchedule[dayKey];
+    const dailyEntries = Object.entries(schedules).reduce((acc, [userId, userSchedule]) => {
+      const scheduleEntry = userSchedule?.[dayKey];
       const scheduleType = scheduleEntry?.tipo;
       const user = users[userId];
 
-      if (user && scheduleType) {
-        if (scheduleType === "teletrabajo" || scheduleType === "tele-presencial" || scheduleType === "tele-media-libre") {
-          teletrabajo.push(user);
-        } else if (NO_SUMAN_HORAS.includes(scheduleType) || scheduleType === "visita-comercial") {
-          fueraOficina.push({ user, type: scheduleType });
-        }
+      if (!user || !scheduleType || scheduleType === "libre") {
+        return acc;
       }
-    });
 
-    if (teletrabajo.length === 0 && fueraOficina.length === 0) {
-      console.log("No special statuses today.");
+      acc.push({
+        user,
+        schedule: scheduleEntry,
+        typeMeta: getDailyStatusTypeMeta(scheduleType)
+      });
+      return acc;
+    }, []);
+
+    if (dailyEntries.length === 0) {
+      console.log("No schedules found for daily reminder.");
       return null;
     }
 
-    let htmlContent = `<p>Resumen de estados para hoy, <strong>${dateStr}</strong>:</p>`;
+    const dailyCounters = getDailyCategoryCounters(dailyEntries);
+    const entriesByDepartment = dailyEntries.reduce((acc, entry) => {
+      const dept = entry.user.departamento || "Sin departamento";
+      if (!acc[dept]) acc[dept] = [];
+      acc[dept].push(entry);
+      return acc;
+    }, {});
 
-    if (teletrabajo.length > 0) {
-      htmlContent += `<h3>🏠 Teletrabajo</h3>`;
-      teletrabajo.forEach(u => {
-        htmlContent += `<div class="card"><strong>${u.nombre} ${u.apellidos}</strong> <span class="tag tag-teletrabajo">Teletrabajo</span></div>`;
-      });
-    }
+    const sortedDepartments = Object.keys(entriesByDepartment).sort((left, right) => left.localeCompare(right, "es"));
 
-    if (fueraOficina.length > 0) {
-      htmlContent += `<h3>🚫 Fuera de Oficina</h3>`;
-      fueraOficina.forEach(item => {
-        const label = item.type.replace(/-/g, " ").toUpperCase();
-        htmlContent += `<div class="card" style="border-left-color: #757575;"><strong>${item.user.nombre} ${item.user.apellidos}</strong> <span class="tag tag-fuera">${label}</span></div>`;
+    let htmlContent = `
+      <p class="intro-text">Aquí está el resumen completo del personal para hoy, <strong>${escapeHtml(dateStr)}</strong>. Se muestran todos los estados registrados, agrupados por departamento.</p>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num">${dailyEntries.length}</div>
+          <div class="stat-label">Total con turno</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">${dailyCounters.telework}</div>
+          <div class="stat-label">Teletrabajo</div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-num">${dailyCounters.outside}</div>
+          <div class="stat-label">Fuera de oficina</div>
+        </div>
+        <div class="stat-card warn">
+          <div class="stat-num">${dailyCounters.medical}</div>
+          <div class="stat-label">Incapacidades</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">${dailyCounters.onsite}</div>
+          <div class="stat-label">Presenciales</div>
+        </div>
+      </div>
+    `;
+
+    sortedDepartments.forEach((department) => {
+      const deptEntries = entriesByDepartment[department].sort((left, right) => {
+        const leftName = `${left.user.nombre || ""} ${left.user.apellidos || ""}`.trim();
+        const rightName = `${right.user.nombre || ""} ${right.user.apellidos || ""}`.trim();
+        return leftName.localeCompare(rightName, "es");
       });
-    }
+
+      htmlContent += `
+        <div class="dept-section">
+          <div class="dept-header">
+            <h2 class="dept-title">${escapeHtml(department)}</h2>
+            <span class="dept-count">${deptEntries.length} ${deptEntries.length === 1 ? "persona" : "personas"}</span>
+          </div>
+      `;
+
+      deptEntries.forEach(({ user, schedule, typeMeta }) => {
+        const fullName = `${user.nombre || ""} ${user.apellidos || ""}`.trim() || "Usuario sin nombre";
+        const cargo = user.cargo || "Sin cargo";
+        const hoursDetail = getHoursDetail(schedule);
+        const timeRangeLabel = getTimeRangeLabel(schedule);
+
+        htmlContent += `
+          <div class="person-row">
+            <div class="person-avatar" style="background:${typeMeta.color};">${escapeHtml(getInitials(user.nombre, user.apellidos))}</div>
+            <div class="person-info">
+              <div class="person-name">${escapeHtml(fullName)}</div>
+              <div class="person-cargo">${escapeHtml(cargo)}</div>
+            </div>
+            <div class="person-right">
+              <span class="tipo-badge" style="background:${typeMeta.color};">${typeMeta.icon} ${escapeHtml(typeMeta.label)}</span>
+              ${timeRangeLabel
+                ? `<span class="turno-info"><span class="turno-time">${escapeHtml(timeRangeLabel)}</span> · <span class="horas-detail ${hoursDetail.className}">${escapeHtml(hoursDetail.text)}</span></span>`
+                : `<span class="horas-detail ${hoursDetail.className}">${escapeHtml(hoursDetail.text)}</span>`}
+            </div>
+          </div>
+        `;
+      });
+
+      htmlContent += `</div>`;
+    });
 
     const finalHtml = createEmailTemplate("Estado del Personal - Hoy", htmlContent);
     

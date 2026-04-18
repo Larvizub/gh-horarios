@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Preview: Estado del Personal - Hoy</title>
+  <style>
+    /* Reset */
+    * { box-sizing: border-box; }
+    body { background: #e8eaf0; margin: 0; padding: 30px 16px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    /* Wrapper simulando cliente de correo */
+    .email-wrapper { max-width: 640px; margin: 0 auto; }
+
+    /* Barra de asunto simulada */
+    .subject-bar {
+      background: #fff;
+      border-radius: 10px 10px 0 0;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 13px;
+      color: #555;
+    }
+    .subject-bar strong { color: #111; font-size: 15px; display: block; margin-bottom: 4px; }
+
+    /* Contenedor del correo */
+    .container {
+      background: #ffffff;
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #00830e 0%, #005a0a 100%);
+      padding: 36px 24px 28px;
+      text-align: center;
+    }
+    .logo-box {
+      background: #fff;
+      width: 76px; height: 76px;
+      border-radius: 16px;
+      margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+    .logo-box img { width: 56px; height: 56px; object-fit: contain; }
+    .header h1 { color: #fff; font-size: 21px; font-weight: 700; margin: 0 0 6px; letter-spacing: 0.3px; }
+    .header .subtitle { color: rgba(255,255,255,0.85); font-size: 12.5px; margin: 0; }
+    .header .date-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-top: 12px;
+      letter-spacing: 0.4px;
+    }
+
+    /* Content */
+    .content { padding: 28px 32px; font-size: 14.5px; line-height: 1.65; color: #444; }
+
+    /* Intro */
+    .intro-text { margin: 0 0 24px; color: #555; font-size: 14px; }
+    .intro-text strong { color: #00830e; }
+
+    /* Stats row */
+    .stats-row {
+      display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1; min-width: 100px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: center;
+      border: 1px solid #e8e8e8;
+    }
+    .stat-card .stat-num { font-size: 24px; font-weight: 700; color: #00830e; line-height: 1; }
+    .stat-card .stat-label { font-size: 11px; color: #777; margin-top: 4px; }
+    .stat-card.warn .stat-num { color: #d32f2f; }
+    .stat-card.neutral .stat-num { color: #64748b; }
+
+    /* Departamento section */
+    .dept-section { margin-bottom: 28px; }
+    .dept-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #00830e;
+    }
+    .dept-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin: 0; }
+    .dept-count {
+      background: #00830e;
+      color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px;
+      margin-left: auto;
+    }
+
+    /* Persona row */
+    .person-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 14px;
+      border-radius: 8px;
+      margin-bottom: 7px;
+      border: 1px solid #eee;
+      background: #fdfdfd;
+    }
+    .person-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .person-info { flex: 1; min-width: 0; }
+    .person-name { font-size: 13.5px; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .person-cargo { font-size: 11.5px; color: #888; margin-top: 1px; }
+    .person-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+
+    /* Tipo badge */
+    .tipo-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11px; font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Horas detail */
+    .horas-detail {
+      font-size: 11px; color: #888;
+      background: #f0f0f0; padding: 3px 8px; border-radius: 6px;
+      white-space: nowrap;
+    }
+    .horas-detail.has-hours { background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+    .horas-detail.no-hours { background: #f3f4f6; color: #9ca3af; }
+
+    /* Horas turno info */
+    .turno-info {
+      font-size: 11px; color: #777;
+      display: flex; gap: 4px; align-items: center;
+    }
+    .turno-time { font-weight: 600; color: #444; }
+
+    /* Footer */
+    .footer {
+      background: #f8f9fa;
+      padding: 22px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+      border-top: 1px solid #eee;
+    }
+    .footer p { margin: 0 0 5px; }
+    .footer p:last-child { margin: 0; color: #bbb; }
+
+    /* Leyenda de tipos */
+    .legend {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 24px;
+      border: 1px solid #e8e8e8;
+    }
+    .legend-title { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+    .legend-items { display: flex; flex-wrap: wrap; gap: 7px; }
+    .legend-dot {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; color: #555;
+    }
+    .legend-dot span {
+      width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0;
+    }
+
+    /* Divider */
+    .divider { border: none; border-top: 1px solid #f0f0f0; margin: 20px 0; }
+  </style>
+</head>
+<body>
+<div class="email-wrapper">
+
+  <!-- Barra de asunto simulada -->
+  <div class="subject-bar">
+    <strong>Estado del Personal — lunes 20 de abril de 2026</strong>
+    De: <em>notificaciones@costaricacc.com</em> &nbsp;·&nbsp; Para: Todo el personal
+  </div>
+
+  <div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="logo-box">
+        <img src="https://costaricacc.com/cccr/Logocccr.png" alt="Logo CCCR" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=\'color:#00830e;font-weight:700;font-size:18px;\'>CC</span>'" />
+      </div>
+      <h1>Estado del Personal — Hoy</h1>
+      <p class="subtitle">Sistema de Horarios — Notificación Automática</p>
+      <span class="date-badge">📅 Lunes, 20 de abril de 2026</span>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <p class="intro-text">
+        Aquí está el resumen completo del personal para hoy. Se muestran todos los estados registrados, agrupados por departamento.
+      </p>
+
+      <!-- Stats resumen -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num">18</div>
+          <div class="stat-label">Total con turno</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">5</div>
+          <div class="stat-label">Teletrabajo</div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-num">4</div>
+          <div class="stat-label">Fuera de oficina</div>
+        </div>
+        <div class="stat-card warn">
+          <div class="stat-num">2</div>
+          <div class="stat-label">Incapacitados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">7</div>
+          <div class="stat-label">Presenciales</div>
+        </div>
+      </div>
+
+      <!-- Leyenda de colores -->
+      <div class="legend">
+        <div class="legend-title">Referencia de tipos</div>
+        <div class="legend-items">
+          <span class="legend-dot"><span style="background:#00830e"></span>Presencial</span>
+          <span class="legend-dot"><span style="background:#2e7d32"></span>Teletrabajo</span>
+          <span class="legend-dot"><span style="background:#6a1b9a"></span>Tele &amp; Presencial</span>
+          <span class="legend-dot"><span style="background:#7c3aed"></span>Horario Dividido</span>
+          <span class="legend-dot"><span style="background:#f97316"></span>Vacaciones</span>
+          <span class="legend-dot"><span style="background:#64748b"></span>Descanso</span>
+          <span class="legend-dot"><span style="background:#8b5cf6"></span>Permiso</span>
+          <span class="legend-dot"><span style="background:#d32f2f"></span>Incapacidad Enf.</span>
+          <span class="legend-dot"><span style="background:#c62828"></span>Incapacidad Acc.</span>
+          <span class="legend-dot"><span style="background:#607d8b"></span>Fuera de Oficina</span>
+          <span class="legend-dot"><span style="background:#1a237e"></span>Viaje de Trabajo</span>
+          <span class="legend-dot"><span style="background:#10b981"></span>Tele &amp; Media Libre</span>
+          <span class="legend-dot"><span style="background:#f57c00"></span>Cambio</span>
+          <span class="legend-dot"><span style="background:#795548"></span>Visita Comercial</span>
+          <span class="legend-dot"><span style="background:#ffd700;border:1px solid #ccc"></span>Beneficio Operac.</span>
+        </div>
+      </div>
+
+      <!-- ======================================== -->
+      <!-- DEPARTAMENTO: Gastronomía -->
+      <!-- ======================================== -->
+      <div class="dept-section">
+        <div class="dept-header">
+          <h2 class="dept-title">🍽️ Gastronomía</h2>
+          <span class="dept-count">5 personas</span>
+        </div>
+
+        <!-- Presencial -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#00830e;">AM</div>
+          <div class="person-info">
+            <div class="person-name">Ana Mora Jiménez</div>
+            <div class="person-cargo">Chef de Banquetes</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#00830e;">🏢 Presencial</span>
+            <span class="turno-info"><span class="turno-time">07:00 – 15:00</span> · <span class="horas-detail has-hours">8.0 h</span></span>
+          </div>
+        </div>
+
+        <!-- Teletrabajo -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#2e7d32;">CR</div>
+          <div class="person-info">
+            <div class="person-name">Carlos Rodríguez Salas</div>
+            <div class="person-cargo">Coordinador de Eventos</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#2e7d32;">🏠 Teletrabajo</span>
+            <span class="turno-info"><span class="turno-time">08:00 – 17:00</span> · <span class="horas-detail has-hours">9.0 h</span></span>
+          </div>
+        </div>
+
+        <!-- Tele & Presencial -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#6a1b9a;">LV</div>
+          <div class="person-info">
+            <div class="person-name">Laura Vargas Castro</div>
+            <div class="person-cargo">Asistente de Cocina</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#6a1b9a;">🏠🏢 Tele &amp; Presencial</span>
+            <span class="turno-info">
+              TT: <span class="turno-time">08:00–12:00</span> / Pres: <span class="turno-time">13:00–17:00</span>
+              · <span class="horas-detail has-hours">8.0 h</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Vacaciones -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#f97316;">MH</div>
+          <div class="person-info">
+            <div class="person-name">Miguel Herrera Pérez</div>
+            <div class="person-cargo">Mesero Senior</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#f97316;">🏖️ Vacaciones</span>
+            <span class="horas-detail no-hours">Sin horas</span>
+          </div>
+        </div>
+
+        <!-- Incapacidad Enfermedad -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#d32f2f;">PG</div>
+          <div class="person-info">
+            <div class="person-name">Patricia González Lobo</div>
+            <div class="person-cargo">Nutricionista</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#d32f2f;">🏥 Incapacidad por Enfermedad</span>
+            <span class="horas-detail no-hours">Sin horas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================== -->
+      <!-- DEPARTAMENTO: Planeación de Eventos -->
+      <!-- ======================================== -->
+      <div class="dept-section">
+        <div class="dept-header">
+          <h2 class="dept-title">📋 Planeación de Eventos</h2>
+          <span class="dept-count">4 personas</span>
+        </div>
+
+        <!-- Presencial -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#00830e;">SB</div>
+          <div class="person-info">
+            <div class="person-name">Sofía Brenes Alpízar</div>
+            <div class="person-cargo">Jefa de Planeación</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#00830e;">🏢 Presencial</span>
+            <span class="turno-info"><span class="turno-time">08:00 – 17:00</span> · <span class="horas-detail has-hours">9.0 h</span></span>
+          </div>
+        </div>
+
+        <!-- Horario Dividido -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#7c3aed;">JQ</div>
+          <div class="person-info">
+            <div class="person-name">José Quesada Mora</div>
+            <div class="person-cargo">Asistente de Logística</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#7c3aed;">⏱️ Horario Dividido</span>
+            <span class="turno-info">
+              B1: <span class="turno-time">07:00–11:00</span> / B2: <span class="turno-time">14:00–18:00</span>
+              · <span class="horas-detail has-hours">8.0 h</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Viaje de Trabajo -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#1a237e;">RF</div>
+          <div class="person-info">
+            <div class="person-name">Roberto Fallas Arias</div>
+            <div class="person-cargo">Ejecutivo de Cuentas</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#1a237e;">✈️ Viaje de Trabajo</span>
+            <span class="turno-info"><span class="turno-time">06:00 – 22:00</span> · <span class="horas-detail has-hours">10.0 h</span></span>
+          </div>
+        </div>
+
+        <!-- Permiso -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#8b5cf6;">KM</div>
+          <div class="person-info">
+            <div class="person-name">Karla Méndez Solano</div>
+            <div class="person-cargo">Coordinadora Junior</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#8b5cf6;">✋ Permiso Jefatura</span>
+            <span class="horas-detail no-hours">Sin horas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================== -->
+      <!-- DEPARTAMENTO: Infraestructura -->
+      <!-- ======================================== -->
+      <div class="dept-section">
+        <div class="dept-header">
+          <h2 class="dept-title">🔧 Infraestructura</h2>
+          <span class="dept-count">4 personas</span>
+        </div>
+
+        <!-- Presencial -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#00830e;">DO</div>
+          <div class="person-info">
+            <div class="person-name">Diego Oviedo Campos</div>
+            <div class="person-cargo">Técnico de Mantenimiento</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#00830e;">🏢 Presencial</span>
+            <span class="turno-info"><span class="turno-time">06:00 – 14:00</span> · <span class="horas-detail has-hours">8.0 h</span></span>
+          </div>
+        </div>
+
+        <!-- Cambio de turno -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#f57c00;">EA</div>
+          <div class="person-info">
+            <div class="person-name">Esteban Araya Quirós</div>
+            <div class="person-cargo">Operario</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#f57c00;">🔄 Cambio</span>
+            <span class="turno-info"><span class="turno-time">14:00 – 22:00</span> · <span class="horas-detail has-hours">8.0 h</span></span>
+          </div>
+        </div>
+
+        <!-- Incapacidad Accidente -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#c62828;">MR</div>
+          <div class="person-info">
+            <div class="person-name">Manuel Rojas Espinoza</div>
+            <div class="person-cargo">Electricista</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#c62828;">🩹 Incapacidad por Accidente</span>
+            <span class="horas-detail no-hours">Sin horas</span>
+          </div>
+        </div>
+
+        <!-- Descanso -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#64748b;">GN</div>
+          <div class="person-info">
+            <div class="person-name">Gabriela Núñez Jiménez</div>
+            <div class="person-cargo">Supervisora de Turno</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#64748b;">💤 Descanso</span>
+            <span class="horas-detail no-hours">Sin horas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================== -->
+      <!-- DEPARTAMENTO: Sistemas -->
+      <!-- ======================================== -->
+      <div class="dept-section">
+        <div class="dept-header">
+          <h2 class="dept-title">💻 Sistemas</h2>
+          <span class="dept-count">3 personas</span>
+        </div>
+
+        <!-- Teletrabajo -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#2e7d32;">AC</div>
+          <div class="person-info">
+            <div class="person-name">Alejandro Coto Villalobos</div>
+            <div class="person-cargo">Desarrollador Sr.</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#2e7d32;">🏠 Teletrabajo</span>
+            <span class="turno-info"><span class="turno-time">08:00 – 17:00</span> · <span class="horas-detail has-hours">9.0 h</span></span>
+          </div>
+        </div>
+
+        <!-- Tele & Media Libre -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#10b981;">NP</div>
+          <div class="person-info">
+            <div class="person-name">Natalia Porras Sánchez</div>
+            <div class="person-cargo">Analista de Sistemas</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#10b981;">🏠⏸️ Tele &amp; Media Jornada Libre</span>
+            <span class="turno-info">TT: <span class="turno-time">08:00–12:00</span> · <span class="horas-detail has-hours">4.5 h</span></span>
+          </div>
+        </div>
+
+        <!-- Visita Comercial -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#795548;">BT</div>
+          <div class="person-info">
+            <div class="person-name">Beatriz Torres Mora</div>
+            <div class="person-cargo">Gestora Comercial</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#795548;">💼 Visita Comercial</span>
+            <span class="turno-info"><span class="turno-time">09:00 – 16:00</span> · <span class="horas-detail has-hours">7.0 h</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================== -->
+      <!-- DEPARTAMENTO: Talento Humano -->
+      <!-- ======================================== -->
+      <div class="dept-section">
+        <div class="dept-header">
+          <h2 class="dept-title">👥 Talento Humano</h2>
+          <span class="dept-count">2 personas</span>
+        </div>
+
+        <!-- Beneficio Operaciones -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#b8860b;">YL</div>
+          <div class="person-info">
+            <div class="person-name">Yolanda Lara Fonseca</div>
+            <div class="person-cargo">Analista de RRHH</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#b8860b; color:#fff;">🎁 Beneficio Operaciones</span>
+            <span class="horas-detail has-hours">8.0 h crédito</span>
+          </div>
+        </div>
+
+        <!-- Fuera de Oficina -->
+        <div class="person-row">
+          <div class="person-avatar" style="background:#607d8b;">FE</div>
+          <div class="person-info">
+            <div class="person-name">Fernando Esquivel Mata</div>
+            <div class="person-cargo">Reclutador</div>
+          </div>
+          <div class="person-right">
+            <span class="tipo-badge" style="background:#607d8b;">🚫 Fuera de Oficina</span>
+            <span class="horas-detail no-hours">Sin horas</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <p>Este es un mensaje automático del Sistema de Horarios.</p>
+      <p>© 2026 Centro de Convenciones de Costa Rica &amp; Grupo Heroica</p>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /email-wrapper -->
+</body>
+</html>
