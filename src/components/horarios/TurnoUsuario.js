@@ -92,14 +92,15 @@ const TurnoUsuario = memo(({
   // Color del icono de copiar
   const copiarColor = soloLabel ? '#222' : '#fff';
 
-  // Colores para split: superior = color por contrato (usar siempre `contratoMain`), inferior = color por tipo (o fallback)
+  // Colores para split: superior = color por contrato (usar `contratoMain`), inferior = color por tipo (o fallback)
   const topColor = contratoMain;
+  // Por defecto priorizamos el color del contrato para tarjetas "presencial"
+  // (ej. usuarios con tipoContrato 'operativo' deben verse en azul),
+  // salvo cuando el turno es un beneficio o requiere split. En otros casos
+  // preferimos el color configurado para el tipo de horario.
   let tipoColorComputed = tieneHorario ? (
-    // Si la tarjeta es presencial, mantener contratoMain **solo si NO es beneficio**
-    // y **no** necesita split (tele+libre, tarde-libre, etc.).
     (esTarjetaPresencialFinal && !esBeneficio && !necesitaSplit) ? contratoMain :
-    // Preferir el color configurado en el catálogo del tipo cuando exista.
-    colorTipoDinamico || (
+    (colorTipoDinamico || (
       horario.tipo === 'viaje-trabajo' ? '#1a237e' :
       horario.tipo === 'visita-comercial' ? '#795548' :
       horario.tipo === 'tele-presencial' ? '#6a1b9a' :
@@ -107,7 +108,7 @@ const TurnoUsuario = memo(({
       horario.tipo === 'cambio' ? '#f57c00' :
       !contratoOperativo ? '#fff' :
       usuario.id === currentUser?.uid ? '#00830e' : '#6c757d'
-    )
+    ))
   ) : '#ffffff';
 
   // Si el turno combina teletrabajo y tiempo libre, preferir el color configurado
@@ -257,8 +258,10 @@ const TurnoUsuario = memo(({
           overflow: 'hidden',
           /* Vacaciones/Descanso/Incapacidad: usar fondo sólido con color configurado.
              Si el turno es de tipo que requiere 'split' (p. ej. tele-media-libre, tarde-libre,
-             o combina tele + libre), mostrar un gradient. En el resto de casos (p.ej. solo
-             teletrabajo) mostrar fondo sólido con el color del tipo. */
+             o combina tele + libre), mostrar un gradient (transparent en backgroundColor
+             porque el gradient se aplica en backgroundImage). En casillas presenciales
+             que no son beneficio ni split, priorizamos el color del contrato (`contratoMain`).
+             En el resto se usa el color del tipo cuando exista, o el fallback calculado. */
           backgroundColor: tieneHorario
             ? (esVacaciones
                 ? vacationBg
@@ -266,7 +269,7 @@ const TurnoUsuario = memo(({
                   ? descansoBg
                   : esIncapacidad
                     ? incapacidadBg
-                    : (necesitaSplit ? 'transparent' : (tipoCatalogo?.color || tipoColorComputed)))
+                    : (necesitaSplit ? 'transparent' : ((esTarjetaPresencialFinal && !esBeneficio) ? contratoMain : (tipoCatalogo?.color || tipoColorComputed))))
             : 'transparent',
           backgroundImage: (tieneHorario && !esVacaciones && !esDescanso && !esIncapacidad && horario?.tipo !== 'viaje-trabajo')
             ? (!soloLabel && necesitaSplit

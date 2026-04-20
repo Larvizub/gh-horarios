@@ -12,6 +12,7 @@ import {
   ROLES 
 } from '../../utils/contratoUtils';
 import useTiposContrato from '../../hooks/useTiposContrato';
+import { getTipoContratoColorPalette } from '../../utils/tiposContrato';
 import TipoContratoChip from '../common/TipoContratoChip';
 import { ref as dbRef, update } from 'firebase/database';
 import {
@@ -204,7 +205,7 @@ const puedeEliminarUsuarios = (usuario) => {
 const Personal = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { tipos: tiposContrato } = useTiposContrato();
+  const { tipos: tiposContrato, tiposMap } = useTiposContrato();
   
   // Flag para prevenir actualizaciones después de desmontar
   const mountedRef = useRef(true);
@@ -475,15 +476,22 @@ const Personal = () => {
   // Vista móvil con cards
   const renderMobileView = () => (
     <Box>
-      {filteredUsuarios.map((usuario) => (
-        <UserCard key={usuario.id}>
+      {filteredUsuarios.map((usuario) => {
+        const palette = getTipoContratoColorPalette(usuario.tipoContrato || 'Operativo', tiposMap);
+        const contratoMain = palette?.main || '#00830e';
+        const contratoDark = palette?.dark || contratoMain;
+        const contratoText = palette?.text || '#ffffff';
+
+        return (
+        <UserCard key={usuario.id} sx={{ borderLeft: `6px solid ${contratoMain}` }}>
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
               <Avatar 
                 sx={{ 
                   width: 50, 
                   height: 50, 
-                  bgcolor: '#00830e',
+                  bgcolor: contratoMain,
+                  color: contratoText,
                   fontSize: '1.1rem',
                   fontWeight: 600,
                 }}
@@ -511,7 +519,7 @@ const Personal = () => {
                     size="small" 
                     sx={{ height: 24, fontSize: '0.7rem' }}
                   />
-                  <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} />
+                  <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} tiposMap={tiposMap} />
                   {usuario.rol && (
                     <Chip 
                       label={usuario.rol} 
@@ -525,7 +533,7 @@ const Personal = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                 <ActionButton 
                   onClick={() => irAEdicion(usuario)} 
-                  sx={{ bgcolor: alpha('#00830e', 0.1), color: '#00830e' }}
+                  sx={{ bgcolor: alpha(contratoMain, 0.1), color: contratoMain }}
                 >
                   <EditIcon fontSize="small" />
                 </ActionButton>
@@ -541,7 +549,8 @@ const Personal = () => {
             </Box>
           </CardContent>
         </UserCard>
-      ))}
+        );
+      })}
     </Box>
   );
 
@@ -578,107 +587,114 @@ const Personal = () => {
           </TableRow>
         </StyledTableHead>
         <TableBody>
-          {filteredUsuarios.map((usuario) => (
-            <StyledTableRow key={usuario.id}>
-              <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#00830e', fontSize: '0.85rem' }}>
-                    {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
-                  </Avatar>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {usuario.nombre} {usuario.apellidos}
-                  </Typography>
-                </Box>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2" color="text.secondary">{usuario.email}</Typography>
-              </TableCell>
-              <TableCell>
-                <Chip
-                  label={usuario.departamento}
-                  size="small"
-                  sx={{ 
-                    fontWeight: 500, 
-                    bgcolor: alpha('#00830e', 0.1),
-                    color: '#00830e',
-                  }}
-                />
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2">{usuario.cargo}</Typography>
-              </TableCell>
-              <TableCell>
-                {puedeModificarTipoContrato(currentUser) ? (
-                  <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <Select
-                      value={usuario.tipoContrato || 'Operativo'}
-                      onChange={(e) => handleCambiarTipoContrato(usuario.id, e.target.value)}
+          {filteredUsuarios.map((usuario) => {
+              const palette = getTipoContratoColorPalette(usuario.tipoContrato || 'Operativo', tiposMap);
+              const contratoMain = palette?.main || '#00830e';
+              const contratoDark = palette?.dark || contratoMain;
+              const contratoText = palette?.text || '#ffffff';
+
+              return (
+                <StyledTableRow key={usuario.id}>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box sx={{ width: 6, height: 36, borderRadius: 1, background: `linear-gradient(180deg, ${contratoMain}, ${contratoDark})` }} />
+                      <Avatar sx={{ width: 36, height: 36, bgcolor: contratoMain, color: contratoText, fontSize: '0.85rem' }}>
+                        {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
+                      </Avatar>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {usuario.nombre} {usuario.apellidos}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">{usuario.email}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={usuario.departamento}
+                      size="small"
                       sx={{ 
-                        bgcolor: 'white', 
-                        borderRadius: 2,
-                        '& .MuiSelect-select': { py: 0.75, fontSize: '0.8rem' }
+                        fontWeight: 500, 
+                        bgcolor: alpha(contratoMain, 0.08),
+                        color: contratoMain,
                       }}
-                    >
-                        {tiposContrato.map((tipoContrato) => (
-                          <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                              <TipoContratoChip value={tipoContrato.key} label={tipoContrato.label} sx={{ minWidth: 120 }} />
-                            </Box>
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} />
-                )}
-              </TableCell>
-              <TableCell>
-                {puedeAsignarRoles(currentUser) ? (
-                  <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <Select
-                      value={usuario.rol || 'Sin rol'}
-                      onChange={(e) => handleCambiarRol(usuario.id, e.target.value)}
-                      sx={{ 
-                        bgcolor: 'white', 
-                        borderRadius: 2,
-                        '& .MuiSelect-select': { py: 0.75, fontSize: '0.8rem' }
-                      }}
-                    >
-                      <MenuItem value="Sin rol">Sin rol</MenuItem>
-                      <MenuItem value={ROLES.ADMINISTRADOR}>Admin</MenuItem>
-                      <MenuItem value={ROLES.MODIFICADOR}>Modificador</MenuItem>
-                      <MenuItem value={ROLES.VISOR}>Visor</MenuItem>
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <Chip
-                    label={usuario.rol || 'Sin rol'}
-                    color={obtenerColorRol(usuario.rol)}
-                    size="small"
-                  />
-                )}
-              </TableCell>
-              <TableCell>
-                {usuario.departamento === 'Practicantes/Crosstraining' ? (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {usuario.departamentosAutorizados?.slice(0, 2).map(dep => (
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{usuario.cargo}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    {puedeModificarTipoContrato(currentUser) ? (
+                      <FormControl size="small" sx={{ minWidth: 100 }}>
+                        <Select
+                          value={usuario.tipoContrato || 'Operativo'}
+                          onChange={(e) => handleCambiarTipoContrato(usuario.id, e.target.value)}
+                          sx={{ 
+                            bgcolor: 'white', 
+                            borderRadius: 2,
+                            '& .MuiSelect-select': { py: 0.75, fontSize: '0.8rem' }
+                          }}
+                        >
+                            {tiposContrato.map((tipoContrato) => (
+                              <MenuItem key={tipoContrato.key} value={tipoContrato.label}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                  <TipoContratoChip value={tipoContrato.key} label={tipoContrato.label} sx={{ minWidth: 120 }} tiposMap={tiposMap} />
+                                </Box>
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
+                    ) : (
+                      <TipoContratoChip value={usuario.tipoContrato || 'Operativo'} tiposMap={tiposMap} />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {puedeAsignarRoles(currentUser) ? (
+                      <FormControl size="small" sx={{ minWidth: 100 }}>
+                        <Select
+                          value={usuario.rol || 'Sin rol'}
+                          onChange={(e) => handleCambiarRol(usuario.id, e.target.value)}
+                          sx={{ 
+                            bgcolor: 'white', 
+                            borderRadius: 2,
+                            '& .MuiSelect-select': { py: 0.75, fontSize: '0.8rem' }
+                          }}
+                        >
+                          <MenuItem value="Sin rol">Sin rol</MenuItem>
+                          <MenuItem value={ROLES.ADMINISTRADOR}>Admin</MenuItem>
+                          <MenuItem value={ROLES.MODIFICADOR}>Modificador</MenuItem>
+                          <MenuItem value={ROLES.VISOR}>Visor</MenuItem>
+                        </Select>
+                      </FormControl>
+                    ) : (
                       <Chip
-                        key={dep}
-                        label={dep}
+                        label={usuario.rol || 'Sin rol'}
+                        color={obtenerColorRol(usuario.rol)}
                         size="small"
-                        variant="outlined"
-                        sx={{ fontSize: '0.65rem', height: 22 }}
-                      />
-                    ))}
-                    {(usuario.departamentosAutorizados?.length || 0) > 2 && (
-                      <Chip
-                        label={`+${usuario.departamentosAutorizados.length - 2}`}
-                        size="small"
-                        sx={{ fontSize: '0.65rem', height: 22 }}
                       />
                     )}
-                  </Box>
-                ) : (
+                  </TableCell>
+                  <TableCell>
+                    {usuario.departamento === 'Practicantes/Crosstraining' ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {usuario.departamentosAutorizados?.slice(0, 2).map(dep => (
+                          <Chip
+                            key={dep}
+                            label={dep}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.65rem', height: 22 }}
+                          />
+                        ))}
+                        {(usuario.departamentosAutorizados?.length || 0) > 2 && (
+                          <Chip
+                            label={`+${usuario.departamentosAutorizados.length - 2}`}
+                            size="small"
+                            sx={{ fontSize: '0.65rem', height: 22 }}
+                          />
+                        )}
+                      </Box>
+                    ) : (
                   <Typography variant="caption" color="text.secondary">—</Typography>
                 )}
               </TableCell>

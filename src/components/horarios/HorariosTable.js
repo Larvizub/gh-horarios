@@ -229,7 +229,8 @@ const MobileUserRow = memo(({
   handleCopiarHorario,
   jornadasOrdinariasMap,
   feriadosPorFecha,
-  feriadosMap
+  feriadosMap,
+  tiposMap,
 }) => {
   const horasSumaSemanal = horasTotales + horasBeneficio;
 
@@ -257,6 +258,7 @@ const MobileUserRow = memo(({
             <TipoContratoChip
               value={usuario.tipoContrato}
               label={tipoContratoLabel}
+              tiposMap={tiposMap}
               showRange
               sx={{
                 width: '100%',
@@ -286,7 +288,7 @@ const MobileUserRow = memo(({
               return (
                 <Grid item sx={{ width: '14.28%', flexBasis: '14.28%' }} key={diaKey}>
                   <Tooltip title={tooltipTitle} arrow placement="top">
-                    <DaySlot
+                      <DaySlot
                       data-dia-key={diaKey}
                       hasSchedule={tieneHorario}
                       scheduleType={horario?.tipo}
@@ -294,7 +296,6 @@ const MobileUserRow = memo(({
                       isFeriado={esFeriado}
                       sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : undefined}
                       onClick={() => {
-                        if (clipboard && editando) { toggleTarget(usuario.id, diaKey); return; }
                         if (editando) handleCambiarTurno(usuario.id, diaKey);
                       }}
                     >
@@ -382,7 +383,8 @@ const DesktopUserRow = memo(({
   NO_SUMAN_HORAS,
   feriadosPorFecha,
   feriadosMap,
-  jornadasOrdinariasMap
+  jornadasOrdinariasMap,
+  tiposMap,
 }) => {
   const horasSumaSemanal = horasTotales + horasBeneficio;
 
@@ -408,6 +410,7 @@ const DesktopUserRow = memo(({
             <TipoContratoChip
               value={usuario.tipoContrato}
               label={tipoContratoLabel}
+              tiposMap={tiposMap}
               showRange
               sx={{
                 width: '100%',
@@ -520,7 +523,7 @@ const HorariosTable = memo(({
   jornadasOrdinariasMap
 }) => {
   const [selectedTargets, setSelectedTargets] = useState(new Set());
-  const { getTipoContratoLabel } = useTiposContrato();
+  const { getTipoContratoLabel, tiposMap: tiposContratoMap } = useTiposContrato();
   const { tiposMap: tiposHorarioMap } = useTiposHorario();
 
   const horariosEditadosVista = useMemo(() => {
@@ -671,6 +674,7 @@ const HorariosTable = memo(({
                   jornadasOrdinariasMap={jornadasOrdinariasMap}
                   feriadosPorFecha={feriadosPorFecha}
                   feriadosMap={feriadosMap}
+                  tiposMap={tiposContratoMap}
                 />
               </Box>
             );
@@ -790,6 +794,7 @@ const HorariosTable = memo(({
                 NO_SUMAN_HORAS={NO_SUMAN_HORAS}
                 feriadosPorFecha={feriadosPorFecha}
                 feriadosMap={feriadosMap}
+                tiposMap={tiposContratoMap}
               />
             );
           })}

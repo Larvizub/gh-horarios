@@ -20,6 +20,8 @@ import HomeWorkIcon from '@mui/icons-material/HomeWork';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import CloseIcon from '@mui/icons-material/Close';
 import useTiposHorario from '../../hooks/useTiposHorario';
+import useTiposContrato from '../../hooks/useTiposContrato';
+import { getTipoContratoColorPalette } from '../../utils/tiposContrato';
 import { getTipoIconComponent } from '../../utils/tiposHorario';
 import { obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
 
@@ -131,6 +133,11 @@ const getTipoIcon = (tipo, tipoConfig) => {
 
 const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccionada, jornadasOrdinariasMap = {} }) => {
   const { getTipoLabel, tiposMap } = useTiposHorario();
+  const { tiposMap: tiposContratoMap } = useTiposContrato();
+
+  const contratoPalette = getTipoContratoColorPalette(usuario?.tipoContrato, tiposContratoMap);
+  const contratoMain = contratoPalette?.main || '#00830e';
+  const contratoText = contratoPalette?.text || '#ffffff';
 
   const getDiaInfo = () => {
     if (!diaKey) return { nombre: '', fecha: '' };
@@ -181,16 +188,16 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
           <InfoCard>
             <InfoRow>
               <Avatar
-                sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: alpha('#00830e', 0.1),
-                  color: '#00830e',
-                  fontWeight: 700,
-                }}
-              >
-                {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
-              </Avatar>
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    bgcolor: alpha(contratoMain, 0.12),
+                    color: contratoMain,
+                    fontWeight: 700,
+                  }}
+                >
+                  {usuario.nombre?.charAt(0)}{usuario.apellidos?.charAt(0)}
+                </Avatar>
               <Box sx={{ flex: 1 }}>
                 <InfoLabel>Colaborador</InfoLabel>
                 <InfoValue>{usuario.nombre} {usuario.apellidos}</InfoValue>
@@ -245,12 +252,12 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
                   <Box sx={{ flex: 1 }}>
                     <InfoLabel>Horas Laboradas</InfoLabel>
                   </Box>
-                  <HoursChip
-                    icon={<AccessTimeIcon />}
-                    label={`${horasLaboradas.toFixed(1)}h`}
-                    color="primary"
-                    variant="outlined"
-                  />
+                    <HoursChip
+                      icon={<AccessTimeIcon />}
+                      label={`${horasLaboradas.toFixed(1)}h`}
+                      variant="outlined"
+                      sx={{ borderColor: alpha(contratoMain, 0.18), color: contratoMain }}
+                    />
                 </Box>
               </InfoRow>
 
