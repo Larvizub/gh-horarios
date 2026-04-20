@@ -1066,6 +1066,7 @@ const Horarios = () => {
       diaKey,
       tipo,
       nota,
+      entregables,
       // nuevos campos para tele-presencial
       horaInicioTele,
       horaFinTele,
@@ -1361,7 +1362,8 @@ const Horarios = () => {
       const horarioGuardado = crearHorarioBase({
         tipo,
         horas: horasCredito,
-        nota: nota || ''
+        nota: nota || '',
+        entregables: entregables || ''
       });
 
       void validarJornadaYGuardar(horarioGuardado, horasCredito);
@@ -1375,14 +1377,16 @@ const Horarios = () => {
         horaInicio: '00:00',
         horaFin: '00:00',
         horas: 0,
-        nota: nota || ''
+        nota: nota || '',
+        entregables: entregables || ''
       };
       void guardarHorarioEnEstado({
         tipo,
         horaInicio: '00:00',
         horaFin: '00:00',
         horas: 0,
-        nota: nota || ''
+        nota: nota || '',
+        entregables: entregables || ''
       });
       return;
     }
@@ -1439,7 +1443,8 @@ const Horarios = () => {
         horaFinPres,
         horasPres,
         horas: horasTrabajadas,
-        nota: nota || ''
+        nota: nota || '',
+        entregables: entregables || ''
       });
 
       void validarJornadaYGuardar(horarioGuardado, horasTrabajadas);
@@ -1482,7 +1487,8 @@ const Horarios = () => {
         horaFinBloque2,
         horasBloque2,
         horas: horasTrabajadas,
-        nota: nota || ''
+        nota: nota || '',
+        entregables: entregables || ''
       });
 
       void validarJornadaYGuardar(horarioGuardado, horasTrabajadas);
@@ -1528,14 +1534,16 @@ const Horarios = () => {
         horaInicioLibre: horaInicioLibre || '',
         horaFinLibre: horaFinLibre || '',
         horas: horasTrabajadas,
-        nota: nota || ''
+        nota: nota || '',
+        entregables: entregables || ''
       })
       : crearHorarioBase({
         tipo,
         horaInicio,
         horaFin,
         horas: horasTrabajadas,
-        nota: nota || ''
+        nota: nota || '',
+        entregables: entregables || ''
       });
 
     void validarJornadaYGuardar(horarioGuardado, horasTrabajadas);

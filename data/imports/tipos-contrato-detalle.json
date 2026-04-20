@@ -1,0 +1,284 @@
+{
+  "file": "Personal de confianza.xlsx",
+  "sheet": "Hoja1",
+  "resumen": {
+    "totalRows": 153,
+    "validRows": 54,
+    "invalidRows": 99,
+    "tiposEncontrados": 1
+  },
+  "data": {
+    "Confianza": [
+      {
+        "puesto": "Coordinador de Cuentas Sr",
+        "frecuencia": "Frecuente",
+        "comentario": "Inspecciones, visitas a eventos, eventos internos y atención a clientes, visita fuera de recinto"
+      },
+      {
+        "puesto": "Analista de Compras Sr",
+        "frecuencia": "Frecuente",
+        "comentario": "Brigadas, temporada alta y compras por imprevistos, auditorias"
+      },
+      {
+        "puesto": "Analista Contable Jr",
+        "frecuencia": "Frecuente",
+        "comentario": "Asociado a eventos, venta directa, cobros de imprevistos, cajeros, parqueo, arqueos, auditorias, cierre del mes"
+      },
+      {
+        "puesto": "Coordinador de Proyectos",
+        "frecuencia": "Frecuente",
+        "comentario": "Asociado a eventos, proyectos de infraestructura y supervisión de mantenimiento"
+      },
+      {
+        "puesto": "Coordinador de Talento Humano",
+        "frecuencia": "Frecuente",
+        "comentario": "Brigadas, cubrir SO, salida de personal, actividades de colaboradores"
+      },
+      {
+        "puesto": "Jefe de Compras",
+        "frecuencia": "Frecuente",
+        "comentario": "Brigadas, temporada alta y compras por imprevistos, auditorias, proyectos de inversión gestión administrativa"
+      },
+      {
+        "puesto": "Gerente Administrativo y Financiero",
+        "frecuencia": "Frecuente",
+        "comentario": "Cierres de mes, entrega de informes, auditorias"
+      },
+      {
+        "puesto": "Diseñadora Gráfica",
+        "frecuencia": "Frecuente",
+        "comentario": "Creación de contenido de eventos"
+      },
+      {
+        "puesto": "Analista de Compras Jr",
+        "frecuencia": "Frecuente",
+        "comentario": "temporada alta y compras por imprevistos, auditorias"
+      },
+      {
+        "puesto": "Analista Contable Sr",
+        "frecuencia": "Frecuente",
+        "comentario": "Auditorías, eventos de venta directa, cajas, cierre de mes, plaqueo de activos, cubrir tesorería"
+      },
+      {
+        "puesto": "Gerente de Desarrollo Internacional",
+        "frecuencia": "Frecuente",
+        "comentario": "Eventos especiales de la UDEI y viajes"
+      },
+      {
+        "puesto": "Gerente de Mercadeo y ventas",
+        "frecuencia": "Frecuente",
+        "comentario": "Inspecciones, visitas a eventos, eventos internos y atención a clientes"
+      },
+      {
+        "puesto": "Tesorera",
+        "frecuencia": "Frecuente",
+        "comentario": "Auditorías, eventos de venta directa, cajas, cierre de mes, parqueo"
+      },
+      {
+        "puesto": "Coordinador de Planeación de Eventos",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos y clientes, entregables especificos de la operación, cobertura dde turnos"
+      },
+      {
+        "puesto": "Jefe de Áreas y Sostenibilidad",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, clientes y entrega de certificados carbon clear events,  gestión de residuos por evento, participación en eventos externos de representación"
+      },
+      {
+        "puesto": "Coordinador de Gestión de Calidad",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a inspección de eventos, aplicación de encuestas y revisión de estandares, brigadas, auditorias"
+      },
+      {
+        "puesto": "Coordinador de SO y Bienestar",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a inspección de eventos, brigadas, revisión de contratistas, planes de emergencias y emergencias en el recinto"
+      },
+      {
+        "puesto": "Jefe de Gestión de la Protección",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, parqueo y emergencias, eventos externos de representación"
+      },
+      {
+        "puesto": "Chef Ejecutivo",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, clientes, producción, pruebas de menú"
+      },
+      {
+        "puesto": "Coordinador de Gestión de Calidad",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a inspección de eventos, aplicación de encuestas y revisión de estandares, alimentación, auditoría"
+      },
+      {
+        "puesto": "Jefe de Experiencias Gastronómicas",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, clientes, producción, pruebas de menú, mice and place"
+      },
+      {
+        "puesto": "Supervisor de Gestión de la Protección",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, parqueo y emergencias, coordinación y supervisión personal extra en parqueo y seguridad, brigadas, eventos externos de representación"
+      },
+      {
+        "puesto": "Jefe de Infraestructura",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, proyectos de infraestructura y supervisión de mantenimiento, emergencia de fallo de equipo"
+      },
+      {
+        "puesto": "Analista de Sistemas",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, cliente interno, expositores, venta directa, emergencia de fallo de equipo"
+      },
+      {
+        "puesto": "Jefe de Costos",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Auditorías, revisión de costos en sitio durante eventos, venta directa"
+      },
+      {
+        "puesto": "Coordinador de Operaciones",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos y clientes, eventos internos"
+      },
+      {
+        "puesto": "Jefe de Gestión de Calidad",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a inspección de eventos, aplicación de encuestas y revisión de estandares, alimentación, auditoría, eventos externos de representación"
+      },
+      {
+        "puesto": "Subgerente de Gastronomía",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, clientes, prueba de menú, revisión personal extra, venta directa"
+      },
+      {
+        "puesto": "Coordinador de Planeación Jr",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos y clientes"
+      },
+      {
+        "puesto": "Jefe de Cocina",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, clientes, producción, pruebas de menú"
+      },
+      {
+        "puesto": "Jefe de Planeación",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos y clientes"
+      },
+      {
+        "puesto": "Gerente de Operaciones",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos y clientes, emergencias en el recinto"
+      },
+      {
+        "puesto": "Coordinador de Áreas y Montajes",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos y clientes, brigadas, revisión de personal extra, emergencias"
+      },
+      {
+        "puesto": "Coordinador de Sistemas",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, cliente interno, expositores, venta directa y emergencia de fallo de equipo"
+      },
+      {
+        "puesto": "Analista de Sistemas",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, cliente interno, expositores"
+      },
+      {
+        "puesto": "Auxiliar de Áreas",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos, clientes y entrega de certificados carbon clear events, gestión de residuos por evento, auditorias relacionadas a sostenibilidad"
+      },
+      {
+        "puesto": "Analista de Costos",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Auditoría, inventarios, cierre de mes, revisiones de eventos en sitio venta directa"
+      },
+      {
+        "puesto": "Asistente Administrativo de Gastronomía",
+        "frecuencia": "Muy frecuente",
+        "comentario": "Asociado a eventos y clientes"
+      },
+      {
+        "puesto": "Asistente de Mercadeo y Ventas",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Atención a eventos internos, externos y  clientes"
+      },
+      {
+        "puesto": "Analista Contable Jr",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Cierres de mes ( cuentas por pagar ), auditorias"
+      },
+      {
+        "puesto": "Analista de Inteligencia de Negocios",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Asistencia a eventos especiales de la UDEI"
+      },
+      {
+        "puesto": "Jefe de Sistemas",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Reporte al corporativo"
+      },
+      {
+        "puesto": "Asistente de Gerencia General",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Atención de recepción en eventos y preparación de camarino (oficina GG), visitas corporativas"
+      },
+      {
+        "puesto": "Analista de Inteligencia de Negocios",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Asistencia a eventos especiales de la UDEI"
+      },
+      {
+        "puesto": "Asistente de Mantenimiento",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Inspecciones a proyectos, cierre de fractall"
+      },
+      {
+        "puesto": "Jefe de Talento Humano",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Soporte a proyectos especiales o inspecciones a evento de alto riesgo"
+      },
+      {
+        "puesto": "Jefe de Contabilidad",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Auditorías, cierre de mes"
+      },
+      {
+        "puesto": "Coordinador de Cuentas Jr",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Brigadas, atención de eventos internos"
+      },
+      {
+        "puesto": "Ejecutivo de Atracción de Eventos (Asociativos y Gubernamentales)",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Asistencia a eventos especiales de la UDEI, Brigadas, eventos asociados a clientes, visitas a clientes, inspecciones con clientes"
+      },
+      {
+        "puesto": "Ejecutivo de Atracción de Eventos",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Asistencia a eventos especiales de la UDEI"
+      },
+      {
+        "puesto": "Jefe de Mercadeo y Comunicaciones",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Atención a eventos internos con clientes"
+      },
+      {
+        "puesto": "Coordinador de Optimización Comercial",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Atención a eventos internos con clientes"
+      },
+      {
+        "puesto": "Coordinadora Administrativa",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Atención a visita corporativo, auditorías, solicitudes especiales ICT/ GH"
+      },
+      {
+        "puesto": "Analista de Mercadeo",
+        "frecuencia": "Poco frecuente",
+        "comentario": "Atención a eventos internos con clientes, brigadas"
+      }
+    ]
+  }
+}

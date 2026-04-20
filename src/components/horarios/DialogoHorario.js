@@ -147,6 +147,7 @@ const DialogoHorario = ({
   // Permiso para eliminar/modificar
   const puedeEliminar = puedeModificarHorarios(currentUser, usuarioObjetivo);
   const { tipos, tiposMap } = useTiposHorario();
+  const [entregablesOpen, setEntregablesOpen] = React.useState(false);
   const [disponibilidadTipos, setDisponibilidadTipos] = React.useState({});
   const [cargandoDisponibilidad, setCargandoDisponibilidad] = React.useState(false);
   const horarioActualSeleccionado = editando && horariosEditados
@@ -183,7 +184,8 @@ const DialogoHorario = ({
           horaInicioPres: horarioActual?.horaInicioPres || '',
           horaFinPres: horarioActual?.horaFinPres || '',
           horas: horarioActual?.horas ?? '',
-          nota: horarioActual?.nota || ''
+          nota: horarioActual?.nota || '',
+          entregables: horarioActual?.entregables || ''
         };
       }
       // No sobrescribir con vacíos si no hay horario previo
@@ -330,6 +332,18 @@ const DialogoHorario = ({
       };
     });
   }, [horarioPersonalizado.horaInicio, resumenJornadaLegal, setHorarioPersonalizado, tipoTemplate]);
+
+  // Si el tipo seleccionado es de teletrabajo, abrir modal de entregables si aún no hay entregables
+  React.useEffect(() => {
+    if (!dialogoHorario) return;
+    const key = String(horarioPersonalizado.tipo || '').toLowerCase();
+    const label = String(tiposMap[horarioPersonalizado.tipo]?.label || '').toLowerCase();
+    const esTele = key.includes('tele') || label.includes('tele');
+    if (esTele && !horarioPersonalizado.entregables) {
+      setEntregablesOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [horarioPersonalizado.tipo, dialogoHorario]);
   const horasLaboradas = (() => {
     if (!horarioPersonalizado.horaInicio || !horarioPersonalizado.horaFin) return 0;
     const [h1, m1] = horarioPersonalizado.horaInicio.split(':').map(Number);
@@ -859,6 +873,24 @@ const DialogoHorario = ({
             </>
           ) : null}
 
+          {/* Campo para entregables si el tipo es teletrabajo */}
+          {(String(tipo).toLowerCase().includes('tele') || String(tiposMap[tipo]?.label || '').toLowerCase().includes('tele')) && (
+            <Box sx={{ mt: 2 }}>
+              <Button variant="outlined" startIcon={<HomeWorkIcon />} onClick={() => setEntregablesOpen(true)}>
+                {horarioPersonalizado.entregables ? 'Editar entregables' : 'Agregar entregables'}
+              </Button>
+
+              {horarioPersonalizado.entregables ? (
+                <Box sx={{ mt: 1, p: 2, bgcolor: '#ffffff', borderRadius: 2, border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Entregables</Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.primary' }}>
+                    {horarioPersonalizado.entregables}
+                  </Typography>
+                </Box>
+              ) : null}
+            </Box>
+          )}
+
           {/* Campo para nota */}
           <StyledTextField
             label="Nota (opcional)"
@@ -872,6 +904,29 @@ const DialogoHorario = ({
             size={isMobile ? 'small' : 'medium'}
             placeholder="Agrega una nota o comentario..."
           />
+
+          {/* Modal de entregables (texto largo) */}
+          <StyledDialog open={entregablesOpen} onClose={() => setEntregablesOpen(false)} fullWidth maxWidth={isMobile ? 'sm' : 'md'}>
+            <StyledDialogTitle>
+              Entregables
+            </StyledDialogTitle>
+            <StyledDialogContent>
+              <TextField
+                value={horarioPersonalizado.entregables || ''}
+                onChange={(e) => setHorarioPersonalizado(prev => ({ ...prev, entregables: e.target.value }))}
+                fullWidth
+                multiline
+                minRows={6}
+                maxRows={20}
+                placeholder="Describe los entregables esperados para este turno..."
+                inputProps={{ maxLength: 5000 }}
+              />
+            </StyledDialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={() => setEntregablesOpen(false)} variant="outlined">Cerrar</Button>
+              <Button onClick={() => setEntregablesOpen(false)} variant="contained">Aceptar</Button>
+            </DialogActions>
+          </StyledDialog>
         </Box>
       </StyledDialogContent>
       <DialogActions sx={{ 

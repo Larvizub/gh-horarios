@@ -64,6 +64,8 @@ const TiposContratoManager = () => {
     return [...tipos].sort((a, b) => a.orden - b.orden);
   }, [tipos]);
 
+  const currentEditingTipo = editingKey ? sortedTipos.find((t) => t.key === editingKey) : null;
+
   const resetForm = () => {
     setForm(EMPTY_FORM);
     setEditingKey(null);
@@ -121,10 +123,13 @@ const TiposContratoManager = () => {
       return;
     }
 
-    const key = sanitizeTipoContratoKey(label);
-    if (!key) {
-      toast.error('El nombre del tipo no genera una clave válida.');
-      return;
+    let newKey = null;
+    if (!editingKey) {
+      newKey = sanitizeTipoContratoKey(label);
+      if (!newKey) {
+        toast.error('El nombre del tipo no genera una clave válida.');
+        return;
+      }
     }
 
     const duplicate = sortedTipos.some((tipo) => {
@@ -132,7 +137,11 @@ const TiposContratoManager = () => {
         return false;
       }
 
-      return tipo.key === key || tipo.label.toLowerCase() === label.toLowerCase();
+      if (!editingKey) {
+        return tipo.key === newKey || tipo.label.toLowerCase() === label.toLowerCase();
+      }
+
+      return tipo.label.toLowerCase() === label.toLowerCase();
     });
 
     if (duplicate) {
@@ -152,6 +161,7 @@ const TiposContratoManager = () => {
 
             return {
               ...tipo,
+              label,
               horasMinimas: aplicaHoras ? horasMinimas : 0,
               horasMaximas: aplicaHoras ? horasMaximas : 0,
               aplicaHoras,
@@ -337,8 +347,8 @@ const TiposContratoManager = () => {
               fullWidth
               label="Nombre del tipo"
               value={form.label}
-              disabled
-              helperText="La etiqueta no se modifica desde aquí"
+              onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))}
+              helperText="Ejemplo: Jornada parcial"
             />
             <TextField
               fullWidth

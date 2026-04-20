@@ -1,0 +1,697 @@
+{
+  "invalidRows": [
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Supervisor de Experiencia Gastronómica",
+      "__rowIndex": 6
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Almacenista",
+      "__rowIndex": 10
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Supervisor de Experiencia Gastronómica",
+      "__rowIndex": 11
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Técnico de Mantenimiento",
+      "__rowIndex": 12
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Auxiliar de Áreas",
+      "__rowIndex": 17
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Steward",
+      "__rowIndex": 23
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Técnico de Mantenimiento",
+      "__rowIndex": 24
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Auxiliar de Mantenimiento",
+      "__rowIndex": 28
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Panadero",
+      "__rowIndex": 29
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Cocinero A",
+      "__rowIndex": 41
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Técnico de Mantenimiento",
+      "__rowIndex": 42
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Segundo de Cocina",
+      "__rowIndex": 43
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Cocinero B",
+      "__rowIndex": 44
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Cocinero B",
+      "__rowIndex": 45
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Supervisor de Experiencia Gastronómica",
+      "__rowIndex": 50
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Técnico de Mantenimiento",
+      "__rowIndex": 66
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "Operativo",
+      "puesto": "Técnico de Mantenimiento",
+      "__rowIndex": 73
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 74
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 75
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 76
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 77
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 78
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 79
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 80
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 81
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 82
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 83
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 84
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 85
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 86
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 87
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 88
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 89
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 90
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 91
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 92
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 93
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 94
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 95
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 96
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 97
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 98
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 99
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 100
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 101
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 102
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 103
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 104
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 105
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 106
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 107
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 108
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 109
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 110
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 111
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 112
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 113
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 114
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 115
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 116
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 117
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 118
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 119
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 120
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 121
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 122
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 123
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 124
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 125
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 126
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 127
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 128
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 129
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 130
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 131
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 132
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 133
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 134
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 135
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 136
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 137
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 138
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 139
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 140
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 141
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 142
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 143
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 144
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 145
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 146
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 147
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 148
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 149
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 150
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 151
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 152
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 153
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 154
+    },
+    {
+      "comentario": "",
+      "frecuencia": "",
+      "tipoContrato": "",
+      "puesto": "",
+      "__rowIndex": 155
+    }
+  ]
+}

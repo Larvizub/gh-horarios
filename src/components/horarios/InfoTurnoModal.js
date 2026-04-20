@@ -267,6 +267,12 @@ const InfoTurnoModal = ({ open, onClose, usuario, turno, diaKey, semanaSeleccion
             </>
           )}
         </InfoCard>
+        {turno?.entregables && (
+          <InfoCard>
+            <InfoLabel>Entregables</InfoLabel>
+            <Typography sx={{ whiteSpace: 'pre-wrap' }}>{turno.entregables}</Typography>
+          </InfoCard>
+        )}
       </ContentBox>
 
       <DialogActions sx={{ 
