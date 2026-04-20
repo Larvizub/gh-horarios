@@ -291,19 +291,20 @@ const TurnoUsuario = memo(({
               ? (isFeriado ? '#fff1f1' : esVacaciones ? hexToRgba(vacationBg, 0.12) : esDescanso ? '#F8F6EE' : esIncapacidad ? hexToRgba(incapacidadBg, 0.12) : '#fff')
               : tieneHorario ? (
                   esTarjetaPresencialFinal ? contratoDark :
-                  !contratoOperativo ? '#fff' :
+                  /* Priorizar colores por tipo antes de aplicar fallback por contrato */
                   esVacaciones ? hexToRgba(vacationBg, 0.16) :
                   esIncapacidad ? hexToRgba(incapacidadBg, 0.16) :
-                  horario.tipo === 'tele-presencial' ? '#4a148c' : // hover morado más oscuro
+                  horario.tipo === 'teletrabajo' ? '#1b5e20' :
+                  horario.tipo === 'tele-presencial' ? '#4a148c' :
                   horario.tipo === 'horario-dividido' ? '#6d28d9' :
                   horario.tipo === 'visita-comercial' ? '#5d4037' :
                   horario.tipo === 'tele-media-libre' ? '#1b5e20' :
                   horario.tipo === 'media2-cumple' ? '#455a64' :
                   horario.tipo === 'media-cumple' ? '#455a64' :
-                  horario.tipo === 'teletrabajo' ? '#1b5e20' :
                   horario.tipo === 'cambio' ? '#e65100' :
                   colorTipoDinamico ? colorTipoDinamico :
-                  usuario.id === currentUser?.uid ? '#303f9f' : '#c51162'
+                  /* Por último aplicar el fallback de contrato/no-contrato */
+                  (!contratoOperativo ? '#fff' : (usuario.id === currentUser?.uid ? '#303f9f' : '#c51162'))
                 ) : '#f0f0f0'
           } : {}
         }}

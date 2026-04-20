@@ -289,16 +289,31 @@ const MobileUserRow = memo(({
                 <Grid item sx={{ width: '14.28%', flexBasis: '14.28%' }} key={diaKey}>
                   <Tooltip title={tooltipTitle} arrow placement="top">
                       <DaySlot
-                      data-dia-key={diaKey}
-                      hasSchedule={tieneHorario}
-                      scheduleType={horario?.tipo}
-                      isCurrentUser={isCurrentUser}
-                      isFeriado={esFeriado}
-                      sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : undefined}
-                      onClick={() => {
-                        if (editando) handleCambiarTurno(usuario.id, diaKey);
-                      }}
-                    >
+                        data-dia-key={diaKey}
+                        data-selected={isSelected ? 'true' : undefined}
+                        hasSchedule={tieneHorario}
+                        scheduleType={horario?.tipo}
+                        isCurrentUser={isCurrentUser}
+                        isFeriado={esFeriado}
+                        sx={isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : undefined}
+                        onClick={async () => {
+                          if (!editando) return;
+                          // Si hay contenido en el portapapeles:
+                          // - en móvil pegamos directamente en la casilla tocada
+                          // - en desktop togglamos la selección para acumular destinos y usar el botón "Pegar"
+                          if (clipboard) {
+                            if (isMobile && onApplyCopiedHorario) {
+                              await onApplyCopiedHorario([{ usuarioId: usuario.id, diaKey }]);
+                              return;
+                            }
+                            // Desktop: toggle target selection
+                            toggleTarget(usuario.id, diaKey);
+                            return;
+                          }
+
+                          handleCambiarTurno(usuario.id, diaKey);
+                        }}
+                      >
                       {tieneHorario && editando && (
                         <CopyButton 
                           size="small" 
@@ -438,17 +453,32 @@ const DesktopUserRow = memo(({
               <Tooltip title={tooltipTitle} arrow placement="top">
                 <Box
                   data-dia-key={diaKey}
-                  onClick={() => {
-                    if (puedeAbrirInfo) {
-                      abrirInfoTurno(usuario, horariosUsuario[diaKey], diaKey);
+                  data-selected={isSelected ? 'true' : undefined}
+                  onClick={(event) => {
+                    // No editar: abrir info si aplica
+                    if (!editando) {
+                      if (puedeAbrirInfo) {
+                        abrirInfoTurno(usuario, horariosUsuario[diaKey], diaKey);
+                      }
+                      return;
                     }
+
+                    // En modo edición y con contenido en clipboard:
+                    // - Desktop: toggle selección para acumular destinos
+                    // - Si no hay clipboard, abrir diálogo de edición
+                    if (clipboard) {
+                      toggleTarget(usuario.id, diaKey);
+                      return;
+                    }
+
+                    handleCambiarTurno(usuario.id, diaKey);
                   }}
                   sx={{
                     ...(isSelected ? { outline: '3px dashed rgba(25, 118, 210, 0.6)' } : {}),
                     borderRadius: 1,
                     background: esFeriado ? 'linear-gradient(180deg, rgba(254, 242, 242, 0.9), rgba(255,255,255,0.95))' : undefined,
                     boxShadow: esFeriado ? 'inset 0 0 0 1px rgba(220, 38, 38, 0.12)' : undefined,
-                    cursor: puedeAbrirInfo ? 'pointer' : 'default',
+                    cursor: editando ? 'pointer' : (puedeAbrirInfo ? 'pointer' : 'default'),
                   }}
                 >
                   <TurnoUsuario
@@ -544,10 +574,15 @@ const HorariosTable = memo(({
   
   const toggleTarget = useCallback((usuarioId, diaKey) => {
     const key = `${usuarioId}|${diaKey}`;
+    // Debug: log toggle events to help diagnose selection issues
+    // eslint-disable-next-line no-console
+    console.log('[DEBUG] toggleTarget called for', key);
     setSelectedTargets(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      // eslint-disable-next-line no-console
+      console.log('[DEBUG] selectedTargets size ->', next.size);
       return next;
     });
   }, []);
