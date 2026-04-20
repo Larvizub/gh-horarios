@@ -264,7 +264,7 @@ const Login = () => {
     <LoginContainer>
       <LoginCard elevation={0}>
         <Logo
-          src="https://costaricacc.com/cccr/Logocccr.png"
+          src="/logocccr.png"
           alt="Logo Centro de Convenciones"
         />
         

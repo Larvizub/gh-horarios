@@ -256,8 +256,9 @@ const TurnoUsuario = memo(({
           position: 'relative',
           overflow: 'hidden',
           /* Vacaciones/Descanso/Incapacidad: usar fondo sólido con color configurado.
-             Excepción: 'viaje-trabajo' no tiene horario partido, mostrar fondo sólido completo.
-             Otros casos: split gradient cuando aplica. */
+             Si el turno es de tipo que requiere 'split' (p. ej. tele-media-libre, tarde-libre,
+             o combina tele + libre), mostrar un gradient. En el resto de casos (p.ej. solo
+             teletrabajo) mostrar fondo sólido con el color del tipo. */
           backgroundColor: tieneHorario
             ? (esVacaciones
                 ? vacationBg
@@ -265,10 +266,10 @@ const TurnoUsuario = memo(({
                   ? descansoBg
                   : esIncapacidad
                     ? incapacidadBg
-                    : (horario?.tipo === 'viaje-trabajo' ? (tipoCatalogo?.color || tipoColorComputed) : 'transparent'))
+                    : (necesitaSplit ? 'transparent' : (tipoCatalogo?.color || tipoColorComputed)))
             : 'transparent',
           backgroundImage: (tieneHorario && !esVacaciones && !esDescanso && !esIncapacidad && horario?.tipo !== 'viaje-trabajo')
-            ? (!soloLabel
+            ? (!soloLabel && necesitaSplit
                 ? `linear-gradient(180deg, ${topColor} 0 50%, ${tipoColorComputed} 50% 100%)`
                 : undefined)
             : undefined,

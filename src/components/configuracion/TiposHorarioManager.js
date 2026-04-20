@@ -76,6 +76,8 @@ const TiposHorarioManager = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [colorPickerValue, setColorPickerValue] = useState(form.color || '#00830e');
 
   const sortedTipos = useMemo(() => {
     return [...tipos].sort((a, b) => a.orden - b.orden);
@@ -249,6 +251,34 @@ const TiposHorarioManager = () => {
   }
 
   const PreviewIcon = getTipoIconComponent(form.icon);
+  const swatchColor = /^#[0-9A-Fa-f]{6}$/.test(String(form.color || '')) ? form.color : '#ffffff';
+  
+
+  const openColorPicker = () => {
+    setColorPickerValue(form.color || '#00830e');
+    setColorPickerOpen(true);
+  };
+
+  const normalizeHex = (v) => {
+    if (!v) return null;
+    let s = String(v).trim();
+    if (!s.startsWith('#')) s = `#${s}`;
+    if (/^#[0-9A-Fa-f]{3}$/.test(s)) {
+      s = `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+    }
+    if (/^#[0-9A-Fa-f]{6}$/.test(s)) return s.toLowerCase();
+    return null;
+  };
+
+  const handleApplyColor = () => {
+    const normalized = normalizeHex(colorPickerValue);
+    if (!normalized) {
+      toast.error('Color inválido. Usa formato #RRGGBB');
+      return;
+    }
+    setForm((prev) => ({ ...prev, color: normalized }));
+    setColorPickerOpen(false);
+  };
 
   return (
     <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, border: '1px solid rgba(0, 0, 0, 0.08)' }}>
@@ -334,13 +364,31 @@ const TiposHorarioManager = () => {
                 ))}
               </Select>
             </FormControl>
-            <TextField
-              fullWidth
-              label="Color"
-              value={form.color}
-              onChange={(event) => setForm((prev) => ({ ...prev, color: event.target.value }))}
-              helperText="Formato hexadecimal #RRGGBB"
-            />
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                fullWidth
+                label="Color"
+                value={form.color}
+                onChange={(event) => setForm((prev) => ({ ...prev, color: event.target.value }))}
+                helperText="Formato hexadecimal #RRGGBB"
+                sx={{ flex: '1 1 auto', maxWidth: 260 }}
+              />
+              <Box
+                onClick={openColorPicker}
+                role="button"
+                aria-label="Seleccionar color"
+                title="Seleccionar color"
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1,
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  backgroundColor: swatchColor,
+                  cursor: 'pointer',
+                  '&:hover': { boxShadow: '0 0 0 4px rgba(0,0,0,0.04)' }
+                }}
+              />
+            </Box>
             <FormControl fullWidth>
               <InputLabel>Plantilla</InputLabel>
               <Select
@@ -459,6 +507,36 @@ const TiposHorarioManager = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Color picker dialog triggered by swatch */}
+      <Dialog open={colorPickerOpen} onClose={() => setColorPickerOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 700 }}>Seleccionar color</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <input
+              type="color"
+              value={colorPickerValue}
+              onChange={(e) => setColorPickerValue(e.target.value)}
+              style={{ width: '100%', height: 140, border: 'none', padding: 0, background: 'transparent', cursor: 'pointer', borderRadius: 8 }}
+            />
+
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                label="Hex"
+                value={colorPickerValue}
+                onChange={(e) => setColorPickerValue(e.target.value)}
+                helperText="Formato #RRGGBB"
+                fullWidth
+              />
+              <Box sx={{ width: 40, height: 40, borderRadius: 1, border: '1px solid rgba(0,0,0,0.08)', backgroundColor: colorPickerValue }} />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setColorPickerOpen(false)} variant="outlined">Cerrar</Button>
+          <Button onClick={handleApplyColor} variant="contained">Aplicar</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={editModalOpen}
         onClose={closeEditModal}
@@ -503,13 +581,31 @@ const TiposHorarioManager = () => {
                 ))}
               </Select>
             </FormControl>
-            <TextField
-              fullWidth
-              label="Color"
-              value={form.color}
-              onChange={(event) => setForm((prev) => ({ ...prev, color: event.target.value }))}
-              helperText="Formato hexadecimal #RRGGBB"
-            />
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                fullWidth
+                label="Color"
+                value={form.color}
+                onChange={(event) => setForm((prev) => ({ ...prev, color: event.target.value }))}
+                helperText="Formato hexadecimal #RRGGBB"
+                sx={{ flex: '1 1 auto', maxWidth: 260 }}
+              />
+              <Box
+                onClick={openColorPicker}
+                role="button"
+                aria-label="Seleccionar color"
+                title="Seleccionar color"
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1,
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  backgroundColor: swatchColor,
+                  cursor: 'pointer',
+                  '&:hover': { boxShadow: '0 0 0 4px rgba(0,0,0,0.04)' }
+                }}
+              />
+            </Box>
             <FormControl fullWidth>
               <InputLabel>Plantilla</InputLabel>
               <Select

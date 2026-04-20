@@ -415,7 +415,7 @@ const Navbar = memo(({ user }) => {
             </IconButton>
             <Box
               component="img"
-              src="https://costaricacc.com/cccr/Logocccr.png"
+              src="/logocccr.png"
               alt="Logo"
               sx={{
                 height: { xs: 28, md: 32 },
@@ -520,7 +520,7 @@ const Navbar = memo(({ user }) => {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, minWidth: 0 }}>
-              <Box component="img" src="https://costaricacc.com/cccr/Logocccr.png" alt="Logo" sx={{ height: 28, width: 'auto' }} />
+              <Box component="img" src="/logocccr.png" alt="Logo" sx={{ height: 28, width: 'auto' }} />
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1a1a2e' }} noWrap>
                   GH Horarios
