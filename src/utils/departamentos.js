@@ -42,6 +42,7 @@ export const buildDefaultDepartamentosCatalog = () => {
     activo: true,
     editable: false,
     orden: index + 1,
+    teleRestricciones: null,
   }));
 };
 
@@ -53,6 +54,7 @@ export const departamentosArrayToFirebaseObject = (departamentos = []) => {
       activo: departamento.activo !== false,
       editable: Boolean(departamento.editable),
       orden: Number.isFinite(departamento.orden) ? departamento.orden : index + 1,
+      teleRestricciones: departamento.teleRestricciones ?? null,
     };
     return accumulator;
   }, {});
@@ -65,6 +67,7 @@ export const departamentosObjectToArray = (catalogo = {}) => {
     activo: value?.activo !== false,
     editable: Boolean(value?.editable),
     orden: Number.isFinite(value?.orden) ? value.orden : index + 1,
+    teleRestricciones: value?.teleRestricciones ?? null,
   }));
 };
 
@@ -88,6 +91,7 @@ export const mergeDepartamentosCatalog = (remoteCatalogo = {}) => {
       activo: remoteDepartamento.activo !== false,
       editable: Boolean(remoteDepartamento.editable),
       orden: Number.isFinite(remoteDepartamento.orden) ? remoteDepartamento.orden : departamento.orden,
+      teleRestricciones: remoteDepartamento.teleRestricciones ?? departamento.teleRestricciones ?? null,
     };
   });
 

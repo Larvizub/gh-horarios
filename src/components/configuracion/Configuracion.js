@@ -186,6 +186,7 @@ const Configuracion = () => {
   const [departamentoEnEdicion, setDepartamentoEnEdicion] = useState(null);
   const [departamentoEdicionForm, setDepartamentoEdicionForm] = useState({
     label: '',
+    teleRestriccionesValue: '',
   });
   const [cargoEdicionAbierto, setCargoEdicionAbierto] = useState(false);
   const [cargoEnEdicion, setCargoEnEdicion] = useState(null);
@@ -486,6 +487,7 @@ const Configuracion = () => {
           activo: true,
           editable: true,
           orden: nextOrden,
+          teleRestricciones: null,
         },
       ]);
       setNuevoDepartamento('');
@@ -525,8 +527,13 @@ const Configuracion = () => {
 
   const abrirEdicionDepartamento = (departamento) => {
     setDepartamentoEnEdicion(departamento);
+    const teleVal = departamento?.teleRestricciones && departamento.teleRestricciones.mode === 'absolute'
+      ? String(departamento.teleRestricciones.value || '')
+      : String(departamento.teleMaxSimultaneo || '');
+
     setDepartamentoEdicionForm({
       label: departamento.label || '',
+      teleRestriccionesValue: teleVal,
     });
     setDepartamentoEdicionAbierto(true);
   };
@@ -576,9 +583,15 @@ const Configuracion = () => {
           return item;
         }
 
+        const teleVal = departamentoEdicionForm.teleRestriccionesValue;
+        const teleObj = (teleVal !== undefined && teleVal !== null && String(teleVal).trim() !== '')
+          ? { mode: 'absolute', value: Number(teleVal) }
+          : null;
+
         return {
           ...item,
           label,
+          teleRestricciones: teleObj,
         };
       });
 
@@ -1542,6 +1555,15 @@ const Configuracion = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }} noWrap>
                                       {departamento.label}
                                     </Typography>
+                                    {(departamento.teleRestricciones && departamento.teleRestricciones.mode === 'absolute' && Number.isFinite(Number(departamento.teleRestricciones.value))) ? (
+                                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                        Cupo tele: {departamento.teleRestricciones.value}
+                                      </Typography>
+                                    ) : (departamento.teleMaxSimultaneo ? (
+                                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                        Cupo tele: {departamento.teleMaxSimultaneo}
+                                      </Typography>
+                                    ) : null)}
                                   </Box>
 
                                   <Box sx={{ display: 'grid', gap: 0.4, justifyItems: 'center' }}>
@@ -1620,6 +1642,16 @@ const Configuracion = () => {
                       value={departamentoEdicionForm.label}
                       onChange={handleDepartamentoEdicionChange}
                     />
+                                    <TextField
+                                      fullWidth
+                                      label="Cupo máximo tele simultáneo (opcional)"
+                                      name="teleRestriccionesValue"
+                                      type="number"
+                                      value={departamentoEdicionForm.teleRestriccionesValue ?? ''}
+                                      onChange={handleDepartamentoEdicionChange}
+                                      helperText="Dejar vacío para sin restricción"
+                                      sx={{ mt: 2 }}
+                                    />
                   </DialogContent>
                   <DialogActions sx={{ px: 3, pb: 3 }}>
                     <Button onClick={cerrarEdicionDepartamento} sx={{ textTransform: 'none' }}>

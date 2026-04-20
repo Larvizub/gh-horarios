@@ -28,6 +28,9 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
 import useTiposHorario from '../../hooks/useTiposHorario';
+import useDepartamentos from '../../hooks/useDepartamentos';
+import { cargarHorariosUsuarios } from '../../services/firebaseHorarios';
+import { sanitizeDepartamentoKey } from '../../utils/departamentos';
 import { getTipoIconComponent, TIPO_TEMPLATES } from '../../utils/tiposHorario';
 import { obtenerResumenJornadaLegal } from '../../utils/jornadasOrdinarias';
 import { cargarHorariosUsuarioEnSemanas } from '../../services/firebaseHorarios';
@@ -147,6 +150,7 @@ const DialogoHorario = ({
   // Permiso para eliminar/modificar
   const puedeEliminar = puedeModificarHorarios(currentUser, usuarioObjetivo);
   const { tipos, tiposMap } = useTiposHorario();
+  const { departamentos } = useDepartamentos();
   const [entregablesOpen, setEntregablesOpen] = React.useState(false);
   const [disponibilidadTipos, setDisponibilidadTipos] = React.useState({});
   const [cargandoDisponibilidad, setCargandoDisponibilidad] = React.useState(false);
@@ -241,10 +245,56 @@ const DialogoHorario = ({
 
         const siguienteDisponibilidad = {};
 
+        // Comprobar restricciones de teletrabajo por departamento (modo absoluto)
+        let deptTeleInfo = null;
+        try {
+          const deptLabel = usuarioObjetivo?.departamento || '';
+          const deptObj = departamentos.find(d => d.label === deptLabel || d.id === sanitizeDepartamentoKey(deptLabel));
+          const teleConfig = deptObj?.teleRestricciones ?? (deptObj?.teleMaxSimultaneo ? { mode: 'absolute', value: Number(deptObj.teleMaxSimultaneo) } : null);
+          if (teleConfig && teleConfig.mode === 'absolute' && Number.isFinite(Number(teleConfig.value)) && Number(teleConfig.value) > 0) {
+            const limit = Number(teleConfig.value);
+            const semanaKeyActual = obtenerClaveSemana?.(semanaSeleccionada) || null;
+            const deptUserIds = usuarios.filter(u => (u.departamento || '') === (deptObj?.label || '')).map(u => u.id);
+            if (semanaKeyActual && deptUserIds.length > 0) {
+              const deptRemote = await cargarHorariosUsuarios(semanaKeyActual, deptUserIds);
+              const mergedDept = {};
+              deptUserIds.forEach(uid => {
+                const remote = deptRemote[uid] || {};
+                const local = (editando ? (horariosEditados?.[uid] || {}) : (horarios?.[uid] || {}));
+                mergedDept[uid] = { ...remote, ...local };
+              });
+
+              const diaKey = horarioPersonalizado.diaKey;
+              let countTele = 0;
+              deptUserIds.forEach(uid => {
+                const turno = mergedDept[uid]?.[diaKey];
+                if (turno && String(turno.tipo || '').toLowerCase().includes('tele')) countTele += 1;
+              });
+
+              const usuarioTieneTele = Boolean(horarioActualSeleccionado && String(horarioActualSeleccionado.tipo || '').toLowerCase().includes('tele'));
+              const countExcludingCurrent = countTele - (usuarioTieneTele ? 1 : 0);
+              const allowedRemaining = limit - countExcludingCurrent;
+              deptTeleInfo = { limit, countTele, allowedRemaining, usuarioTieneTele };
+            }
+          }
+        } catch (e) {
+          // No bloquear por error en conteo; dejamos que la validación por usuario existente siga funcionando
+          // console.warn('Error calculando cupos de tele por departamento:', e);
+        }
+
         tipos.forEach((tipoItem) => {
           const tipoConfig = tiposMap[tipoItem.key] || tipoItem;
-          if (!debeValidarLimiteUsoHorario(tipoConfig)) {
-            siguienteDisponibilidad[tipoItem.key] = { disponible: true };
+
+          // Si no es un tipo con limitación individual, por defecto lo dejamos disponible (salvo restricción de departamento)
+          const necesitaValidacionIndividual = debeValidarLimiteUsoHorario(tipoConfig);
+          if (!necesitaValidacionIndividual) {
+            // Chequear restricción de tele por departamento si aplica
+            const isTeleTipo = String(tipoItem.key).toLowerCase().includes('tele') || String(tiposMap[tipoItem.key]?.label || '').toLowerCase().includes('tele');
+            if (isTeleTipo && deptTeleInfo && deptTeleInfo.allowedRemaining <= 0 && !horarioActualSeleccionado) {
+              siguienteDisponibilidad[tipoItem.key] = { disponible: false, motivo: `Cupos de teletrabajo por departamento agotados (${deptTeleInfo.countTele}/${deptTeleInfo.limit})` };
+            } else {
+              siguienteDisponibilidad[tipoItem.key] = { disponible: true };
+            }
             return;
           }
 
@@ -255,6 +305,13 @@ const DialogoHorario = ({
             historialHorarios,
             horarioExistente: horarioActualSeleccionado?.tipo === tipoItem.key ? horarioActualSeleccionado : null,
           });
+
+          // Si además aplica la restricción por departamento para tele, combínala
+          const isTeleTipo = String(tipoItem.key).toLowerCase().includes('tele') || String(tiposMap[tipoItem.key]?.label || '').toLowerCase().includes('tele');
+          if (isTeleTipo && deptTeleInfo && deptTeleInfo.allowedRemaining <= 0 && !(horarioActualSeleccionado && String(horarioActualSeleccionado.tipo || '').toLowerCase().includes('tele'))) {
+            siguienteDisponibilidad[tipoItem.key] = { disponible: false, motivo: `Cupos de teletrabajo por departamento agotados (${deptTeleInfo.countTele}/${deptTeleInfo.limit})` };
+            return;
+          }
 
           siguienteDisponibilidad[tipoItem.key] = validacion.permitido
             ? { disponible: true }

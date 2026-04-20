@@ -39,6 +39,7 @@ import { guardarBatchHorarios, guardarHorariosUsuarioSemana, subscribeHorariosUs
 import { puedeVerHorarios } from '../../utils/contratoUtils';
 import { useUsuariosYHorarios } from '../../hooks/useUsuariosYHorarios';
 import useDepartamentos from '../../hooks/useDepartamentos';
+import { sanitizeDepartamentoKey } from '../../utils/departamentos';
 import { useSemana } from '../../hooks/useSemana';
 import { useModalConfirm } from '../../hooks/useModalConfirm';
 import useTiposHorario from '../../hooks/useTiposHorario';
@@ -198,7 +199,7 @@ const Horarios = () => {
   const { tipos, tiposMap } = useTiposHorario();
   const { getHorasMaximasTipoContrato } = useTiposContrato();
   const obtenerHorasMaximas = getHorasMaximasTipoContrato;
-  const { departamentosActivos } = useDepartamentos();
+  const { departamentos, departamentosActivos } = useDepartamentos();
   const { jornadasMap: jornadasOrdinariasMap } = useJornadasOrdinarias();
   
   // Flag para prevenir actualizaciones después de desmontar
@@ -1204,6 +1205,45 @@ const Horarios = () => {
     const validarJornadaYGuardar = async (horarioGuardado, horasTrabajadas) => {
       const tipoConfigUso = tiposMap[horarioGuardado.tipo] || {};
       const usuario = obtenerUsuario(usuarios, usuarioId);
+
+      // Validación: límite absoluto de teletrabajo por departamento (si existe)
+      try {
+        const isTeleTipo = String(horarioGuardado.tipo).toLowerCase().includes('tele') || String(tiposMap[horarioGuardado.tipo]?.label || '').toLowerCase().includes('tele');
+        if (isTeleTipo) {
+          const deptLabel = usuario?.departamento || '';
+          const deptObj = departamentos.find(d => d.label === deptLabel || d.id === sanitizeDepartamentoKey(deptLabel));
+          const teleConfig = deptObj?.teleRestricciones ?? (deptObj?.teleMaxSimultaneo ? { mode: 'absolute', value: Number(deptObj.teleMaxSimultaneo) } : null);
+          if (teleConfig && teleConfig.mode === 'absolute' && Number.isFinite(Number(teleConfig.value)) && Number(teleConfig.value) > 0) {
+            const limit = Number(teleConfig.value);
+            const semanaKey = obtenerClaveSemana(semanaSeleccionada);
+            const deptUserIds = usuarios.filter(u => (u.departamento || '') === (deptObj?.label || '')).map(u => u.id);
+            const deptRemote = await cargarHorariosUsuarios(semanaKey, deptUserIds);
+            const mergedDept = {};
+            deptUserIds.forEach(uid => {
+              const remote = deptRemote[uid] || {};
+              const local = { ...(horariosRef.current?.[uid] || {}), ...(horariosEditadosRef.current?.[uid] || {}), ...(bufferEditSemanasRef.current?.[semanaKey]?.[uid] || {}) };
+              mergedDept[uid] = { ...remote, ...local };
+            });
+
+            let countTele = 0;
+            deptUserIds.forEach(uid => {
+              const turno = mergedDept[uid]?.[diaKey];
+              if (turno && String(turno.tipo || '').toLowerCase().includes('tele')) countTele += 1;
+            });
+
+            const horarioExistente = horariosEditadosRef.current?.[usuarioId]?.[diaKey] || horariosRef.current?.[usuarioId]?.[diaKey] || null;
+            const usuarioTieneTele = horarioExistente && String(horarioExistente.tipo || '').toLowerCase().includes('tele');
+            const countExcluding = countTele - (usuarioTieneTele ? 1 : 0);
+            const allowedRemaining = limit - countExcluding;
+            if (!usuarioTieneTele && allowedRemaining <= 0) {
+              mostrarModal({ tipo: 'warning', titulo: 'Cupos de tele agotados', mensaje: `El departamento ${deptObj?.label || deptLabel} ya alcanzó el límite de ${limit} teletrabajos para ese día.`, soloInfo: true });
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        // No bloquear en caso de error en la verificación de cupos
+      }
 
       if (debeValidarLimiteUsoHorario(tipoConfigUso)) {
         const fechaTurno = obtenerFechaTurnoDesdeSemana(semanaSeleccionada, diaKey);
