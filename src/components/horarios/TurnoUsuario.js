@@ -205,6 +205,11 @@ const TurnoUsuario = memo(({
         ? (esTarjetaPresencialFinal ? '#fff' : (esDescanso ? getContrastColor(descansoBg) : (esVacaciones ? '#fff' : (esIncapacidad ? getContrastColor(incapacidadBg) : (necesitaSplit ? '#fff' : (contratoOperativo ? 'white' : getContrastColor(tipoColorComputed)))))))
         : 'text.secondary');
 
+  // Color y opacidad del icono grande de fondo (heurística simple para asegurar visibilidad
+  // incluso en tarjetas de contratos no-operativos como 'pasantes').
+  const iconOpacity = soloLabel ? 0.14 : 0.25;
+  const iconColor = soloLabel ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.45)';
+
   return (
     <Grid item xs={true} key={diaKey}>
       <Box
@@ -317,10 +322,8 @@ const TurnoUsuario = memo(({
               right: -10,
               top: '50%',
               transform: 'translateY(-50%) rotate(-14deg)',
-              opacity: contratoOperativo ? (soloLabel ? 0.14 : 0.25) : 0.08,
-              color: contratoOperativo
-                ? (soloLabel ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.45)')
-                : 'rgba(100, 116, 139, 0.35)',
+              opacity: iconOpacity,
+              color: iconColor,
               pointerEvents: 'none',
               userSelect: 'none',
               zIndex: 0
